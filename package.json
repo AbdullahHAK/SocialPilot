@@ -1,0 +1,25 @@
+{
+  "name": "socialpilot",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "dev:worker": "pnpm --filter worker dev",
+    "build": "pnpm -r --filter=./apps/* run build",
+    "lint": "pnpm -r --filter=./apps/* --filter=./packages/* run lint",
+    "typecheck": "pnpm -r --filter=./apps/* --filter=./packages/* run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "pnpm --filter @socialpilot/db run generate",
+    "db:migrate": "pnpm --filter @socialpilot/db run migrate",
+    "db:seed": "pnpm --filter @socialpilot/db run seed"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
