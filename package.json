@@ -6,19 +6,20 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "dev:worker": "pnpm --filter worker dev",
-    "build": "pnpm -r --filter=./apps/* run build",
+    "dev": "dotenv -e .env -- pnpm --filter web dev",
+    "dev:worker": "dotenv -e .env -- pnpm --filter worker dev",
+    "build": "dotenv -e .env -- pnpm -r --filter=./apps/* run build",
     "lint": "pnpm -r --filter=./apps/* --filter=./packages/* run lint",
     "typecheck": "pnpm -r --filter=./apps/* --filter=./packages/* run typecheck",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "dotenv -e .env -- vitest run",
+    "test:watch": "dotenv -e .env -- vitest",
     "db:generate": "pnpm --filter @socialpilot/db run generate",
-    "db:migrate": "pnpm --filter @socialpilot/db run migrate",
-    "db:seed": "pnpm --filter @socialpilot/db run seed"
+    "db:migrate": "dotenv -e .env -- pnpm --filter @socialpilot/db run migrate",
+    "db:seed": "dotenv -e .env -- pnpm --filter @socialpilot/db run seed"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "dotenv-cli": "^11.0.0",
     "typescript": "^5.7.3",
     "vitest": "^3.0.5"
   }

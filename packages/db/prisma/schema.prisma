@@ -1,5 +1,6 @@
-// Data model lives here. Models are added in Phase 1 (multi-tenant schema),
-// then extended additively in later phases — see docs/roadmap.md.
+// Multi-tenant data model. Every tenant-owned table carries an
+// organizationId (row-level tenancy). See docs/roadmap.md for which phase
+// introduces the UI/logic around each model.
 
 generator client {
   provider = "prisma-client-js"
@@ -8,4 +9,251 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+}
+
+enum SocialProvider {
+  INSTAGRAM
+  FACEBOOK
+}
+
+enum SocialAccountStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+enum CreativeConceptStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Platform {
+  INSTAGRAM
+  FACEBOOK
+}
+
+enum ContentType {
+  POST
+  STORY
+}
+
+enum ContentPostStatus {
+  DRAFT
+  QUEUED
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships          Membership[]
+  subscription         Subscription?
+  brandProfile         BrandProfile?
+  brandCreativeProfile BrandCreativeProfile?
+  socialAccounts       SocialAccount[]
+  creativeConcepts     CreativeConcept[]
+  publishingSchedule   PublishingSchedule?
+  contentPosts         ContentPost[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  role           MembershipRole @default(OWNER)
+  userId         String
+  organizationId String
+  createdAt      DateTime       @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("memberships")
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  organizationId       String             @unique
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  plan                 SubscriptionPlan?
+  status               SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model BrandProfile {
+  id               String   @id @default(cuid())
+  organizationId   String   @unique
+  businessName     String
+  category         String?
+  description      String?
+  logoUrl          String?
+  colors           Json?
+  language         String   @default("en")
+  tone             String?
+  productsServices Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("brand_profiles")
+}
+
+model SocialAccount {
+  id                String              @id @default(cuid())
+  organizationId    String
+  provider          SocialProvider
+  externalId        String
+  displayName       String?
+  profilePictureUrl String?
+  accessToken       String
+  tokenExpiresAt    DateTime?
+  status            SocialAccountStatus @default(ACTIVE)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([organizationId])
+  @@map("social_accounts")
+}
+
+model CreativeConcept {
+  id             String                @id @default(cuid())
+  organizationId String
+  brief          String
+  imageUrls      String[]
+  status         CreativeConceptStatus @default(PENDING)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("creative_concepts")
+}
+
+model BrandCreativeProfile {
+  id                      String   @id @default(cuid())
+  organizationId          String   @unique
+  styleDescriptors        Json?
+  referenceImageUrls      String[]
+  palette                 Json?
+  promptTemplateAdditions String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("brand_creative_profiles")
+}
+
+model PublishingSchedule {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  timezone       String   @default("UTC")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slots        ScheduleSlot[]
+
+  @@map("publishing_schedules")
+}
+
+model ScheduleSlot {
+  id                   String    @id @default(cuid())
+  publishingScheduleId String
+  dayOfWeek            DayOfWeek
+  /// 24h local time in the schedule's timezone, formatted "HH:mm"
+  time                 String
+  platform             Platform
+  enabled              Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  publishingSchedule PublishingSchedule @relation(fields: [publishingScheduleId], references: [id], onDelete: Cascade)
+
+  @@index([publishingScheduleId])
+  @@map("schedule_slots")
+}
+
+model ContentPost {
+  id             String            @id @default(cuid())
+  organizationId String
+  platform       Platform
+  type           ContentType
+  status         ContentPostStatus @default(DRAFT)
+  caption        String?
+  hashtags       String[]
+  imageUrls      String[]
+  scheduledFor   DateTime?
+  publishedAt    DateTime?
+  externalPostId String?
+  errorMessage   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("content_posts")
 }
