@@ -32,3 +32,20 @@ starting them early:
 5. **Production hosting (decided 2026-09-11):** Vercel (web app) + Neon
    (pooled Postgres) + Railway (worker service + Redis). Local dev is
    unaffected — it still uses Docker Compose (Postgres + Redis).
+
+## Live environments
+
+- **Web (Vercel)**: https://web-ten-opal-64.vercel.app — project
+  `abdullahhaks-projects/web`, root directory `apps/web`. Deployed via
+  `vercel deploy --prod` from the repo root (CLI-driven, not git-triggered
+  yet — see below).
+- **Worker + Redis (Railway)**: project `socialpilot`
+  (`b2096130-3719-4e59-bbf8-4c5263f47bc6`), services `worker` and `Redis`.
+  Deployed via `railway up --service worker` (also CLI-driven for now).
+- **Database**: Neon project, `neondb`. Migrations applied via
+  `prisma migrate deploy` against the direct (non-pooled) connection string.
+- **Outstanding for both platforms**: their GitHub Apps aren't authorized for
+  `AbdullahHAK/SocialPilot` yet, so pushes to `main` don't auto-deploy.
+  Authorize at https://github.com/apps/vercel (Configure → grant repo access)
+  and via Railway's dashboard GitHub integration, then re-run
+  `vercel git connect` / `railway service redeploy --from-source` once each.
