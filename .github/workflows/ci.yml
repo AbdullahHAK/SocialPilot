@@ -11,6 +11,7 @@ env:
   DIRECT_URL: "postgresql://socialpilot:socialpilot@localhost:5432/socialpilot"
   REDIS_URL: "redis://localhost:6379"
   AUTH_SECRET: "ci-test-secret-do-not-use-in-production"
+  TOKEN_ENCRYPTION_KEY: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
 
 jobs:
   ci:

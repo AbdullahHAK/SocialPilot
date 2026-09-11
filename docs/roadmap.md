@@ -10,6 +10,9 @@ passing tests. Check off phases as they land.
       Pakistan-based accounts. Revisit with Paddle/LemonSqueezy later.
 - [x] 4. Onboarding wizard / Brand Profile
 - [ ] 5. Meta OAuth connect flow (Instagram/Facebook via Facebook Login for Business)
+      — code complete (connect/callback routes, token encryption, Connected
+      Accounts page), pending a Meta Developer App from the user for live
+      end-to-end verification.
 - [ ] 6. AI brand analysis job (infers style from existing IG/FB content)
 - [ ] 7. Creative brief -> AI concept generation -> approval -> Brand Creative Profile
 - [ ] 8. Weekly publishing schedule builder
