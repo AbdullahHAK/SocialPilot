@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { AuthForm } from "@/components/auth-form";
-import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { AuthForm } from "@/components/auth-form";
+import { AuthShell } from "@/components/auth-shell";
+import { getSession } from "@/lib/session";
 import { loginAction } from "./actions";
 
 export default async function LoginPage() {
@@ -11,15 +12,19 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
-      <h1 className="text-2xl font-semibold">Log in</h1>
+    <AuthShell
+      title="Log in"
+      description="Welcome back — pick up right where you left off."
+      footer={
+        <>
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
+            Sign up
+          </Link>
+        </>
+      }
+    >
       <AuthForm mode="login" action={loginAction} />
-      <p className="text-sm text-gray-600">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="underline">
-          Sign up
-        </Link>
-      </p>
-    </main>
+    </AuthShell>
   );
 }

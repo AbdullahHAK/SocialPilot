@@ -1,7 +1,20 @@
 "use client";
 
+import { Check, ImagePlus, Plus, X } from "lucide-react";
 import { useActionState, useState, type ReactNode } from "react";
 import type { OnboardingFormState } from "@/app/onboarding/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 const STEPS = [
   "Business basics",
@@ -42,59 +55,60 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
   const isLastStep = step === STEPS.length - 1;
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
-      <ol className="flex flex-wrap gap-3 text-xs font-medium text-gray-500">
-        {STEPS.map((label, index) => (
-          <li key={label} className={index === step ? "text-black" : ""}>
-            {index + 1}. {label}
-          </li>
-        ))}
-      </ol>
+    <form action={formAction} className="flex flex-col gap-8">
+      <Stepper currentStep={step} />
 
       <Step active={step === 0}>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
           {/* No `required` here: Chromium doesn't reliably exempt a
               required field from constraint validation just because an
               ancestor is `hidden` on a later step, so it can block
               submission on a field the user can't see or fix. The server
               action validates this instead. */}
-          <Field label="Business name" name="businessName" />
+          <Field label="Business name" name="businessName" placeholder="Acme Coffee Co" />
           <Field
             label="Category"
             name="category"
             placeholder="e.g. Cafe, Clothing brand, Fitness studio"
           />
-          <TextArea
-            label="Description"
-            name="description"
-            placeholder="What does your business do?"
-          />
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              placeholder="What does your business do?"
+              rows={3}
+            />
+          </div>
         </div>
       </Step>
 
       <Step active={step === 1}>
-        <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Logo
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="logo">Logo</Label>
+            <label
+              htmlFor="logo"
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-input px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent/30"
+            >
+              <ImagePlus className="size-5 shrink-0" />
+              {logoName ?? "Click to upload a logo (PNG, JPEG, WebP, or SVG)"}
+            </label>
             <input
+              id="logo"
               type="file"
               name="logo"
               accept="image/png,image/jpeg,image/webp,image/svg+xml"
               onChange={(e) => setLogoName(e.target.files?.[0]?.name ?? null)}
-              className="text-sm font-normal"
+              className="sr-only"
             />
-            {logoName && (
-              <span className="text-xs font-normal text-gray-500">
-                Selected: {logoName}
-              </span>
-            )}
-          </label>
+          </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium">Brand colors</span>
-            <div className="flex flex-wrap gap-3">
+            <Label>Brand colors</Label>
+            <div className="flex flex-wrap items-center gap-3">
               {colors.map((color, index) => (
-                <div key={index} className="flex items-center gap-1">
+                <div key={index} className="group relative">
                   <input
                     type="color"
                     name="colors"
@@ -104,41 +118,43 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
                         prev.map((c, i) => (i === index ? e.target.value : c)),
                       )
                     }
-                    className="h-9 w-9 cursor-pointer rounded border border-gray-300"
+                    className="size-10 cursor-pointer rounded-lg border border-input p-0.5"
                   />
                   {colors.length > 1 && (
                     <button
                       type="button"
+                      aria-label={`Remove color ${index + 1}`}
                       onClick={() =>
                         setColors((prev) => prev.filter((_, i) => i !== index))
                       }
-                      className="text-xs text-gray-400"
+                      className="absolute -top-1.5 -right-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
                     >
-                      Remove
+                      <X className="size-2.5" />
                     </button>
                   )}
                 </div>
               ))}
+              {colors.length < 6 && (
+                <button
+                  type="button"
+                  aria-label="Add color"
+                  onClick={() => setColors((prev) => [...prev, "#888888"])}
+                  className="flex size-10 items-center justify-center rounded-lg border border-dashed border-input text-muted-foreground hover:border-primary/50 hover:text-primary"
+                >
+                  <Plus className="size-4" />
+                </button>
+              )}
             </div>
-            {colors.length < 6 && (
-              <button
-                type="button"
-                onClick={() => setColors((prev) => [...prev, "#888888"])}
-                className="self-start text-xs underline"
-              >
-                + Add color
-              </button>
-            )}
           </div>
         </div>
       </Step>
 
       <Step active={step === 2}>
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">Products / services</span>
+          <Label>Products / services</Label>
           {products.map((product, index) => (
             <div key={index} className="flex items-center gap-2">
-              <input
+              <Input
                 name="productsServices"
                 value={product}
                 onChange={(e) =>
@@ -147,47 +163,52 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
                   )
                 }
                 placeholder="e.g. Espresso, Wedding photography, Yoga classes"
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
               />
               {products.length > 1 && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() =>
                     setProducts((prev) => prev.filter((_, i) => i !== index))
                   }
-                  className="text-xs text-gray-400"
                 >
-                  Remove
-                </button>
+                  <X className="size-4" />
+                </Button>
               )}
             </div>
           ))}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            className="mt-1 w-fit gap-1.5"
             onClick={() => setProducts((prev) => [...prev, ""])}
-            className="self-start text-xs underline"
           >
-            + Add another
-          </button>
+            <Plus className="size-4" />
+            Add another
+          </Button>
         </div>
       </Step>
 
       <Step active={step === 3}>
-        <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Preferred language
-            <select
-              name="language"
-              defaultValue="en"
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-normal"
-            >
-              {LANGUAGE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="language">Preferred language</Label>
+            <Select name="language" defaultValue="en">
+              <SelectTrigger id="language">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Field
             label="Content style / tone"
             name="tone"
@@ -197,49 +218,88 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
       </Step>
 
       <Step active={step === 4}>
-        <div className="flex flex-col gap-2 text-sm text-gray-600">
-          <p>
-            Review your answers with Back, then Finish to go to your
-            dashboard. You&apos;ll be able to fine-tune these later in Brand
-            Settings.
-          </p>
+        <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+          Review your answers with Back, then Finish to go to your dashboard.
+          You&apos;ll be able to fine-tune these later in Brand Settings.
         </div>
       </Step>
 
       {state.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm font-medium text-destructive">
           {state.error}
         </p>
       )}
 
-      <div className="flex justify-between">
-        <button
+      <div className="flex items-center justify-between border-t border-border pt-6">
+        <Button
           type="button"
+          variant="outline"
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-40"
         >
           Back
-        </button>
+        </Button>
         {isLastStep ? (
-          <button
-            type="submit"
-            disabled={isPending}
-            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
+          <Button type="submit" disabled={isPending}>
             Finish
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
             onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white"
           >
             Next
-          </button>
+          </Button>
         )}
       </div>
     </form>
+  );
+}
+
+function Stepper({ currentStep }: { currentStep: number }) {
+  return (
+    <ol className="flex items-center">
+      {STEPS.map((label, index) => {
+        const isCompleted = index < currentStep;
+        const isCurrent = index === currentStep;
+
+        return (
+          <li key={label} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center gap-1.5">
+              <span
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+                  isCompleted && "bg-primary text-primary-foreground",
+                  isCurrent &&
+                    "border-2 border-primary text-primary",
+                  !isCompleted &&
+                    !isCurrent &&
+                    "border border-border text-muted-foreground",
+                )}
+              >
+                {isCompleted ? <Check className="size-3.5" /> : index + 1}
+              </span>
+              <span
+                className={cn(
+                  "hidden text-center text-[11px] font-medium whitespace-nowrap sm:block",
+                  isCurrent ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {label}
+              </span>
+            </div>
+            {index < STEPS.length - 1 && (
+              <span
+                className={cn(
+                  "mx-2 h-px flex-1",
+                  isCompleted ? "bg-primary" : "bg-border",
+                )}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -257,44 +317,15 @@ function Field({
   label,
   name,
   placeholder,
-  required,
-}: {
-  label: string;
-  name: string;
-  placeholder?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-sm font-medium">
-      {label}
-      <input
-        name={name}
-        placeholder={placeholder}
-        required={required}
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm font-normal"
-      />
-    </label>
-  );
-}
-
-function TextArea({
-  label,
-  name,
-  placeholder,
 }: {
   label: string;
   name: string;
   placeholder?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm font-medium">
-      {label}
-      <textarea
-        name={name}
-        placeholder={placeholder}
-        rows={3}
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm font-normal"
-      />
-    </label>
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={name}>{label}</Label>
+      <Input id={name} name={name} placeholder={placeholder} />
+    </div>
   );
 }

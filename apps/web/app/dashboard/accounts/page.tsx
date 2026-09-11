@@ -1,5 +1,9 @@
 import { listSocialAccounts } from "@socialpilot/db";
+import { AlertCircle, CheckCircle2, Share2 } from "lucide-react";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
 import { getSession } from "@/lib/session";
 import { disconnectAccountAction } from "./actions";
 
@@ -16,57 +20,87 @@ export default async function AccountsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Connected Accounts</h1>
-        <a
-          href="/api/meta/connect"
-          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white"
-        >
-          Connect Instagram / Facebook
-        </a>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Connected Accounts
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Connect your Facebook Page and its linked Instagram Business
+            account to start publishing.
+          </p>
+        </div>
+        <Button asChild>
+          <a href="/api/meta/connect">Connect Instagram / Facebook</a>
+        </Button>
       </div>
 
       {typeof error === "string" && (
-        <p role="alert" className="text-sm text-red-600">
+        <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
           {error}
-        </p>
+        </div>
       )}
       {typeof connected === "string" && (
-        <p className="text-sm text-green-700">
+        <div className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
           Connected {connected} account{connected === "1" ? "" : "s"}.
-        </p>
+        </div>
       )}
 
       {accounts.length === 0 ? (
-        <p className="text-sm text-gray-600">
-          No accounts connected yet. Connect your Facebook Page and its
-          linked Instagram Business account to start publishing.
-        </p>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Share2 className="size-6" />
+            </span>
+            <p className="font-medium">No accounts connected yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Connect your Facebook Page and its linked Instagram Business
+              account to start publishing automatically.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <div className="grid gap-3">
           {accounts.map((account) => (
-            <li
-              key={account.id}
-              className="flex items-center justify-between rounded-md border border-gray-200 p-4"
-            >
-              <div>
-                <p className="text-sm font-medium">
-                  {account.displayName ?? account.externalId}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {account.provider === "INSTAGRAM" ? "Instagram" : "Facebook"}{" "}
-                  · {account.status}
-                </p>
-              </div>
-              <form action={disconnectAccountAction}>
-                <input type="hidden" name="accountId" value={account.id} />
-                <button type="submit" className="text-xs text-red-600 underline">
-                  Disconnect
-                </button>
-              </form>
-            </li>
+            <Card key={account.id}>
+              <CardContent className="flex items-center justify-between gap-4 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    {account.provider === "INSTAGRAM" ? (
+                      <InstagramIcon className="size-5" />
+                    ) : (
+                      <FacebookIcon className="size-5" />
+                    )}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">
+                      {account.displayName ?? account.externalId}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {account.provider === "INSTAGRAM"
+                        ? "Instagram"
+                        : "Facebook"}{" "}
+                      · {account.status === "ACTIVE" ? "Active" : account.status}
+                    </p>
+                  </div>
+                </div>
+                <form action={disconnectAccountAction}>
+                  <input type="hidden" name="accountId" value={account.id} />
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    Disconnect
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
