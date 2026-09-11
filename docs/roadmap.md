@@ -14,11 +14,13 @@ passing tests. Check off phases as they land.
       Accounts page), pending a Meta Developer App from the user for live
       end-to-end verification.
 - [ ] 6. AI brand analysis job (infers style from existing IG/FB content)
-      — blocked on an OpenAI API key; skipped ahead to Phase 8 in the
-      meantime since it doesn't depend on Phase 6/7's AI work.
+      — OpenAI key now set (see below); not yet built.
 - [ ] 7. Creative brief -> AI concept generation -> approval -> Brand Creative Profile
-      — also blocked on an OpenAI API key.
+      — OpenAI key now set; not yet built.
 - [x] 8. Weekly publishing schedule builder
+- [x] Design system + full visual overhaul (real component library, color
+      tokens, marketing landing page) — not a numbered phase, but a
+      significant unplanned pass across everything built so far.
 - [ ] 9. Automated content pipeline worker (idea -> image -> caption/hashtags -> formats)
 - [ ] 10. Publishing engine (Graph API publishing, retries, status tracking)
 - [ ] 11. Dashboard views (Content Calendar, Scheduled/Published, Accounts, Brand, Schedule, Subscription)
@@ -34,7 +36,9 @@ starting them early:
    can take days to weeks. Required before Phase 5 can go beyond mocked calls.
 2. ~~Stripe account~~ — not available for Pakistan-based accounts; billing is
    deferred indefinitely (see Phase 3 above).
-3. **OpenAI API key** — only needed once Phase 6 (AI brand analysis) starts.
+3. **OpenAI API key (done 2026-09-11):** set in local `.env`, Vercel, and
+   Railway. Not used by any code yet — Phase 6/7 aren't built. Per the
+   user, image generation should use `gpt-image-1.5` at `medium` quality.
 4. **Object storage (done 2026-09-11):** Cloudflare R2, bucket
    `socialpilot-assets`, public via its r2.dev URL. Used by the Phase 4
    onboarding wizard for logo uploads.
