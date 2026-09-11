@@ -33,3 +33,6 @@ coverage/
 
 # prisma
 packages/db/generated/
+
+.vercel
+.env*
