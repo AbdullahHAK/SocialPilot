@@ -6,8 +6,9 @@ passing tests. Check off phases as they land.
 - [x] 0. Monorepo scaffolding (pnpm workspaces, Next.js web app, worker service, CI)
 - [x] 1. Full multi-tenant Prisma schema + migrations + seed
 - [x] 2. Auth (signup/login/session) + organization creation + dashboard shell
-- [ ] 3. Stripe billing (Checkout, webhooks, customer portal, plan gating)
-- [ ] 4. Onboarding wizard / Brand Profile
+- [ ] 3. ~~Stripe billing~~ — deferred indefinitely: Stripe doesn't support
+      Pakistan-based accounts. Revisit with Paddle/LemonSqueezy later.
+- [x] 4. Onboarding wizard / Brand Profile
 - [ ] 5. Meta OAuth connect flow (Instagram/Facebook via Facebook Login for Business)
 - [ ] 6. AI brand analysis job (infers style from existing IG/FB content)
 - [ ] 7. Creative brief -> AI concept generation -> approval -> Brand Creative Profile
@@ -25,10 +26,12 @@ starting them early:
 1. **Meta Developer App + Business Verification** — needed for real OAuth and
    Graph API publishing. App Review for scopes like `instagram_content_publish`
    can take days to weeks. Required before Phase 5 can go beyond mocked calls.
-2. **Stripe account** — test-mode keys are enough to build Phase 3.
+2. ~~Stripe account~~ — not available for Pakistan-based accounts; billing is
+   deferred indefinitely (see Phase 3 above).
 3. **OpenAI API key** — only needed once Phase 6 (AI brand analysis) starts.
-4. **Object storage** (e.g. Cloudflare R2 or AWS S3) — needed from Phase 4
-   onward for logos and generated images.
+4. **Object storage (done 2026-09-11):** Cloudflare R2, bucket
+   `socialpilot-assets`, public via its r2.dev URL. Used by the Phase 4
+   onboarding wizard for logo uploads.
 5. **Production hosting (decided 2026-09-11):** Vercel (web app) + Neon
    (pooled Postgres) + Railway (worker service + Redis). Local dev is
    unaffected — it still uses Docker Compose (Postgres + Redis).
