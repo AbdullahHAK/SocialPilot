@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getStartupMessage } from "./index.js";
+import { getStartupMessage } from "./index";
 
 describe("getStartupMessage", () => {
   it("returns the worker startup message", () => {

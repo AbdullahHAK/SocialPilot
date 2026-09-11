@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { prisma } from "./index.js";
+import { prisma } from "./index";
 
 async function createOrg(name: string) {
   return prisma.organization.create({

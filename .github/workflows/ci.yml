@@ -10,7 +10,6 @@ env:
   DATABASE_URL: "postgresql://socialpilot:socialpilot@localhost:5432/socialpilot"
   REDIS_URL: "redis://localhost:6379"
   AUTH_SECRET: "ci-test-secret-do-not-use-in-production"
-  AUTH_URL: "http://localhost:3000"
 
 jobs:
   ci:

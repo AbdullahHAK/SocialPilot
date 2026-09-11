@@ -5,7 +5,7 @@ passing tests. Check off phases as they land.
 
 - [x] 0. Monorepo scaffolding (pnpm workspaces, Next.js web app, worker service, CI)
 - [x] 1. Full multi-tenant Prisma schema + migrations + seed
-- [ ] 2. Auth (signup/login/session) + organization creation + dashboard shell
+- [x] 2. Auth (signup/login/session) + organization creation + dashboard shell
 - [ ] 3. Stripe billing (Checkout, webhooks, customer portal, plan gating)
 - [ ] 4. Onboarding wizard / Brand Profile
 - [ ] 5. Meta OAuth connect flow (Instagram/Facebook via Facebook Login for Business)
