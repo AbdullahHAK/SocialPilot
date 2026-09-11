@@ -29,5 +29,6 @@ starting them early:
 3. **OpenAI API key** — only needed once Phase 6 (AI brand analysis) starts.
 4. **Object storage** (e.g. Cloudflare R2 or AWS S3) — needed from Phase 4
    onward for logos and generated images.
-5. **Production host** (Railway/Render/AWS/etc.) — not decided yet; local dev
-   uses Docker Compose (Postgres + Redis) and doesn't depend on this.
+5. **Production hosting (decided 2026-09-11):** Vercel (web app) + Neon
+   (pooled Postgres) + Railway (worker service + Redis). Local dev is
+   unaffected — it still uses Docker Compose (Postgres + Redis).
