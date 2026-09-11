@@ -6,8 +6,10 @@ passing tests. Check off phases as they land.
 - [x] 0. Monorepo scaffolding (pnpm workspaces, Next.js web app, worker service, CI)
 - [x] 1. Full multi-tenant Prisma schema + migrations + seed
 - [x] 2. Auth (signup/login/session) + organization creation + dashboard shell
-- [ ] 3. ~~Stripe billing~~ — deferred indefinitely: Stripe doesn't support
-      Pakistan-based accounts. Revisit with Paddle/LemonSqueezy later.
+- [ ] 3. Stripe billing — un-deferred 2026-09-11 (client will hold the
+      Stripe account). Checkout, webhook handler, customer portal, and the
+      Subscription page are built with placeholder $49/mo and $470/yr
+      plans; pending a real Stripe secret key + price IDs to test live.
 - [x] 4. Onboarding wizard / Brand Profile
 - [ ] 5. Meta OAuth connect flow (Instagram/Facebook via Facebook Login for Business)
       — code complete (connect/callback routes, token encryption, Connected
@@ -23,7 +25,11 @@ passing tests. Check off phases as they land.
       significant unplanned pass across everything built so far.
 - [ ] 9. Automated content pipeline worker (idea -> image -> caption/hashtags -> formats)
 - [ ] 10. Publishing engine (Graph API publishing, retries, status tracking)
-- [ ] 11. Dashboard views (Content Calendar, Scheduled/Published, Accounts, Brand, Schedule, Subscription)
+- [x] 11. Dashboard views — Content Calendar (real month grid, empty until
+      Phase 9/10 populate it), Brand Settings (edit the Phase 4 profile),
+      and Subscription (see Phase 3) all built ahead of schedule since none
+      of them need Meta. Scheduled/Published are just calendar filters once
+      there's real data; Connected Accounts was already done in Phase 5.
 - [ ] 12. Polish (notifications, observability, deployment docs)
 
 ## External account dependencies
@@ -34,8 +40,10 @@ starting them early:
 1. **Meta Developer App + Business Verification** — needed for real OAuth and
    Graph API publishing. App Review for scopes like `instagram_content_publish`
    can take days to weeks. Required before Phase 5 can go beyond mocked calls.
-2. ~~Stripe account~~ — not available for Pakistan-based accounts; billing is
-   deferred indefinitely (see Phase 3 above).
+2. **Stripe account** — the client will hold this one (not available for
+   Pakistan-based accounts, which is why it was deferred until now). Need a
+   Secret Key, Webhook Signing Secret, and either two Price IDs or just
+   confirmation to keep the $49/mo, $470/yr placeholders.
 3. **OpenAI API key (done 2026-09-11):** set in local `.env`, Vercel, and
    Railway. Not used by any code yet — Phase 6/7 aren't built. Per the
    user, image generation should use `gpt-image-1.5` at `medium` quality.
