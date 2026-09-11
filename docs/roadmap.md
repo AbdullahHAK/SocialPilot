@@ -14,8 +14,11 @@ passing tests. Check off phases as they land.
       Accounts page), pending a Meta Developer App from the user for live
       end-to-end verification.
 - [ ] 6. AI brand analysis job (infers style from existing IG/FB content)
+      — blocked on an OpenAI API key; skipped ahead to Phase 8 in the
+      meantime since it doesn't depend on Phase 6/7's AI work.
 - [ ] 7. Creative brief -> AI concept generation -> approval -> Brand Creative Profile
-- [ ] 8. Weekly publishing schedule builder
+      — also blocked on an OpenAI API key.
+- [x] 8. Weekly publishing schedule builder
 - [ ] 9. Automated content pipeline worker (idea -> image -> caption/hashtags -> formats)
 - [ ] 10. Publishing engine (Graph API publishing, retries, status tracking)
 - [ ] 11. Dashboard views (Content Calendar, Scheduled/Published, Accounts, Brand, Schedule, Subscription)

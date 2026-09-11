@@ -16,3 +16,4 @@ export * from "./auth";
 export * from "./brand-profile";
 export * from "./crypto";
 export * from "./social-account";
+export * from "./publishing-schedule";

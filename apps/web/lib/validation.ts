@@ -46,3 +46,19 @@ export const LOGO_ALLOWED_TYPES = [
   "image/webp",
   "image/svg+xml",
 ];
+
+export const scheduleSlotSchema = z.object({
+  dayOfWeek: z.enum([
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+    "SUNDAY",
+  ]),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a time as HH:MM"),
+  platform: z.enum(["INSTAGRAM", "FACEBOOK"]),
+});
+
+export type ScheduleSlotInput = z.infer<typeof scheduleSlotSchema>;
