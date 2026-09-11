@@ -44,8 +44,7 @@ starting them early:
   Deployed via `railway up --service worker` (also CLI-driven for now).
 - **Database**: Neon project, `neondb`. Migrations applied via
   `prisma migrate deploy` against the direct (non-pooled) connection string.
-- **Outstanding for both platforms**: their GitHub Apps aren't authorized for
-  `AbdullahHAK/SocialPilot` yet, so pushes to `main` don't auto-deploy.
-  Authorize at https://github.com/apps/vercel (Configure → grant repo access)
-  and via Railway's dashboard GitHub integration, then re-run
-  `vercel git connect` / `railway service redeploy --from-source` once each.
+- **Auto-deploy (as of 2026-09-11):** both platforms' GitHub Apps are
+  authorized for `AbdullahHAK/SocialPilot` and connected — pushes to `main`
+  now auto-build and deploy the web app (Vercel) and the worker (Railway).
+  No more CLI-driven manual deploys needed for routine changes.
