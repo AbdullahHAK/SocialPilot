@@ -36,15 +36,14 @@ starting them early:
 ## Live environments
 
 - **Web (Vercel)**: https://web-ten-opal-64.vercel.app — project
-  `abdullahhaks-projects/web`, root directory `apps/web`. Deployed via
-  `vercel deploy --prod` from the repo root (CLI-driven, not git-triggered
-  yet — see below).
+  `abdullahhaks-projects/web`, root directory `apps/web`.
 - **Worker + Redis (Railway)**: project `socialpilot`
   (`b2096130-3719-4e59-bbf8-4c5263f47bc6`), services `worker` and `Redis`.
-  Deployed via `railway up --service worker` (also CLI-driven for now).
 - **Database**: Neon project, `neondb`. Migrations applied via
   `prisma migrate deploy` against the direct (non-pooled) connection string.
-- **Auto-deploy (as of 2026-09-11):** both platforms' GitHub Apps are
-  authorized for `AbdullahHAK/SocialPilot` and connected — pushes to `main`
-  now auto-build and deploy the web app (Vercel) and the worker (Railway).
-  No more CLI-driven manual deploys needed for routine changes.
+- **Auto-deploy (confirmed working 2026-09-11):** pushes to `main` auto-build
+  and deploy both the web app (Vercel, via its GitHub integration) and the
+  worker (Railway, via an explicit deployment trigger — Railway's GitHub App
+  being merely "authorized" wasn't enough on its own, it also had to be
+  *installed* on the repo, and a `deploymentTriggerCreate` mutation was
+  needed since `railway add --repo` alone doesn't create one).
