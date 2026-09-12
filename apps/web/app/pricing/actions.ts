@@ -2,7 +2,8 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getStripeClient, STRIPE_PRICE_IDS } from "@/lib/stripe";
+import { setPendingSignupCookie } from "@/lib/pending-signup";
+import { getStripeClient, isStripeConfigured, STRIPE_PRICE_IDS } from "@/lib/stripe";
 
 async function getBaseUrl(): Promise<string> {
   const headersList = await headers();
@@ -14,10 +15,20 @@ async function getBaseUrl(): Promise<string> {
 /** Starts a Stripe Checkout session for a visitor who has no account yet -
  * Stripe collects the email and creates the customer itself. The result is
  * picked back up by /api/checkout/complete, which stashes the plan and
- * Stripe IDs in a pending-signup cookie until account creation. */
+ * Stripe IDs in a pending-signup cookie until account creation.
+ *
+ * While billing isn't wired up yet (no Stripe account available), this
+ * skips straight to Connect with no charge instead of crashing - matches
+ * the client's own note that paywall enforcement isn't needed for this
+ * round of testing. Remove this branch once real Stripe keys land. */
 export async function startPendingCheckoutAction(formData: FormData) {
   const plan = formData.get("plan");
   if (plan !== "MONTHLY" && plan !== "YEARLY") return;
+
+  if (!isStripeConfigured()) {
+    await setPendingSignupCookie({ plan });
+    redirect("/connect");
+  }
 
   const stripe = getStripeClient();
   const priceId =

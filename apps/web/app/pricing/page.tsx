@@ -1,4 +1,4 @@
-import { AlertCircle, Check } from "lucide-react";
+import { AlertCircle, Check, Info } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
+import { isStripeConfigured } from "@/lib/stripe";
 import { startPendingCheckoutAction } from "./actions";
 
 const PLANS = [
@@ -49,6 +50,7 @@ export default async function PricingPage({
   searchParams,
 }: PageProps<"/pricing">) {
   const { checkout, error } = await searchParams;
+  const billingLive = isStripeConfigured();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -74,6 +76,15 @@ export default async function PricingPage({
               brand. Cancel anytime.
             </p>
           </div>
+
+          {!billingLive && (
+            <div className="mx-auto mt-8 flex max-w-xl items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+              <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+              Billing setup is still in progress — continue below at no
+              charge for now. You&apos;ll be able to add payment details
+              later from your account.
+            </div>
+          )}
 
           {checkout === "cancelled" && (
             <div className="mx-auto mt-8 flex max-w-xl items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

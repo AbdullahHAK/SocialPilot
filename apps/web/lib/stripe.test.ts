@@ -1,5 +1,28 @@
-import { describe, expect, it } from "vitest";
-import { mapStripeStatusToSubscriptionStatus } from "./stripe";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isStripeConfigured, mapStripeStatusToSubscriptionStatus } from "./stripe";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("isStripeConfigured", () => {
+  it("is false when any required env var is missing", () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "");
+    vi.stubEnv("STRIPE_PRICE_ID_MONTHLY", "");
+    vi.stubEnv("STRIPE_PRICE_ID_YEARLY", "");
+    expect(isStripeConfigured()).toBe(false);
+
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    expect(isStripeConfigured()).toBe(false);
+  });
+
+  it("is true once all three are set", () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
+    vi.stubEnv("STRIPE_PRICE_ID_MONTHLY", "price_monthly");
+    vi.stubEnv("STRIPE_PRICE_ID_YEARLY", "price_yearly");
+    expect(isStripeConfigured()).toBe(true);
+  });
+});
 
 describe("mapStripeStatusToSubscriptionStatus", () => {
   it("maps trialing and active statuses directly", () => {

@@ -15,6 +15,17 @@ export function getStripeClient(): Stripe {
   return cachedClient;
 }
 
+/** Whether real billing is wired up yet. Lets the pricing flow fall back to
+ * a no-payment "continue for now" path instead of crashing while the
+ * client's Stripe account is still being sorted out. */
+export function isStripeConfigured(): boolean {
+  return Boolean(
+    process.env.STRIPE_SECRET_KEY &&
+      process.env.STRIPE_PRICE_ID_MONTHLY &&
+      process.env.STRIPE_PRICE_ID_YEARLY,
+  );
+}
+
 export const STRIPE_PRICE_IDS = {
   MONTHLY: () => requireEnv("STRIPE_PRICE_ID_MONTHLY"),
   YEARLY: () => requireEnv("STRIPE_PRICE_ID_YEARLY"),
