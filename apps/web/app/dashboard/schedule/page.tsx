@@ -1,10 +1,15 @@
-import { getPublishingSchedule } from "@socialpilot/db";
+import {
+  getLastPublishedPost,
+  getNextScheduledPost,
+  getPublishingSchedule,
+} from "@socialpilot/db";
 import { Plus, Trash2 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
+import { PublishingStatusCard } from "@/components/publishing-status-card";
 import {
   Select,
   SelectContent,
@@ -45,7 +50,11 @@ export default async function SchedulePage() {
     redirect("/login");
   }
 
-  const schedule = await getPublishingSchedule(session.organizationId);
+  const [schedule, lastPublished, nextScheduled] = await Promise.all([
+    getPublishingSchedule(session.organizationId),
+    getLastPublishedPost(session.organizationId),
+    getNextScheduledPost(session.organizationId),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,9 +64,13 @@ export default async function SchedulePage() {
         </h1>
         <p className="mt-1 text-muted-foreground">
           Choose which days and times SocialPilot should publish, and to
-          which platform. Add as many slots per day as you need.
+          which platform. Add as many slots per day as you need. Content for
+          each slot is generated automatically a day or two ahead of time —
+          adding a slot here doesn&apos;t create a post immediately.
         </p>
       </div>
+
+      <PublishingStatusCard lastPublished={lastPublished} nextScheduled={nextScheduled} />
 
       <div className="grid gap-4">
         {DAYS.map((day) => {

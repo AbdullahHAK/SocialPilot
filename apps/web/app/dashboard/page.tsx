@@ -6,13 +6,12 @@ import {
   getPublishingSchedule,
   listSocialAccounts,
 } from "@socialpilot/db";
-import { CalendarClock, Clock3, Palette, Share2, Sparkles } from "lucide-react";
+import { CalendarClock, Palette, Share2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
+import { PublishingStatusCard } from "@/components/publishing-status-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatRelativeTime } from "@/lib/relative-time";
 import { getSession } from "@/lib/session";
 
 export default async function DashboardPage() {
@@ -66,63 +65,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Publishing status</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <Clock3 className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Last posted</p>
-              {lastPublished?.publishedAt ? (
-                <p className="flex items-center gap-1.5 text-sm font-medium">
-                  {lastPublished.platform === "INSTAGRAM" ? (
-                    <InstagramIcon className="size-3.5 shrink-0" />
-                  ) : (
-                    <FacebookIcon className="size-3.5 shrink-0" />
-                  )}
-                  {formatRelativeTime(lastPublished.publishedAt)}
-                </p>
-              ) : (
-                <p className="text-sm font-medium text-muted-foreground">
-                  Nothing published yet
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <CalendarClock className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Next post</p>
-              {nextScheduled?.scheduledFor ? (
-                <p className="flex items-center gap-1.5 text-sm font-medium">
-                  {nextScheduled.platform === "INSTAGRAM" ? (
-                    <InstagramIcon className="size-3.5 shrink-0" />
-                  ) : (
-                    <FacebookIcon className="size-3.5 shrink-0" />
-                  )}
-                  {formatRelativeTime(nextScheduled.scheduledFor)}
-                </p>
-              ) : (
-                <p className="text-sm font-medium text-muted-foreground">
-                  Nothing scheduled —{" "}
-                  <Link
-                    href="/dashboard/style"
-                    className="text-primary underline-offset-4 hover:underline"
-                  >
-                    generate this month&apos;s content
-                  </Link>
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PublishingStatusCard lastPublished={lastPublished} nextScheduled={nextScheduled} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
