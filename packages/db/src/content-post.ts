@@ -48,6 +48,24 @@ export function markContentPostFailed(id: string, errorMessage: string) {
   });
 }
 
+/** The most recently published post, for a "last posted" status display. */
+export function getLastPublishedPost(organizationId: string) {
+  return prisma.contentPost.findFirst({
+    where: { organizationId, status: "PUBLISHED" },
+    orderBy: { publishedAt: "desc" },
+  });
+}
+
+/** The soonest still-upcoming scheduled post, for a "next post" status
+ * display - excludes anything already due, since that's the worker's job
+ * to have picked up, not something to show as "upcoming". */
+export function getNextScheduledPost(organizationId: string, now: Date = new Date()) {
+  return prisma.contentPost.findFirst({
+    where: { organizationId, status: "SCHEDULED", scheduledFor: { gt: now } },
+    orderBy: { scheduledFor: "asc" },
+  });
+}
+
 /**
  * Lists content posts whose scheduled or published date falls within
  * [start, end), for rendering a calendar month view. A post counts as
