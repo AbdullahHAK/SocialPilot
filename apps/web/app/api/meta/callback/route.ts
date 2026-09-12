@@ -112,8 +112,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Pre-account signup: there's no organization yet to attach these to,
-    // so stash the pages (tokens encrypted, same as at-rest storage) in the
-    // pending-signup cookie until account creation commits them for real.
+    // so stash the page (token encrypted, same as at-rest storage) in the
+    // pending-signup cookie until account creation commits it for real.
     if (pages.length === 0) {
       return redirectWith({
         error:
@@ -121,26 +121,38 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const metaPages: PendingMetaPage[] = [];
-    for (const page of pages) {
-      metaPages.push({
+    // Only one Page's worth of data fits comfortably in a cookie once
+    // tokens are encrypted - a user who administers several Pages (common
+    // for agencies, or anyone who co-manages a community page) would blow
+    // past the ~4KB per-cookie limit if every Page were included, and the
+    // browser silently drops the cookie rather than erroring, which looks
+    // exactly like the connection did nothing. Picking the Page with a
+    // linked Instagram Business account (falling back to the first Page)
+    // also matches what this product actually needs: one brand's Page +
+    // Instagram, not every Page the connecting user happens to help admin.
+    const page =
+      pages.find((candidate) => candidate.instagramBusinessAccount) ??
+      pages[0]!;
+
+    const metaPages: PendingMetaPage[] = [
+      {
         provider: "FACEBOOK",
         externalId: page.id,
         displayName: page.name,
         encryptedAccessToken: encryptToken(page.accessToken),
         tokenExpiresAt: tokenExpiresAt?.toISOString(),
-      });
+      },
+    ];
 
-      if (page.instagramBusinessAccount) {
-        metaPages.push({
-          provider: "INSTAGRAM",
-          externalId: page.instagramBusinessAccount.id,
-          displayName: page.instagramBusinessAccount.username,
-          profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
-          encryptedAccessToken: encryptToken(page.accessToken),
-          tokenExpiresAt: tokenExpiresAt?.toISOString(),
-        });
-      }
+    if (page.instagramBusinessAccount) {
+      metaPages.push({
+        provider: "INSTAGRAM",
+        externalId: page.instagramBusinessAccount.id,
+        displayName: page.instagramBusinessAccount.username,
+        profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
+        encryptedAccessToken: encryptToken(page.accessToken),
+        tokenExpiresAt: tokenExpiresAt?.toISOString(),
+      });
     }
 
     await setPendingSignupCookie({ ...pending!, metaPages });
