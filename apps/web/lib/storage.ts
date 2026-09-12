@@ -48,3 +48,26 @@ export async function uploadLogo(
 
   return `${publicUrl.replace(/\/$/, "")}/${key}`;
 }
+
+/** Uploads an AI-generated concept/content image (PNG) and returns its
+ * public URL. Filenames are unique per call so multiple concepts/posts
+ * never collide. */
+export async function uploadGeneratedImage(
+  organizationId: string,
+  imageBuffer: Buffer,
+): Promise<string> {
+  const bucket = requireEnv("STORAGE_BUCKET");
+  const publicUrl = requireEnv("STORAGE_PUBLIC_URL");
+  const key = `generated/${organizationId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
+
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: imageBuffer,
+      ContentType: "image/png",
+    }),
+  );
+
+  return `${publicUrl.replace(/\/$/, "")}/${key}`;
+}

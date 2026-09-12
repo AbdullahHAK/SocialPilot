@@ -1,9 +1,99 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { listContentPostsInRange } from "./content-post";
+import {
+  createContentPost,
+  listContentPostsInRange,
+  listDuePosts,
+  markContentPostFailed,
+  markContentPostPublished,
+} from "./content-post";
 import { prisma } from "./index";
 
 afterEach(async () => {
   await prisma.organization.deleteMany();
+});
+
+describe("createContentPost", () => {
+  it("creates a SCHEDULED post with the given fields", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+
+    const post = await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      caption: "New arrivals!",
+      hashtags: ["#new", "#sale"],
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-20T09:00:00Z"),
+    });
+
+    expect(post.status).toBe("SCHEDULED");
+    expect(post.type).toBe("POST");
+    expect(post.caption).toBe("New arrivals!");
+    expect(post.hashtags).toEqual(["#new", "#sale"]);
+  });
+});
+
+describe("listDuePosts", () => {
+  it("returns only SCHEDULED posts at or before the given time, with the account preloaded", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await prisma.socialAccount.create({
+      data: {
+        organizationId: org.id,
+        provider: "INSTAGRAM",
+        externalId: "ig_1",
+        accessToken: "enc",
+      },
+    });
+
+    const due = await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-01T00:00:00Z"),
+    });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/b.png"],
+      scheduledFor: new Date("2099-01-01T00:00:00Z"),
+    });
+
+    const results = await listDuePosts(new Date("2026-09-15T00:00:00Z"));
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.id).toBe(due.id);
+    expect(results[0]?.organization.socialAccounts).toHaveLength(1);
+  });
+});
+
+describe("markContentPostPublished / markContentPostFailed", () => {
+  it("marks a post published with its external id", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const post = await createContentPost({
+      organizationId: org.id,
+      platform: "FACEBOOK",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date(),
+    });
+
+    const updated = await markContentPostPublished(post.id, "fb_post_123");
+    expect(updated.status).toBe("PUBLISHED");
+    expect(updated.externalPostId).toBe("fb_post_123");
+    expect(updated.publishedAt).not.toBeNull();
+  });
+
+  it("marks a post failed with an error message", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const post = await createContentPost({
+      organizationId: org.id,
+      platform: "FACEBOOK",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date(),
+    });
+
+    const updated = await markContentPostFailed(post.id, "Graph API error");
+    expect(updated.status).toBe("FAILED");
+    expect(updated.errorMessage).toBe("Graph API error");
+  });
 });
 
 describe("listContentPostsInRange", () => {

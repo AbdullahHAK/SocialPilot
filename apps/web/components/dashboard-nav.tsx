@@ -7,6 +7,8 @@ import {
   LayoutDashboard,
   Palette,
   Share2,
+  Sparkles,
+  Wand2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/create", label: "Create Content", icon: Sparkles },
+  { href: "/dashboard/style", label: "Brand Style", icon: Wand2 },
   { href: "/dashboard/calendar", label: "Content Calendar", icon: CalendarDays },
   { href: "/dashboard/accounts", label: "Connected Accounts", icon: Share2 },
   { href: "/dashboard/brand", label: "Brand Settings", icon: Palette },

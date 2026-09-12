@@ -47,6 +47,14 @@ export const LOGO_ALLOWED_TYPES = [
   "image/svg+xml",
 ];
 
+export const REFERENCE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+export const REFERENCE_IMAGE_MAX_COUNT = 4;
+export const REFERENCE_IMAGE_ALLOWED_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+];
+
 export const scheduleSlotSchema = z.object({
   dayOfWeek: z.enum([
     "MONDAY",

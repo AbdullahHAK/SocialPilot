@@ -1,4 +1,52 @@
+import type { Platform } from "@prisma/client";
 import { prisma } from "./index";
+
+export interface CreateContentPostInput {
+  organizationId: string;
+  platform: Platform;
+  caption?: string;
+  hashtags?: string[];
+  imageUrls: string[];
+  scheduledFor: Date;
+}
+
+export function createContentPost(input: CreateContentPostInput) {
+  return prisma.contentPost.create({
+    data: {
+      organizationId: input.organizationId,
+      platform: input.platform,
+      type: "POST",
+      status: "SCHEDULED",
+      caption: input.caption,
+      hashtags: input.hashtags ?? [],
+      imageUrls: input.imageUrls,
+      scheduledFor: input.scheduledFor,
+    },
+  });
+}
+
+/** Posts due to publish now, with the connected social account for their
+ * platform preloaded so the worker doesn't need a second query per post. */
+export function listDuePosts(now: Date = new Date()) {
+  return prisma.contentPost.findMany({
+    where: { status: "SCHEDULED", scheduledFor: { lte: now } },
+    include: { organization: { include: { socialAccounts: true } } },
+  });
+}
+
+export function markContentPostPublished(id: string, externalPostId: string) {
+  return prisma.contentPost.update({
+    where: { id },
+    data: { status: "PUBLISHED", publishedAt: new Date(), externalPostId },
+  });
+}
+
+export function markContentPostFailed(id: string, errorMessage: string) {
+  return prisma.contentPost.update({
+    where: { id },
+    data: { status: "FAILED", errorMessage },
+  });
+}
 
 /**
  * Lists content posts whose scheduled or published date falls within

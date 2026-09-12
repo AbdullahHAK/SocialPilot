@@ -1,11 +1,13 @@
 import {
+  getBrandCreativeProfile,
   getBrandProfile,
   getPublishingSchedule,
   listSocialAccounts,
 } from "@socialpilot/db";
-import { CalendarClock, Palette, Share2 } from "lucide-react";
+import { CalendarClock, Palette, Share2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
 
@@ -15,8 +17,9 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [brandProfile, accounts, schedule] = await Promise.all([
+  const [brandProfile, creativeProfile, accounts, schedule] = await Promise.all([
     getBrandProfile(session.organizationId),
+    getBrandCreativeProfile(session.organizationId),
     listSocialAccounts(session.organizationId),
     getPublishingSchedule(session.organizationId),
   ]);
@@ -76,14 +79,23 @@ export default async function DashboardPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Content Calendar</CardTitle>
+        <CardHeader className="flex-row items-center gap-3 space-y-0">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="size-4.5" />
+          </span>
+          <CardTitle>
+            {creativeProfile ? "Create your next post" : "Create your first post"}
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-muted-foreground">
-            Your content calendar and publishing activity will appear here
-            once the automated content pipeline is live.
+            {creativeProfile
+              ? "Describe what you want and SocialPilot's AI will generate on-brand concepts for you to review."
+              : "Describe what you want to create, and SocialPilot's AI will generate three concepts to choose your visual style from."}
           </p>
+          <Button asChild className="ml-auto shrink-0">
+            <Link href="/dashboard/create">Create Content</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

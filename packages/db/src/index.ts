@@ -19,3 +19,5 @@ export * from "./social-account";
 export * from "./publishing-schedule";
 export * from "./content-post";
 export * from "./subscription";
+export * from "./creative-concept";
+export * from "./brand-creative-profile";
