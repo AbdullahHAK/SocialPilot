@@ -240,11 +240,18 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
           Back
         </Button>
         {isLastStep ? (
-          <Button type="submit" disabled={isPending}>
+          // `key` forces React to mount a fresh element here rather than
+          // mutating the Next button in place: without it, the same DOM
+          // node's type flips button -> submit as part of the very click
+          // that turns Next into Finish, and the browser can treat that
+          // click as activating the now-submit button, silently skipping
+          // the review step and submitting onboarding one click early.
+          <Button key="finish" type="submit" disabled={isPending}>
             Finish
           </Button>
         ) : (
           <Button
+            key="next"
             type="button"
             onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
           >

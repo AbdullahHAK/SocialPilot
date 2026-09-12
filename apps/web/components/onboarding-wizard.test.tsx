@@ -44,4 +44,25 @@ describe("OnboardingWizard", () => {
       screen.queryByRole("button", { name: /^next$/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("does not submit when the last Next click turns the button into Finish", () => {
+    // Regression test: Next and Finish previously shared one DOM node (same
+    // position, no `key`), so React mutated its `type` from "button" to
+    // "submit" in place as part of the very click that reveals the review
+    // step. A real browser can treat that click as activating the
+    // now-submit button, silently skipping the review step. Distinct
+    // `key`s force a fresh element instead. jsdom's synthetic events don't
+    // reproduce that native timing quirk, so this only guards the visible
+    // side effect (no premature action call); the real browser-level
+    // regression check is the Playwright E2E onboarding flow.
+    const action = vi.fn();
+    render(<OnboardingWizard action={action} />);
+
+    for (let i = 0; i < 4; i++) {
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    }
+
+    expect(screen.getByRole("button", { name: /finish/i })).toBeVisible();
+    expect(action).not.toHaveBeenCalled();
+  });
 });
