@@ -6,9 +6,12 @@ import { computeUpcomingSlotOccurrences } from "@/lib/schedule-dates";
 // Keeps only the next couple of days topped up with content, generated
 // just ahead of when it's needed - not a whole month upfront. If a
 // customer cancels, at most this much gets wasted, never sixty images'
-// worth. Vercel Cron calls this on a schedule (see vercel.json).
+// worth. Vercel Cron calls this once a day (see vercel.json - Hobby plan
+// caps cron frequency at once/day; the 48h lookahead comfortably covers
+// the gap between runs). Raise MAX_GENERATED_PER_ORG_PER_RUN or the cron
+// frequency together if this project moves to a Pro plan.
 const LOOKAHEAD_HOURS = 48;
-const MAX_GENERATED_PER_ORG_PER_RUN = 3;
+const MAX_GENERATED_PER_ORG_PER_RUN = 6;
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
