@@ -72,13 +72,17 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
             placeholder="e.g. Cafe, Clothing brand, Fitness studio"
           />
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Tell us about your business</Label>
             <Textarea
               id="description"
               name="description"
-              placeholder="What does your business do?"
-              rows={3}
+              placeholder="e.g. I own a crispy chicken restaurant. I want daily content that highlights the quality and deliciousness of our food, professional and appetizing visuals, and a bold, memorable tone."
+              rows={4}
             />
+            <p className="text-xs text-muted-foreground">
+              Write naturally — leave category or tone blank above and
+              SocialPilot&apos;s AI will fill them in from this description.
+            </p>
           </div>
         </div>
       </Step>

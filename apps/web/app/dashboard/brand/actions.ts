@@ -2,6 +2,7 @@
 
 import { upsertBrandProfile } from "@socialpilot/db";
 import { revalidatePath } from "next/cache";
+import { analyzeBrandDescription } from "@/lib/openai";
 import { getSession } from "@/lib/session";
 import { uploadLogo } from "@/lib/storage";
 import {
@@ -63,15 +64,37 @@ export async function updateBrandProfileAction(
     }
   }
 
+  let category = parsed.data.category || undefined;
+  let tone = parsed.data.tone || undefined;
+  let productsServices = parsed.data.productsServices;
+
+  // The description is meant to work on its own - a business owner who
+  // just describes their business in plain words shouldn't also have to
+  // fill in category/tone/products by hand. Only fills gaps: anything the
+  // user already typed into those fields directly is left alone.
+  const description = parsed.data.description;
+  if (description && (!category || !tone || productsServices.length === 0)) {
+    try {
+      const analyzed = await analyzeBrandDescription(description);
+      category ??= analyzed.category ?? undefined;
+      tone ??= analyzed.tone ?? undefined;
+      if (productsServices.length === 0 && analyzed.productsServices.length > 0) {
+        productsServices = analyzed.productsServices;
+      }
+    } catch (error) {
+      console.error("Brand description analysis failed", error);
+    }
+  }
+
   await upsertBrandProfile({
     organizationId: session.organizationId,
     businessName: parsed.data.businessName,
-    category: parsed.data.category || undefined,
+    category,
     description: parsed.data.description || undefined,
     colors: parsed.data.colors,
     language: parsed.data.language,
-    tone: parsed.data.tone || undefined,
-    productsServices: parsed.data.productsServices,
+    tone,
+    productsServices,
     ...(logoUrl ? { logoUrl } : {}),
   });
 

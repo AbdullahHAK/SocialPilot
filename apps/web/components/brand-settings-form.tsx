@@ -98,14 +98,19 @@ export function BrandSettingsForm({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Tell us about your business</Label>
             <Textarea
               id="description"
               name="description"
               defaultValue={defaults.description}
-              rows={3}
-              placeholder="What does your business do?"
+              rows={4}
+              placeholder="e.g. I own a crispy chicken restaurant. I want daily content that highlights the quality and deliciousness of our food, professional and appetizing visuals, and a bold, memorable tone that makes customers think of us first."
             />
+            <p className="text-xs text-muted-foreground">
+              Write naturally — SocialPilot&apos;s AI reads this to understand
+              your category, tone, and products, and fills those in below
+              automatically if you leave them blank.
+            </p>
           </div>
         </CardContent>
       </Card>

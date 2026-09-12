@@ -2,6 +2,7 @@
 
 import { upsertBrandProfile } from "@socialpilot/db";
 import { redirect } from "next/navigation";
+import { analyzeBrandDescription } from "@/lib/openai";
 import { getSession } from "@/lib/session";
 import { uploadLogo } from "@/lib/storage";
 import {
@@ -62,15 +63,36 @@ export async function saveBrandProfileAction(
     }
   }
 
+  let category = parsed.data.category || undefined;
+  let tone = parsed.data.tone || undefined;
+  let productsServices = parsed.data.productsServices;
+
+  // Same free-text-first behavior as editing this later in Brand Settings -
+  // a business owner who describes their business in plain words during
+  // onboarding shouldn't also have to fill in category/tone/products.
+  const description = parsed.data.description;
+  if (description && (!category || !tone || productsServices.length === 0)) {
+    try {
+      const analyzed = await analyzeBrandDescription(description);
+      category ??= analyzed.category ?? undefined;
+      tone ??= analyzed.tone ?? undefined;
+      if (productsServices.length === 0 && analyzed.productsServices.length > 0) {
+        productsServices = analyzed.productsServices;
+      }
+    } catch (error) {
+      console.error("Brand description analysis failed", error);
+    }
+  }
+
   await upsertBrandProfile({
     organizationId: session.organizationId,
     businessName: parsed.data.businessName,
-    category: parsed.data.category || undefined,
+    category,
     description: parsed.data.description || undefined,
     colors: parsed.data.colors,
     language: parsed.data.language,
-    tone: parsed.data.tone || undefined,
-    productsServices: parsed.data.productsServices,
+    tone,
+    productsServices,
     ...(logoUrl ? { logoUrl } : {}),
   });
 
