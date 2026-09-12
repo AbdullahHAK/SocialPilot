@@ -25,3 +25,12 @@ export async function upsertBrandProfile(input: UpsertBrandProfileInput) {
 export function getBrandProfile(organizationId: string) {
   return prisma.brandProfile.findUnique({ where: { organizationId } });
 }
+
+/** Sets the approved logo on its own, without needing every other brand
+ * field on hand - used after an AI-generated logo concept is approved. */
+export function setBrandLogo(organizationId: string, logoUrl: string) {
+  return prisma.brandProfile.update({
+    where: { organizationId },
+    data: { logoUrl },
+  });
+}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getBrandProfile, upsertBrandProfile } from "./brand-profile";
+import { getBrandProfile, setBrandLogo, upsertBrandProfile } from "./brand-profile";
 import { prisma } from "./index";
 
 afterEach(async () => {
@@ -59,5 +59,23 @@ describe("getBrandProfile", () => {
   it("returns null when no profile exists yet", async () => {
     const org = await prisma.organization.create({ data: { name: "Acme" } });
     await expect(getBrandProfile(org.id)).resolves.toBeNull();
+  });
+});
+
+describe("setBrandLogo", () => {
+  it("updates only the logo, leaving other fields untouched", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await upsertBrandProfile({
+      organizationId: org.id,
+      businessName: "Acme Coffee Co",
+      language: "en",
+      tone: "Warm and friendly",
+    });
+
+    await setBrandLogo(org.id, "https://example.com/logo.png");
+
+    const profile = await getBrandProfile(org.id);
+    expect(profile?.logoUrl).toBe("https://example.com/logo.png");
+    expect(profile?.tone).toBe("Warm and friendly");
   });
 });

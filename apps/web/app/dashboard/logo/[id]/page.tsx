@@ -1,0 +1,61 @@
+import { getCreativeConcept } from "@socialpilot/db";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getSession } from "@/lib/session";
+import { approveLogoAction } from "../actions";
+
+export default async function LogoReviewPage({
+  params,
+}: PageProps<"/dashboard/logo/[id]">) {
+  const session = await getSession();
+  if (!session) {
+    redirect("/login");
+  }
+
+  const { id } = await params;
+  const concept = await getCreativeConcept(session.organizationId, id);
+  if (!concept) {
+    notFound();
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Choose your logo
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Pick the one that fits your brand — it&apos;ll be used consistently
+          across future content, never redesigned automatically.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        {concept.imageUrls.map((url) => (
+          <Card key={url} className="overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt="Generated logo concept"
+              className="aspect-square w-full bg-white object-contain p-4"
+            />
+            <CardContent className="p-3">
+              <form action={approveLogoAction}>
+                <input type="hidden" name="imageUrl" value={url} />
+                <Button type="submit" className="w-full">
+                  Use this logo
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Button asChild variant="outline" className="w-fit">
+        <Link href="/dashboard/logo">Try a different description</Link>
+      </Button>
+    </div>
+  );
+}

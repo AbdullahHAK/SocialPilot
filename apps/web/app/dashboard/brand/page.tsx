@@ -1,4 +1,5 @@
 import { getBrandProfile } from "@socialpilot/db";
+import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -7,14 +8,19 @@ import {
 } from "@/components/brand-settings-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { asStringArray } from "@/lib/brand-fields";
 import { getSession } from "@/lib/session";
 import { updateBrandProfileAction } from "./actions";
 
-export default async function BrandSettingsPage() {
+export default async function BrandSettingsPage({
+  searchParams,
+}: PageProps<"/dashboard/brand">) {
   const session = await getSession();
   if (!session) {
     redirect("/login");
   }
+
+  const { logoApproved } = await searchParams;
 
   const profile = await getBrandProfile(session.organizationId);
 
@@ -49,16 +55,10 @@ export default async function BrandSettingsPage() {
     category: profile.category ?? "",
     description: profile.description ?? "",
     logoUrl: profile.logoUrl,
-    colors: Array.isArray(profile.colors)
-      ? profile.colors.filter((c): c is string => typeof c === "string")
-      : [],
+    colors: asStringArray(profile.colors) ?? [],
     language: profile.language,
     tone: profile.tone ?? "",
-    productsServices: Array.isArray(profile.productsServices)
-      ? profile.productsServices.filter(
-          (p): p is string => typeof p === "string",
-        )
-      : [],
+    productsServices: asStringArray(profile.productsServices) ?? [],
   };
 
   return (
@@ -71,6 +71,26 @@ export default async function BrandSettingsPage() {
           This is what SocialPilot uses to keep your content on-brand.
         </p>
       </div>
+
+      {logoApproved === "1" && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          <CheckCircle2 className="size-4 shrink-0" />
+          Logo approved — it&apos;ll be used across future content.
+        </div>
+      )}
+
+      {!defaults.logoUrl && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Don&apos;t have a logo yet?{" "}
+          <Link
+            href="/dashboard/logo"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Generate one with AI
+          </Link>
+        </div>
+      )}
+
       <BrandSettingsForm action={updateBrandProfileAction} defaults={defaults} />
     </div>
   );
