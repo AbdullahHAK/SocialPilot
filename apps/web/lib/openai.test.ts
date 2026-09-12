@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { generateCaption, generateImage } from "./openai";
+import { analyzeBrandDescription, generateCaption, generateImage } from "./openai";
 
 beforeEach(() => {
   vi.stubEnv("OPENAI_API_KEY", "test-key");
@@ -100,5 +100,63 @@ describe("generateCaption", () => {
 
     expect(result.caption).toBe("Weekend special is here!");
     expect(result.hashtags).toEqual(["#weekendoffer", "#burger"]);
+  });
+});
+
+describe("analyzeBrandDescription", () => {
+  it("parses structured brand details from the model response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    category: "Fast food restaurant",
+                    tone: "Bold and playful",
+                    productsServices: ["Crispy chicken burger", "Fries"],
+                    language: "Arabic",
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const result = await analyzeBrandDescription(
+      "We sell crispy chicken burgers, want bold content in Arabic",
+    );
+
+    expect(result).toEqual({
+      category: "Fast food restaurant",
+      tone: "Bold and playful",
+      productsServices: ["Crispy chicken burger", "Fries"],
+      language: "Arabic",
+    });
+  });
+
+  it("defaults missing fields to null/empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: "{}" } }] }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const result = await analyzeBrandDescription("A small shop");
+    expect(result).toEqual({
+      category: null,
+      tone: null,
+      productsServices: [],
+      language: null,
+    });
   });
 });

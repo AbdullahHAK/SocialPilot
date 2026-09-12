@@ -1,10 +1,11 @@
 import { getCreativeConcept } from "@socialpilot/db";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { RegenerateConceptForm } from "@/components/regenerate-concept-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
-import { approveConceptAction } from "../actions";
+import { approveConceptAction, regenerateConceptAction } from "../actions";
 
 export default async function ConceptReviewPage({
   params,
@@ -59,6 +60,8 @@ export default async function ConceptReviewPage({
           </Card>
         ))}
       </div>
+
+      <RegenerateConceptForm action={regenerateConceptAction} conceptId={concept.id} />
 
       <Button asChild variant="outline" className="w-fit">
         <Link href="/dashboard/create">Try a different prompt</Link>

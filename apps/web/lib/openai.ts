@@ -108,7 +108,7 @@ export async function generateCaption(
         {
           role: "system",
           content:
-            'You write short, engaging Instagram/Facebook captions with relevant hashtags for small businesses. Respond ONLY with JSON matching {"caption": string, "hashtags": string[]}. Hashtags should not include the "#" character.',
+            'You write short, engaging Instagram/Facebook captions with relevant hashtags for small businesses. Default to building brand recognition and making the business memorable - do not invent or mention a specific price, discount percentage, or limited-time deal unless the post topic explicitly names one; when no price is given, prefer broader phrases like "special offer available" or "discover our menu". Respond ONLY with JSON matching {"caption": string, "hashtags": string[]}. Hashtags should not include the "#" character.',
         },
         {
           role: "user",
@@ -139,5 +139,66 @@ export async function generateCaption(
   return {
     caption: parsed.caption ?? "",
     hashtags: (parsed.hashtags ?? []).map((tag) => `#${tag.replace(/^#/, "")}`),
+  };
+}
+
+export interface AnalyzedBrandDetails {
+  category: string | null;
+  tone: string | null;
+  productsServices: string[];
+  language: string | null;
+}
+
+/** Lets a business owner describe their business in their own words instead
+ * of filling out separate rigid fields - this fills in the structured
+ * fields (category, tone, products) from that free text. Callers should
+ * treat the result as a starting point, not overwrite fields the user has
+ * already filled in manually. */
+export async function analyzeBrandDescription(
+  description: string,
+): Promise<AnalyzedBrandDetails> {
+  const apiKey = requireEnv("OPENAI_API_KEY");
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: TEXT_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            'Extract structured brand details from a business owner\'s freeform description of their business. Respond ONLY with JSON matching {"category": string|null, "tone": string|null, "productsServices": string[], "language": string|null}. "category" is a short business category (e.g. "Fast food restaurant"). "tone" is a short content style description (e.g. "Warm and friendly" or "Bold and playful"). "productsServices" lists specific products or services mentioned, empty array if none. "language" is the name of the language the owner wants their content written in, if stated or clearly implied, otherwise null.',
+        },
+        { role: "user", content: description },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`OpenAI brand analysis failed (${res.status}): ${body}`);
+  }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("OpenAI brand analysis: no content returned");
+  }
+
+  const parsed = JSON.parse(content) as Partial<AnalyzedBrandDetails>;
+  return {
+    category: parsed.category ?? null,
+    tone: parsed.tone ?? null,
+    productsServices: Array.isArray(parsed.productsServices)
+      ? parsed.productsServices.filter((item): item is string => typeof item === "string")
+      : [],
+    language: parsed.language ?? null,
   };
 }
