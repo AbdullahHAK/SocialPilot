@@ -135,14 +135,19 @@ export default async function CalendarPage({
                   {dayPosts.map((post) => (
                     <div
                       key={post.id}
-                      className="flex items-center gap-1 rounded-md bg-accent/60 px-1.5 py-1 text-[11px] font-medium"
+                      className="flex items-center justify-center gap-1 rounded-md bg-accent/60 px-1.5 py-1 text-[11px] font-medium sm:justify-start"
+                      title={post.caption ?? post.type}
                     >
                       {post.platform === "INSTAGRAM" ? (
                         <InstagramIcon className="size-3 shrink-0" />
                       ) : (
                         <FacebookIcon className="size-3 shrink-0" />
                       )}
-                      <span className="truncate">
+                      {/* Below `sm`, cells are only ~35px wide - a couple of
+                          truncated letters read as broken, not helpful, so
+                          just show the platform icon as a glance indicator
+                          and rely on the title tooltip / tapping through. */}
+                      <span className="hidden min-w-0 truncate sm:inline">
                         {post.caption ?? post.type}
                       </span>
                     </div>
