@@ -4,6 +4,7 @@ import {
   exchangeForLongLivedToken,
   getManagedPagesWithInstagram,
   getMetaOAuthUrl,
+  getPageById,
 } from "./meta";
 
 beforeEach(() => {
@@ -137,5 +138,39 @@ describe("getManagedPagesWithInstagram", () => {
         instagramBusinessAccount: undefined,
       },
     ]);
+  });
+});
+
+describe("getPageById", () => {
+  it("fetches a single Page's token and linked Instagram account", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "page-1",
+          name: "Acme Coffee",
+          access_token: "page-token-1",
+          instagram_business_account: {
+            id: "ig-1",
+            username: "acmecoffee",
+            profile_picture_url: "https://example.com/pic.jpg",
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const page = await getPageById("user-token", "page-1");
+    expect(page).toEqual({
+      id: "page-1",
+      name: "Acme Coffee",
+      accessToken: "page-token-1",
+      instagramBusinessAccount: {
+        id: "ig-1",
+        username: "acmecoffee",
+        profilePictureUrl: "https://example.com/pic.jpg",
+      },
+    });
+    expect(String(fetchMock.mock.calls[0]![0])).toContain("/page-1?");
   });
 });

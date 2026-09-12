@@ -143,3 +143,46 @@ export async function getManagedPagesWithInstagram(
       : undefined,
   }));
 }
+
+interface GraphSinglePageResponse {
+  id: string;
+  name: string;
+  access_token: string;
+  instagram_business_account?: {
+    id: string;
+    username?: string;
+    profile_picture_url?: string;
+  };
+}
+
+/** Fetches one specific Page's access token and linked Instagram account -
+ * used when a user administers multiple Pages and has picked one, so we
+ * don't have to hold every Page's token around while they decide. */
+export async function getPageById(
+  userAccessToken: string,
+  pageId: string,
+): Promise<ManagedPage> {
+  const params = new URLSearchParams({
+    access_token: userAccessToken,
+    fields:
+      "id,name,access_token,instagram_business_account{id,username,profile_picture_url}",
+  });
+  const res = await fetch(`${GRAPH_API_BASE}/${pageId}?${params}`);
+  const page = await parseGraphResponse<GraphSinglePageResponse>(
+    res,
+    "Fetching Facebook Page",
+  );
+
+  return {
+    id: page.id,
+    name: page.name,
+    accessToken: page.access_token,
+    instagramBusinessAccount: page.instagram_business_account
+      ? {
+          id: page.instagram_business_account.id,
+          username: page.instagram_business_account.username,
+          profilePictureUrl: page.instagram_business_account.profile_picture_url,
+        }
+      : undefined,
+  };
+}

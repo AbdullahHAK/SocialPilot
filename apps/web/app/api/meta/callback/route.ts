@@ -10,6 +10,7 @@ import {
   exchangeForLongLivedToken,
   getManagedPagesWithInstagram,
 } from "@/lib/meta";
+import { setMetaPageChoiceCookie } from "@/lib/meta-page-choice";
 import {
   getPendingSignup,
   setPendingSignupCookie,
@@ -72,48 +73,6 @@ export async function GET(request: NextRequest) {
       ? new Date(Date.now() + expiresInSeconds * 1000)
       : undefined;
 
-    if (session) {
-      // Instagram publishing/reading for a Page's linked IG account is done
-      // with the Page's own access token, not a separate "IG token" - Meta
-      // doesn't issue one.
-      let connectedCount = 0;
-      for (const page of pages) {
-        await upsertSocialAccount({
-          organizationId: session.organizationId,
-          provider: "FACEBOOK",
-          externalId: page.id,
-          displayName: page.name,
-          accessToken: page.accessToken,
-          tokenExpiresAt,
-        });
-        connectedCount++;
-
-        if (page.instagramBusinessAccount) {
-          await upsertSocialAccount({
-            organizationId: session.organizationId,
-            provider: "INSTAGRAM",
-            externalId: page.instagramBusinessAccount.id,
-            displayName: page.instagramBusinessAccount.username,
-            profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
-            accessToken: page.accessToken,
-            tokenExpiresAt,
-          });
-          connectedCount++;
-        }
-      }
-
-      if (connectedCount === 0) {
-        return redirectWith({
-          error:
-            "No Facebook Pages found. Make sure you selected a Page when connecting.",
-        });
-      }
-      return redirectWith({ connected: String(connectedCount) });
-    }
-
-    // Pre-account signup: there's no organization yet to attach these to,
-    // so stash the page (token encrypted, same as at-rest storage) in the
-    // pending-signup cookie until account creation commits it for real.
     if (pages.length === 0) {
       return redirectWith({
         error:
@@ -121,19 +80,62 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Only one Page's worth of data fits comfortably in a cookie once
-    // tokens are encrypted - a user who administers several Pages (common
-    // for agencies, or anyone who co-manages a community page) would blow
-    // past the ~4KB per-cookie limit if every Page were included, and the
-    // browser silently drops the cookie rather than erroring, which looks
-    // exactly like the connection did nothing. Picking the Page with a
-    // linked Instagram Business account (falling back to the first Page)
-    // also matches what this product actually needs: one brand's Page +
-    // Instagram, not every Page the connecting user happens to help admin.
-    const page =
-      pages.find((candidate) => candidate.instagramBusinessAccount) ??
-      pages[0]!;
+    // Multiple Pages: ask which one, rather than guessing or (for the
+    // pre-account path) trying to cram every Page's encrypted token into a
+    // single cookie - a handful of Pages already blows past the ~4KB
+    // per-cookie limit browsers enforce, and it silently gets dropped.
+    if (pages.length > 1) {
+      await setMetaPageChoiceCookie({
+        encryptedUserToken: encryptToken(longLivedToken),
+        choices: pages.map((page) => ({
+          id: page.id,
+          name: page.name,
+          hasInstagram: Boolean(page.instagramBusinessAccount),
+        })),
+        target: session ? "session" : "pending",
+      });
+      const response = NextResponse.redirect(
+        new URL("/connect/choose-page", request.url),
+      );
+      response.cookies.delete(META_OAUTH_STATE_COOKIE);
+      return response;
+    }
 
+    const page = pages[0]!;
+
+    if (session) {
+      // Instagram publishing/reading for a Page's linked IG account is done
+      // with the Page's own access token, not a separate "IG token" - Meta
+      // doesn't issue one.
+      await upsertSocialAccount({
+        organizationId: session.organizationId,
+        provider: "FACEBOOK",
+        externalId: page.id,
+        displayName: page.name,
+        accessToken: page.accessToken,
+        tokenExpiresAt,
+      });
+      let connectedCount = 1;
+
+      if (page.instagramBusinessAccount) {
+        await upsertSocialAccount({
+          organizationId: session.organizationId,
+          provider: "INSTAGRAM",
+          externalId: page.instagramBusinessAccount.id,
+          displayName: page.instagramBusinessAccount.username,
+          profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
+          accessToken: page.accessToken,
+          tokenExpiresAt,
+        });
+        connectedCount++;
+      }
+
+      return redirectWith({ connected: String(connectedCount) });
+    }
+
+    // Pre-account signup: there's no organization yet to attach this to,
+    // so stash the page (token encrypted, same as at-rest storage) in the
+    // pending-signup cookie until account creation commits it for real.
     const metaPages: PendingMetaPage[] = [
       {
         provider: "FACEBOOK",
