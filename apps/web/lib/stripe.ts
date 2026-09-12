@@ -20,6 +20,18 @@ export const STRIPE_PRICE_IDS = {
   YEARLY: () => requireEnv("STRIPE_PRICE_ID_YEARLY"),
 } as const;
 
+/** Derives our plan from the Stripe price actually purchased, rather than
+ * trusting a client-suppliable value, since this feeds both the webhook and
+ * the pre-account checkout-completion redirect. */
+export function planForPriceId(
+  priceId: string | undefined,
+): "MONTHLY" | "YEARLY" | null {
+  if (!priceId) return null;
+  if (priceId === process.env.STRIPE_PRICE_ID_MONTHLY) return "MONTHLY";
+  if (priceId === process.env.STRIPE_PRICE_ID_YEARLY) return "YEARLY";
+  return null;
+}
+
 export function mapStripeStatusToSubscriptionStatus(
   status: Stripe.Subscription.Status,
 ): "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE" {

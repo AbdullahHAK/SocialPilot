@@ -1,14 +1,21 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getMetaOAuthUrl } from "@/lib/meta";
+import { getPendingSignup } from "@/lib/pending-signup";
 import { getSession } from "@/lib/session";
 
 export const META_OAUTH_STATE_COOKIE = "sp_meta_oauth_state";
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Reachable two ways: an existing customer connecting/reconnecting from
+  // the dashboard (real session), or a new visitor mid-signup who has paid
+  // but has no organization yet (pending-signup cookie only).
+  const [session, pending] = await Promise.all([
+    getSession(),
+    getPendingSignup(),
+  ]);
+  if (!session && !pending) {
+    return NextResponse.redirect(new URL("/pricing", request.url));
   }
 
   const state = randomBytes(16).toString("hex");

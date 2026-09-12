@@ -1,20 +1,17 @@
 import { syncSubscriptionFromStripe } from "@socialpilot/db";
 import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
-import { getStripeClient, mapStripeStatusToSubscriptionStatus } from "@/lib/stripe";
+import {
+  getStripeClient,
+  mapStripeStatusToSubscriptionStatus,
+  planForPriceId,
+} from "@/lib/stripe";
 
 const SUBSCRIPTION_EVENTS = new Set([
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
 ]);
-
-function planForPriceId(priceId: string | undefined): "MONTHLY" | "YEARLY" | null {
-  if (!priceId) return null;
-  if (priceId === process.env.STRIPE_PRICE_ID_MONTHLY) return "MONTHLY";
-  if (priceId === process.env.STRIPE_PRICE_ID_YEARLY) return "YEARLY";
-  return null;
-}
 
 export async function POST(request: NextRequest) {
   const signature = request.headers.get("stripe-signature");

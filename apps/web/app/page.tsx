@@ -54,9 +54,9 @@ const FEATURES = [
 const STEPS = [
   {
     number: "01",
-    title: "Tell us about your business",
+    title: "Choose your plan",
     description:
-      "Brand name, category, colors, logo, products, and tone — set up once during onboarding.",
+      "Pick monthly or yearly billing and complete checkout — takes under a minute.",
   },
   {
     number: "02",
@@ -66,15 +66,15 @@ const STEPS = [
   },
   {
     number: "03",
-    title: "Approve your creative style",
+    title: "Tell us about your business",
     description:
-      "Describe what you want, review AI-generated concepts, and approve the direction that fits your brand.",
+      "Brand name, category, colors, logo, products, and tone — set up once during onboarding.",
   },
   {
     number: "04",
-    title: "Set your schedule and go",
+    title: "Approve your style and go",
     description:
-      "Pick your days and times. SocialPilot generates and publishes content automatically from there.",
+      "Review AI-generated concepts, approve the direction, and set your schedule. SocialPilot takes it from there.",
   },
 ] as const;
 
@@ -89,7 +89,7 @@ export default function Home() {
               <Link href="/login">Log in</Link>
             </Button>
             <Button asChild>
-              <Link href="/signup">Get started</Link>
+              <Link href="/pricing">Get started</Link>
             </Button>
           </nav>
         </div>
@@ -122,14 +122,14 @@ export default function Home() {
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg">
-                  <Link href="/signup">Get started free</Link>
+                  <Link href="/pricing">Get started</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link href="/login">Log in</Link>
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                No credit card required to set up your brand and schedule.
+                Cancel anytime. Setup takes about 5 minutes.
               </p>
             </div>
 
@@ -251,7 +251,7 @@ export default function Home() {
                 Connect your accounts and let SocialPilot take it from here.
               </h2>
               <Button asChild size="lg" variant="secondary">
-                <Link href="/signup">Get started free</Link>
+                <Link href="/pricing">Get started</Link>
               </Button>
             </div>
           </div>

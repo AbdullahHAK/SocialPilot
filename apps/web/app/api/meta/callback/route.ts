@@ -1,4 +1,8 @@
-import { SocialAccountAlreadyConnectedError, upsertSocialAccount } from "@socialpilot/db";
+import {
+  encryptToken,
+  SocialAccountAlreadyConnectedError,
+  upsertSocialAccount,
+} from "@socialpilot/db";
 import { NextResponse, type NextRequest } from "next/server";
 import { META_OAUTH_STATE_COOKIE } from "@/app/api/meta/connect/route";
 import {
@@ -6,18 +10,31 @@ import {
   exchangeForLongLivedToken,
   getManagedPagesWithInstagram,
 } from "@/lib/meta";
+import {
+  getPendingSignup,
+  setPendingSignupCookie,
+  type PendingMetaPage,
+} from "@/lib/pending-signup";
 import { getSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  const [session, pending] = await Promise.all([
+    getSession(),
+    getPendingSignup(),
+  ]);
+  if (!session && !pending) {
+    return NextResponse.redirect(new URL("/pricing", request.url));
   }
 
-  const accountsUrl = new URL("/dashboard/accounts", request.url);
+  // Existing customers land back on their accounts list; a mid-signup
+  // visitor (no session yet) lands back on /connect to see the result.
+  const fallbackUrl = new URL(
+    session ? "/dashboard/accounts" : "/connect",
+    request.url,
+  );
 
   function redirectWith(params: Record<string, string>): NextResponse {
-    const url = new URL(accountsUrl);
+    const url = new URL(fallbackUrl);
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
@@ -55,42 +72,79 @@ export async function GET(request: NextRequest) {
       ? new Date(Date.now() + expiresInSeconds * 1000)
       : undefined;
 
-    let connectedCount = 0;
-    for (const page of pages) {
+    if (session) {
       // Instagram publishing/reading for a Page's linked IG account is done
       // with the Page's own access token, not a separate "IG token" - Meta
       // doesn't issue one.
-      await upsertSocialAccount({
-        organizationId: session.organizationId,
-        provider: "FACEBOOK",
-        externalId: page.id,
-        displayName: page.name,
-        accessToken: page.accessToken,
-        tokenExpiresAt,
-      });
-      connectedCount++;
-
-      if (page.instagramBusinessAccount) {
+      let connectedCount = 0;
+      for (const page of pages) {
         await upsertSocialAccount({
           organizationId: session.organizationId,
-          provider: "INSTAGRAM",
-          externalId: page.instagramBusinessAccount.id,
-          displayName: page.instagramBusinessAccount.username,
-          profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
+          provider: "FACEBOOK",
+          externalId: page.id,
+          displayName: page.name,
           accessToken: page.accessToken,
           tokenExpiresAt,
         });
         connectedCount++;
+
+        if (page.instagramBusinessAccount) {
+          await upsertSocialAccount({
+            organizationId: session.organizationId,
+            provider: "INSTAGRAM",
+            externalId: page.instagramBusinessAccount.id,
+            displayName: page.instagramBusinessAccount.username,
+            profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
+            accessToken: page.accessToken,
+            tokenExpiresAt,
+          });
+          connectedCount++;
+        }
       }
+
+      if (connectedCount === 0) {
+        return redirectWith({
+          error:
+            "No Facebook Pages found. Make sure you selected a Page when connecting.",
+        });
+      }
+      return redirectWith({ connected: String(connectedCount) });
     }
 
-    if (connectedCount === 0) {
+    // Pre-account signup: there's no organization yet to attach these to,
+    // so stash the pages (tokens encrypted, same as at-rest storage) in the
+    // pending-signup cookie until account creation commits them for real.
+    if (pages.length === 0) {
       return redirectWith({
         error:
           "No Facebook Pages found. Make sure you selected a Page when connecting.",
       });
     }
-    return redirectWith({ connected: String(connectedCount) });
+
+    const metaPages: PendingMetaPage[] = [];
+    for (const page of pages) {
+      metaPages.push({
+        provider: "FACEBOOK",
+        externalId: page.id,
+        displayName: page.name,
+        encryptedAccessToken: encryptToken(page.accessToken),
+        tokenExpiresAt: tokenExpiresAt?.toISOString(),
+      });
+
+      if (page.instagramBusinessAccount) {
+        metaPages.push({
+          provider: "INSTAGRAM",
+          externalId: page.instagramBusinessAccount.id,
+          displayName: page.instagramBusinessAccount.username,
+          profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
+          encryptedAccessToken: encryptToken(page.accessToken),
+          tokenExpiresAt: tokenExpiresAt?.toISOString(),
+        });
+      }
+    }
+
+    await setPendingSignupCookie({ ...pending!, metaPages });
+    return redirectWith({});
   } catch (error) {
     if (error instanceof SocialAccountAlreadyConnectedError) {
       return redirectWith({
