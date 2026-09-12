@@ -106,6 +106,10 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
               onChange={(e) => setLogoName(e.target.files?.[0]?.name ?? null)}
               className="sr-only"
             />
+            <p className="text-xs text-muted-foreground">
+              Don&apos;t have a logo yet? Skip this for now — you can
+              generate one with AI from the Logo page once setup is done.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

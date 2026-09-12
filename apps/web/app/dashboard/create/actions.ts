@@ -47,6 +47,14 @@ export async function generateConceptsAction(
     redirect("/login");
   }
 
+  // Enforced here too, not just by the page gating which form it shows -
+  // a business can't get on-brand content without a logo to be consistent
+  // with.
+  const brand = await getBrandProfile(session.organizationId);
+  if (!brand?.logoUrl) {
+    redirect("/dashboard/create");
+  }
+
   const prompt = formData.get("prompt")?.toString().trim();
   if (!prompt) {
     return { error: "Describe what you want to create." };
@@ -75,13 +83,10 @@ export async function generateConceptsAction(
     files.map(async (file) => Buffer.from(await file.arrayBuffer())),
   );
 
-  const brand = await getBrandProfile(session.organizationId);
-  if (brand?.logoUrl) {
-    try {
-      referenceImages.push(await fetchImageBuffer(brand.logoUrl));
-    } catch (error) {
-      console.error("Fetching approved logo for reference failed", error);
-    }
+  try {
+    referenceImages.push(await fetchImageBuffer(brand.logoUrl));
+  } catch (error) {
+    console.error("Fetching approved logo for reference failed", error);
   }
 
   const fullPrompt = buildImagePrompt(prompt, toBrandContext(brand));

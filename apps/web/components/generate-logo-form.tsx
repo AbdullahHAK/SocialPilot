@@ -11,7 +11,13 @@ export type GenerateLogoAction = (
   formData: FormData,
 ) => Promise<GenerateLogoFormState>;
 
-export function GenerateLogoForm({ action }: { action: GenerateLogoAction }) {
+export function GenerateLogoForm({
+  action,
+  returnTo,
+}: {
+  action: GenerateLogoAction;
+  returnTo?: string;
+}) {
   const [state, formAction, isPending] = useActionState<
     GenerateLogoFormState,
     FormData
@@ -20,6 +26,7 @@ export function GenerateLogoForm({ action }: { action: GenerateLogoAction }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <Textarea
         name="prompt"
         value={prompt}

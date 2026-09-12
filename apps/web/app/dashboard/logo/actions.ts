@@ -17,6 +17,20 @@ export interface GenerateLogoFormState {
 
 const LOGO_CONCEPT_COUNT = 3;
 
+function safeReturnTo(value: FormDataEntryValue | null): string {
+  // Only ever redirect back within our own app - a same-origin relative
+  // path starting with a single "/", never a protocol-relative "//host"
+  // that would actually send the browser somewhere external.
+  if (
+    typeof value === "string" &&
+    value.startsWith("/") &&
+    !value.startsWith("//")
+  ) {
+    return value;
+  }
+  return "/dashboard/brand";
+}
+
 export async function generateLogoConceptsAction(
   _prevState: GenerateLogoFormState,
   formData: FormData,
@@ -33,6 +47,7 @@ export async function generateLogoConceptsAction(
   if (prompt.length > 500) {
     return { error: "Keep the description under 500 characters." };
   }
+  const returnTo = safeReturnTo(formData.get("returnTo"));
 
   const brand = await getBrandProfile(session.organizationId);
   const fullPrompt = buildLogoPrompt(prompt, brand?.businessName);
@@ -58,7 +73,9 @@ export async function generateLogoConceptsAction(
     imageUrls,
   });
 
-  redirect(`/dashboard/logo/${concept.id}`);
+  redirect(
+    `/dashboard/logo/${concept.id}?returnTo=${encodeURIComponent(returnTo)}`,
+  );
 }
 
 export async function approveLogoAction(formData: FormData) {
@@ -72,5 +89,7 @@ export async function approveLogoAction(formData: FormData) {
 
   await setBrandLogo(session.organizationId, imageUrl);
 
-  redirect("/dashboard/brand?logoApproved=1");
+  const returnTo = safeReturnTo(formData.get("returnTo"));
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}logoApproved=1`);
 }

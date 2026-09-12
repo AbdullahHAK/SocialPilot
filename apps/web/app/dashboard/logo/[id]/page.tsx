@@ -8,6 +8,7 @@ import { approveLogoAction } from "../actions";
 
 export default async function LogoReviewPage({
   params,
+  searchParams,
 }: PageProps<"/dashboard/logo/[id]">) {
   const session = await getSession();
   if (!session) {
@@ -15,6 +16,7 @@ export default async function LogoReviewPage({
   }
 
   const { id } = await params;
+  const { returnTo } = await searchParams;
   const concept = await getCreativeConcept(session.organizationId, id);
   if (!concept) {
     notFound();
@@ -44,6 +46,9 @@ export default async function LogoReviewPage({
             <CardContent className="p-3">
               <form action={approveLogoAction}>
                 <input type="hidden" name="imageUrl" value={url} />
+                {typeof returnTo === "string" && (
+                  <input type="hidden" name="returnTo" value={returnTo} />
+                )}
                 <Button type="submit" className="w-full">
                   Use this logo
                 </Button>
@@ -54,7 +59,15 @@ export default async function LogoReviewPage({
       </div>
 
       <Button asChild variant="outline" className="w-fit">
-        <Link href="/dashboard/logo">Try a different description</Link>
+        <Link
+          href={
+            typeof returnTo === "string"
+              ? `/dashboard/logo?returnTo=${encodeURIComponent(returnTo)}`
+              : "/dashboard/logo"
+          }
+        >
+          Try a different description
+        </Link>
       </Button>
     </div>
   );

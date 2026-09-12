@@ -44,7 +44,7 @@ export async function generateMonthlyContentAction() {
     getPublishingSchedule(session.organizationId),
   ]);
 
-  if (!creativeProfile) {
+  if (!creativeProfile || !brandProfile?.logoUrl) {
     redirect("/dashboard/create");
   }
 
