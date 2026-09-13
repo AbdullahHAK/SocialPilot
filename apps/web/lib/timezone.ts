@@ -58,6 +58,31 @@ export function zonedTimeToUtc(parts: ZonedDateTimeParts, timeZone: string): Dat
   return new Date(naiveUtcGuess - offsetMs);
 }
 
+/** The [start, end) UTC range covering one calendar day as experienced in
+ * the given timezone - used to ask "has this org already generated
+ * something for today (their today)?" without caring what hour it was. */
+export function getLocalDayBoundsUtc(
+  instant: Date,
+  timeZone: string,
+): { start: Date; end: Date } {
+  const { year, month, day } = getZonedDateParts(instant, timeZone);
+  const start = zonedTimeToUtc({ year, month, day, hour: 0, minute: 0 }, timeZone);
+
+  const nextCalendarDay = new Date(Date.UTC(year, month - 1, day + 1));
+  const end = zonedTimeToUtc(
+    {
+      year: nextCalendarDay.getUTCFullYear(),
+      month: nextCalendarDay.getUTCMonth() + 1,
+      day: nextCalendarDay.getUTCDate(),
+      hour: 0,
+      minute: 0,
+    },
+    timeZone,
+  );
+
+  return { start, end };
+}
+
 interface FormattedParts {
   year: string;
   month: string;

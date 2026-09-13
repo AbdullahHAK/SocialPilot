@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { createStoryImage } from "./story-image";
+import { createStoryImage, cropToPostFormat } from "./story-image";
 
 async function makeTestImage(width: number, height: number): Promise<Buffer> {
   return sharp({
@@ -14,6 +14,29 @@ async function makeTestImage(width: number, height: number): Promise<Buffer> {
     .png()
     .toBuffer();
 }
+
+describe("cropToPostFormat", () => {
+  it("crops the AI's native portrait output down to Instagram's 1080x1350 (4:5) post ratio", async () => {
+    const source = await makeTestImage(1024, 1536);
+
+    const result = await cropToPostFormat(source);
+
+    const metadata = await sharp(result).metadata();
+    expect(metadata.width).toBe(1080);
+    expect(metadata.height).toBe(1350);
+    expect(metadata.format).toBe("png");
+  });
+
+  it("also works from a square source", async () => {
+    const source = await makeTestImage(1024, 1024);
+
+    const result = await cropToPostFormat(source);
+
+    const metadata = await sharp(result).metadata();
+    expect(metadata.width).toBe(1080);
+    expect(metadata.height).toBe(1350);
+  });
+});
 
 describe("createStoryImage", () => {
   it("produces a 1080x1920 (9:16) image from a square source", async () => {

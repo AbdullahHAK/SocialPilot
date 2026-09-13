@@ -3,6 +3,7 @@ import {
   countContentPosts,
   createContentPost,
   deleteContentPost,
+  findImageForDay,
   getContentPost,
   getLastPublishedPost,
   getNextScheduledPost,
@@ -84,6 +85,77 @@ describe("countContentPosts", () => {
   it("returns 0 for an organization with no posts", async () => {
     const org = await prisma.organization.create({ data: { name: "Acme" } });
     expect(await countContentPosts(org.id)).toBe(0);
+  });
+});
+
+describe("findImageForDay", () => {
+  const dayStart = new Date("2026-09-13T00:00:00.000Z");
+  const dayEnd = new Date("2026-09-14T00:00:00.000Z");
+
+  it("returns null when nothing has been generated for that day yet", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    expect(await findImageForDay(org.id, dayStart, dayEnd)).toBeNull();
+  });
+
+  it("returns the image and story image of an existing post that day", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/master.png"],
+      storyImageUrl: "https://example.com/master-story.png",
+      scheduledFor: new Date("2026-09-13T10:00:00.000Z"),
+    });
+
+    const result = await findImageForDay(org.id, dayStart, dayEnd);
+    expect(result).toEqual({
+      imageUrl: "https://example.com/master.png",
+      storyImageUrl: "https://example.com/master-story.png",
+    });
+  });
+
+  it("finds it regardless of which platform the existing post was for", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "FACEBOOK",
+      imageUrls: ["https://example.com/master.png"],
+      scheduledFor: new Date("2026-09-13T10:00:00.000Z"),
+    });
+
+    const result = await findImageForDay(org.id, dayStart, dayEnd);
+    expect(result?.imageUrl).toBe("https://example.com/master.png");
+  });
+
+  it("ignores posts scheduled on a different day", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/other-day.png"],
+      scheduledFor: new Date("2026-09-14T10:00:00.000Z"),
+    });
+
+    expect(await findImageForDay(org.id, dayStart, dayEnd)).toBeNull();
+  });
+
+  it("ignores STORY-type rows - only reuses a POST's image", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await recordPublishedStory({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a-story.png"],
+      externalPostId: "ig-story-1",
+    });
+
+    // recordPublishedStory always uses the current moment, so bound the
+    // window around "now" rather than the fixed Sept-13 window above -
+    // otherwise this would only actually exercise the type filter when
+    // the suite happens to run on that date.
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    expect(await findImageForDay(org.id, todayStart, todayEnd)).toBeNull();
   });
 });
 

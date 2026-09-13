@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getZonedDateParts, zonedTimeToUtc } from "./timezone";
+import { getLocalDayBoundsUtc, getZonedDateParts, zonedTimeToUtc } from "./timezone";
 
 describe("zonedTimeToUtc", () => {
   it("converts a wall-clock time in a fixed-offset zone (no DST) to UTC", () => {
@@ -61,5 +61,40 @@ describe("getZonedDateParts", () => {
     const parts = getZonedDateParts(new Date("2026-09-13T21:00:00.000Z"), "Asia/Karachi");
     expect(parts.day).toBe(14); // 21:00 UTC + 5h = 02:00 next day in Karachi
     expect(parts.hour).toBe(2);
+  });
+});
+
+describe("getLocalDayBoundsUtc", () => {
+  it("spans exactly one local calendar day, in UTC terms", () => {
+    // 10:55 AM Karachi time on Sept 13.
+    const { start, end } = getLocalDayBoundsUtc(
+      new Date("2026-09-13T05:55:00.000Z"),
+      "Asia/Karachi",
+    );
+    expect(start.toISOString()).toBe("2026-09-12T19:00:00.000Z"); // Sept 13 00:00 Karachi
+    expect(end.toISOString()).toBe("2026-09-13T19:00:00.000Z"); // Sept 14 00:00 Karachi
+  });
+
+  it("places two times on the same local day within the same bounds", () => {
+    const morning = getLocalDayBoundsUtc(new Date("2026-09-13T05:00:00.000Z"), "Asia/Karachi");
+    const evening = getLocalDayBoundsUtc(new Date("2026-09-13T16:00:00.000Z"), "Asia/Karachi");
+    expect(morning).toEqual(evening);
+  });
+
+  it("places a time just before local midnight in the previous day's bounds", () => {
+    // 11:59 PM Karachi on Sept 13 is 18:59 UTC.
+    const lateNight = getLocalDayBoundsUtc(new Date("2026-09-13T18:59:00.000Z"), "Asia/Karachi");
+    // Just past local midnight (00:01 AM Sept 14 Karachi = 19:01 UTC Sept 13).
+    const justAfterMidnight = getLocalDayBoundsUtc(
+      new Date("2026-09-13T19:01:00.000Z"),
+      "Asia/Karachi",
+    );
+    expect(lateNight).not.toEqual(justAfterMidnight);
+  });
+
+  it("works for UTC itself", () => {
+    const { start, end } = getLocalDayBoundsUtc(new Date("2026-09-13T12:00:00.000Z"), "UTC");
+    expect(start.toISOString()).toBe("2026-09-13T00:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-09-14T00:00:00.000Z");
   });
 });

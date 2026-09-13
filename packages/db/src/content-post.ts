@@ -35,6 +35,32 @@ export function countContentPosts(organizationId: string): Promise<number> {
   return prisma.contentPost.count({ where: { organizationId } });
 }
 
+/** Finds an already-generated image to reuse for another post landing on
+ * the same calendar day - the client's explicit cost rule is at most one
+ * AI image generation per day, regardless of how many platforms or posts
+ * are scheduled that day. [dayStart, dayEnd) should be one calendar day's
+ * bounds in the org's own timezone, converted to UTC (see
+ * getLocalDayBoundsUtc). Returns null if nothing's been generated yet for
+ * that day, meaning a fresh image is actually needed. */
+export async function findImageForDay(
+  organizationId: string,
+  dayStart: Date,
+  dayEnd: Date,
+): Promise<{ imageUrl: string; storyImageUrl: string | null } | null> {
+  const existing = await prisma.contentPost.findFirst({
+    where: {
+      organizationId,
+      type: "POST",
+      scheduledFor: { gte: dayStart, lt: dayEnd },
+      imageUrls: { isEmpty: false },
+    },
+    orderBy: { createdAt: "asc" },
+    select: { imageUrls: true, storyImageUrl: true },
+  });
+  if (!existing) return null;
+  return { imageUrl: existing.imageUrls[0]!, storyImageUrl: existing.storyImageUrl };
+}
+
 export interface RecordPublishedStoryInput {
   organizationId: string;
   platform: Platform;

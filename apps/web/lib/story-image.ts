@@ -1,7 +1,22 @@
 import sharp from "sharp";
 
+const POST_WIDTH = 1080;
+const POST_HEIGHT = 1350;
 const STORY_WIDTH = 1080;
 const STORY_HEIGHT = 1920;
+
+/**
+ * Crops the AI's raw output (whatever size it came back at) down to
+ * Instagram's actual recommended post ratio, 1080x1350 (4:5) - the client
+ * was explicit that this, not a square, should be the one "master" image
+ * generation everything else derives from.
+ */
+export async function cropToPostFormat(sourceImage: Buffer): Promise<Buffer> {
+  return sharp(sourceImage)
+    .resize(POST_WIDTH, POST_HEIGHT, { fit: "cover" })
+    .png()
+    .toBuffer();
+}
 
 /**
  * Turns a square (or any-ratio) post image into a 9:16 Story-ready image,

@@ -1,16 +1,19 @@
 import {
   countContentPosts,
   createContentPost,
+  findImageForDay,
   getBrandCreativeProfile,
   getBrandProfile,
+  getPublishingSchedule,
   type Platform,
 } from "@socialpilot/db";
 import { asStringArray } from "./brand-fields";
 import { buildImagePrompt } from "./brand-prompt";
 import { fetchImageBuffer } from "./fetch-image";
 import { generateCaption, generateImage } from "./openai";
-import { createStoryImage } from "./story-image";
+import { createStoryImage, cropToPostFormat } from "./story-image";
 import { uploadGeneratedImage } from "./storage";
+import { getLocalDayBoundsUtc } from "./timezone";
 
 // Cycled by call index so a run of daily/weekly content doesn't repeat the
 // same angle every time, even though it's the same approved visual style -
@@ -51,8 +54,16 @@ export interface GenerateAndScheduleInput {
 }
 
 /**
- * Generates one on-brand image + caption and schedules it as a
- * ContentPost. Requires an approved creative style and logo - returns
+ * Schedules one on-brand ContentPost, generating a fresh AI image only
+ * when the org doesn't already have one for that calendar day - the
+ * client's explicit, "very strict" cost rule is at most one AI image
+ * generation per organization per day, no matter how many platforms or
+ * posts are scheduled that day. Everything else (a second platform, a
+ * second time slot the same day) reuses that same day's image and Story
+ * crop; only the caption is generated per call, since text is cheap and
+ * keeping it distinct per post/platform is still worth doing.
+ *
+ * Requires an approved creative style and logo - returns
  * `{ skipped: "not_ready" }` rather than throwing if either is missing, so
  * callers (the periodic job especially) can just move on to the next
  * organization instead of treating "hasn't set up their brand yet" as an
@@ -70,6 +81,8 @@ export async function generateAndScheduleContent(
     return { success: false, skipped: "not_ready" };
   }
 
+  const schedule = await getPublishingSchedule(input.organizationId);
+
   const brief = creativeProfile.promptTemplateAdditions ?? "on-brand social media content";
   // Falls back to how many posts this org already has, rather than
   // literally 0, so two posts triggered independently (e.g. a one-time
@@ -78,54 +91,70 @@ export async function generateAndScheduleContent(
   const resolvedIndex = input.themeIndex ?? (await countContentPosts(input.organizationId));
   const theme = CONTENT_THEMES[resolvedIndex % CONTENT_THEMES.length];
   const treatment = CONTENT_TREATMENTS[resolvedIndex % CONTENT_TREATMENTS.length];
-  const brandContext = {
-    businessName: brandProfile.businessName,
-    category: brandProfile.category,
-    tone: brandProfile.tone,
-    description: brandProfile.description,
-    colors: asStringArray(brandProfile.colors),
-  };
-
-  // The approved concept image anchors the look, the logo keeps brand
-  // identity intact - passed as references so the visual style actually
-  // stays consistent (not just prompted to).
-  const referenceUrls = [
-    creativeProfile.referenceImageUrls[0],
-    brandProfile.logoUrl,
-  ].filter((url): url is string => Boolean(url));
-  const referenceImages = (
-    await Promise.all(
-      referenceUrls.map(async (url) => {
-        try {
-          return await fetchImageBuffer(url);
-        } catch (error) {
-          console.error("Fetching a style reference image failed", error);
-          return null;
-        }
-      }),
-    )
-  ).filter((buffer): buffer is Buffer => buffer !== null);
 
   try {
-    const imageBuffer = await generateImage({
-      prompt: buildImagePrompt(
-        brief,
-        brandContext,
-        `${theme} ${treatment} Consistent with the brand's established visual style.`,
-      ),
-      referenceImages,
-    });
-    const imageUrl = await uploadGeneratedImage(input.organizationId, imageBuffer);
+    const { start, end } = getLocalDayBoundsUtc(input.scheduledFor, schedule.timezone);
+    const existingDayImage = await findImageForDay(input.organizationId, start, end);
 
-    // Best-effort: the post itself is the primary deliverable, so a
-    // failure here shouldn't block it - it just means this post won't
-    // also go out as a Story.
+    let imageUrl: string;
     let storyImageUrl: string | undefined;
-    try {
-      const storyBuffer = await createStoryImage(imageBuffer);
-      storyImageUrl = await uploadGeneratedImage(input.organizationId, storyBuffer, "stories");
-    } catch (error) {
-      console.error("Generating the Story-format version of the image failed", error);
+
+    if (existingDayImage) {
+      imageUrl = existingDayImage.imageUrl;
+      storyImageUrl = existingDayImage.storyImageUrl ?? undefined;
+    } else {
+      const brandContext = {
+        businessName: brandProfile.businessName,
+        category: brandProfile.category,
+        tone: brandProfile.tone,
+        description: brandProfile.description,
+        colors: asStringArray(brandProfile.colors),
+      };
+
+      // The approved concept image anchors the look, the logo keeps
+      // brand identity intact - passed as references so the visual style
+      // actually stays consistent (not just prompted to).
+      const referenceUrls = [
+        creativeProfile.referenceImageUrls[0],
+        brandProfile.logoUrl,
+      ].filter((url): url is string => Boolean(url));
+      const referenceImages = (
+        await Promise.all(
+          referenceUrls.map(async (url) => {
+            try {
+              return await fetchImageBuffer(url);
+            } catch (error) {
+              console.error("Fetching a style reference image failed", error);
+              return null;
+            }
+          }),
+        )
+      ).filter((buffer): buffer is Buffer => buffer !== null);
+
+      const rawImage = await generateImage({
+        prompt: buildImagePrompt(
+          brief,
+          brandContext,
+          `${theme} ${treatment} Consistent with the brand's established visual style.`,
+        ),
+        referenceImages,
+        // Closest native size to Instagram's 1080x1350 (4:5) post ratio -
+        // cropped to the exact ratio below, rather than starting from a
+        // square and losing more of the image to cropping.
+        size: "1024x1536",
+      });
+      const masterImage = await cropToPostFormat(rawImage);
+      imageUrl = await uploadGeneratedImage(input.organizationId, masterImage);
+
+      // Best-effort: the post itself is the primary deliverable, so a
+      // failure here shouldn't block it - it just means this post won't
+      // also go out as a Story.
+      try {
+        const storyBuffer = await createStoryImage(masterImage);
+        storyImageUrl = await uploadGeneratedImage(input.organizationId, storyBuffer, "stories");
+      } catch (error) {
+        console.error("Generating the Story-format version of the image failed", error);
+      }
     }
 
     const { caption, hashtags } = await generateCaption({
