@@ -21,10 +21,48 @@ export interface PublishToInstagramInput {
   caption: string;
 }
 
+interface MediaContainerStatus {
+  status_code: "EXPIRED" | "ERROR" | "FINISHED" | "IN_PROGRESS" | "PUBLISHED";
+}
+
+/** A freshly-created media container isn't always instantly publishable -
+ * Instagram processes the image server-side first. Publishing too early
+ * fails with "Media ID is not available... please wait for a moment"
+ * (error 9007/2207027), so poll the container's own status instead of
+ * assuming it's ready right after creation. */
+async function waitForContainerReady(
+  creationId: string,
+  accessToken: string,
+  { pollIntervalMs = 1500, timeoutMs = 60_000 } = {},
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const params = new URLSearchParams({
+      fields: "status_code",
+      access_token: accessToken,
+    });
+    const res = await fetch(`${GRAPH_API_BASE}/${creationId}?${params}`);
+    const { status_code } = await parseGraphResponse<MediaContainerStatus>(
+      res,
+      "Instagram media container status check",
+    );
+
+    if (status_code === "FINISHED" || status_code === "PUBLISHED") return;
+    if (status_code === "ERROR" || status_code === "EXPIRED") {
+      throw new Error(`Instagram media container failed to process (${status_code})`);
+    }
+    if (Date.now() >= deadline) {
+      throw new Error("Instagram media container did not finish processing in time");
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+}
+
 /** Instagram Content Publishing is a two-step Graph API flow: create a
- * media container, then publish it. */
+ * media container, wait for it to finish processing, then publish it. */
 export async function publishToInstagram(
   input: PublishToInstagramInput,
+  pollOptions?: { pollIntervalMs?: number; timeoutMs?: number },
 ): Promise<string> {
   const createParams = new URLSearchParams({
     image_url: input.imageUrl,
@@ -39,6 +77,8 @@ export async function publishToInstagram(
     createRes,
     "Instagram media container creation",
   );
+
+  await waitForContainerReady(creationId, input.pageAccessToken, pollOptions);
 
   const publishParams = new URLSearchParams({
     creation_id: creationId,

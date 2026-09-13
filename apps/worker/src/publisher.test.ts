@@ -33,6 +33,9 @@ describe("runPublishCycle", () => {
         new Response(JSON.stringify({ id: "creation-1" }), { status: 200 }),
       )
       .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
         new Response(JSON.stringify({ id: "ig-post-1" }), { status: 200 }),
       );
     vi.stubGlobal("fetch", fetchMock);
@@ -109,6 +112,9 @@ describe("runPublishCycle", () => {
       vi
         .fn()
         .mockResolvedValueOnce(new Response(JSON.stringify({ id: "creation-1" }), { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }),
+        )
         .mockResolvedValueOnce(new Response(JSON.stringify({ id: "ig-post-1" }), { status: 200 })),
     );
 
