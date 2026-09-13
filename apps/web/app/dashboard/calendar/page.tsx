@@ -1,4 +1,4 @@
-import { listContentPostsInRange } from "@socialpilot/db";
+import { getPublishingSchedule, listContentPostsInRange } from "@socialpilot/db";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -11,6 +11,7 @@ import {
   dateKey,
   formatMonthParam,
   getMonthGrid,
+  localDateKey,
   MONTH_LABELS,
   parseMonthParam,
   WEEKDAY_LABELS,
@@ -41,17 +42,19 @@ export default async function CalendarPage({
 
   const rangeStart = new Date(Date.UTC(year, month, 1));
   const rangeEnd = new Date(Date.UTC(year, month + 1, 1));
-  const posts = await listContentPostsInRange(
-    session.organizationId,
-    rangeStart,
-    rangeEnd,
-  );
+  const [posts, schedule] = await Promise.all([
+    listContentPostsInRange(session.organizationId, rangeStart, rangeEnd),
+    getPublishingSchedule(session.organizationId),
+  ]);
 
+  // Grouped by the org's own local calendar day, not UTC - a post
+  // scheduled late in the UTC day can already be "tomorrow" where the
+  // org actually is, and needs to land in that day's cell.
   const postsByDay = new Map<string, typeof posts>();
   for (const post of posts) {
     const displayDate = post.publishedAt ?? post.scheduledFor;
     if (!displayDate) continue;
-    const key = dateKey(displayDate);
+    const key = localDateKey(displayDate, schedule.timezone);
     const existing = postsByDay.get(key) ?? [];
     existing.push(post);
     postsByDay.set(key, existing);
@@ -60,7 +63,7 @@ export default async function CalendarPage({
   const grid = getMonthGrid(year, month);
   const prevMonth = month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 };
   const nextMonth = month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 };
-  const todayKey = dateKey(new Date());
+  const todayKey = localDateKey(new Date(), schedule.timezone);
 
   return (
     <div className="flex flex-col gap-6">

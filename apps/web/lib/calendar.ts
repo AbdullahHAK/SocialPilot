@@ -1,3 +1,5 @@
+import { getZonedDateParts } from "./timezone";
+
 export interface CalendarCell {
   date: Date;
   inCurrentMonth: boolean;
@@ -36,6 +38,15 @@ export function getMonthGrid(year: number, month: number): CalendarCell[] {
 
 export function dateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+/** Same YYYY-MM-DD key, but as the org's own timezone would read the
+ * clock - a post scheduled at 8PM UTC for an org in Asia/Karachi (UTC+5)
+ * happened just after midnight *their* next day, and needs to land in
+ * that day's calendar cell, not get stranded on the UTC date. */
+export function localDateKey(date: Date, timeZone: string): string {
+  const { year, month, day } = getZonedDateParts(date, timeZone);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 export function parseMonthParam(value: string | undefined): {

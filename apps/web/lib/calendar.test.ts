@@ -3,6 +3,7 @@ import {
   dateKey,
   formatMonthParam,
   getMonthGrid,
+  localDateKey,
   parseMonthParam,
 } from "./calendar";
 
@@ -28,6 +29,26 @@ describe("getMonthGrid", () => {
     expect(daysInMonth).toHaveLength(28);
     expect(dateKey(daysInMonth[0]!.date)).toBe("2026-02-01");
     expect(dateKey(daysInMonth[27]!.date)).toBe("2026-02-28");
+  });
+});
+
+describe("localDateKey", () => {
+  it("rolls a late-UTC evening post into the next day for a timezone ahead of UTC", () => {
+    // The exact bug report: a post at 8PM UTC is already past midnight in
+    // Karachi (UTC+5) - it belongs on the 14th's calendar cell, not the 13th.
+    const scheduledFor = new Date("2026-09-13T20:10:00.000Z");
+    expect(dateKey(scheduledFor)).toBe("2026-09-13");
+    expect(localDateKey(scheduledFor, "Asia/Karachi")).toBe("2026-09-14");
+  });
+
+  it("rolls an early-UTC morning post back a day for a timezone behind UTC", () => {
+    const scheduledFor = new Date("2026-09-14T02:00:00.000Z");
+    expect(localDateKey(scheduledFor, "America/Los_Angeles")).toBe("2026-09-13");
+  });
+
+  it("matches plain UTC dateKey for a UTC-scheduled org", () => {
+    const scheduledFor = new Date("2026-09-13T20:10:00.000Z");
+    expect(localDateKey(scheduledFor, "UTC")).toBe(dateKey(scheduledFor));
   });
 });
 
