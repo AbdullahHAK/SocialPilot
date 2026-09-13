@@ -38,18 +38,23 @@ export async function addScheduleSlotAction(formData: FormData) {
   const session = await getSession();
   if (!session) return;
 
-  const parsed = scheduleSlotSchema.safeParse({
-    dayOfWeek: formData.get("dayOfWeek"),
-    time: formData.get("time"),
-    platform: formData.get("platform"),
-  });
-  if (!parsed.success) return;
+  // One time/platform can be applied to several days at once (the "repeat
+  // on these days" pattern from alarm apps) - a plain <form> naturally
+  // collects multiple same-named fields via getAll, one per checked day.
+  const days = formData.getAll("dayOfWeek");
+  const time = formData.get("time");
+  const platform = formData.get("platform");
 
-  await addScheduleSlot({
-    organizationId: session.organizationId,
-    ...parsed.data,
-  });
-  await generateForImmediateOccurrence(session.organizationId, parsed.data);
+  for (const dayOfWeek of days) {
+    const parsed = scheduleSlotSchema.safeParse({ dayOfWeek, time, platform });
+    if (!parsed.success) continue;
+
+    await addScheduleSlot({
+      organizationId: session.organizationId,
+      ...parsed.data,
+    });
+    await generateForImmediateOccurrence(session.organizationId, parsed.data);
+  }
   revalidatePath("/dashboard/schedule");
 }
 
