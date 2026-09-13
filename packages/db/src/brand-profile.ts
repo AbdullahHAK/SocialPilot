@@ -27,10 +27,20 @@ export function getBrandProfile(organizationId: string) {
 }
 
 /** Sets the approved logo on its own, without needing every other brand
- * field on hand - used after an AI-generated logo concept is approved. */
-export function setBrandLogo(organizationId: string, logoUrl: string) {
-  return prisma.brandProfile.update({
+ * field on hand - used after an AI-generated logo concept is approved.
+ * Upserts rather than updates: a user can reach this point (e.g. via the
+ * Create Content logo gate) without ever having completed onboarding, in
+ * which case no BrandProfile row exists yet. Falls back to the
+ * organization's name for the required businessName field in that case. */
+export async function setBrandLogo(organizationId: string, logoUrl: string) {
+  const organization = await prisma.organization.findUniqueOrThrow({
+    where: { id: organizationId },
+    select: { name: true },
+  });
+
+  return prisma.brandProfile.upsert({
     where: { organizationId },
-    data: { logoUrl },
+    update: { logoUrl },
+    create: { organizationId, logoUrl, businessName: organization.name },
   });
 }

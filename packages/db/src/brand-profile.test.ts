@@ -78,4 +78,14 @@ describe("setBrandLogo", () => {
     expect(profile?.logoUrl).toBe("https://example.com/logo.png");
     expect(profile?.tone).toBe("Warm and friendly");
   });
+
+  it("creates a brand profile when the org never completed onboarding", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+
+    await setBrandLogo(org.id, "https://example.com/logo.png");
+
+    const profile = await getBrandProfile(org.id);
+    expect(profile?.logoUrl).toBe("https://example.com/logo.png");
+    expect(profile?.businessName).toBe("Acme");
+  });
 });
