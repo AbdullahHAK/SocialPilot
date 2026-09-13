@@ -11,7 +11,7 @@ import { asStringArray } from "./brand-fields";
 import { buildImagePrompt } from "./brand-prompt";
 import { fetchImageBuffer } from "./fetch-image";
 import { generateCaption, generateImage } from "./openai";
-import { createStoryImage, cropToPostFormat } from "./story-image";
+import { createStoryImage } from "./story-image";
 import { uploadGeneratedImage } from "./storage";
 import { getLocalDayBoundsUtc } from "./timezone";
 
@@ -131,24 +131,26 @@ export async function generateAndScheduleContent(
         )
       ).filter((buffer): buffer is Buffer => buffer !== null);
 
-      const rawImage = await generateImage({
+      // Square (1:1) - safely inside Instagram's accepted post aspect
+      // ratio range (4:5 to 1.91:1) as-is, so the post goes out exactly as
+      // the model made it, with no cropping that could cut into text, a
+      // logo, or the subject itself (the client's explicit complaint about
+      // an earlier, taller size that got center-cropped for the post).
+      const masterImage = await generateImage({
         prompt: buildImagePrompt(
           brief,
           brandContext,
           `${theme} ${treatment} Consistent with the brand's established visual style.`,
         ),
         referenceImages,
-        // Closest native size to Instagram's 1080x1350 (4:5) post ratio -
-        // cropped to the exact ratio below, rather than starting from a
-        // square and losing more of the image to cropping.
-        size: "1024x1536",
       });
-      const masterImage = await cropToPostFormat(rawImage);
       imageUrl = await uploadGeneratedImage(input.organizationId, masterImage);
 
       // Best-effort: the post itself is the primary deliverable, so a
       // failure here shouldn't block it - it just means this post won't
-      // also go out as a Story.
+      // also go out as a Story. Built from the same untouched master
+      // image (not a cropped copy) - createStoryImage letterboxes it into
+      // the 9:16 frame rather than cropping, so nothing is cut here either.
       try {
         const storyBuffer = await createStoryImage(masterImage);
         storyImageUrl = await uploadGeneratedImage(input.organizationId, storyBuffer, "stories");

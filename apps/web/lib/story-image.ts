@@ -1,38 +1,16 @@
 import sharp from "sharp";
 
-const POST_WIDTH = 1080;
-const POST_HEIGHT = 1350;
 const STORY_WIDTH = 1080;
 const STORY_HEIGHT = 1920;
 
 /**
- * Crops the AI's raw output (whatever size it came back at) down to
- * Instagram's actual recommended post ratio, 1080x1350 (4:5) - the client
- * was explicit that this, not a square, should be the one "master" image
- * generation everything else derives from.
- *
- * Anchored to the top rather than centered: the model consistently places
- * headline/banner text right at the top of the frame (e.g. "SPECIAL
- * WEEKEND OFFER"), and a center crop sliced straight through it since the
- * native 1024x1536 output is noticeably taller than the 4:5 target. Cropping
- * from the bottom instead keeps that text intact - the bottom of these
- * shots is reliably just background/surface, never the headline.
- */
-export async function cropToPostFormat(sourceImage: Buffer): Promise<Buffer> {
-  return sharp(sourceImage)
-    .resize(POST_WIDTH, POST_HEIGHT, { fit: "cover", position: "top" })
-    .png()
-    .toBuffer();
-}
-
-/**
- * Turns a square (or any-ratio) post image into a 9:16 Story-ready image,
- * per the client's own request that the post and Story should be "the
- * same image, adjusted to fit the Story format" rather than two separate
- * generations: a blurred, cropped copy of the same image fills the
- * background, with the original centered on top at full width - the
- * standard "square post to Story" treatment, so it reads as an
- * intentional crop rather than an awkward letterboxed image.
+ * Turns the untouched post image (whatever size/ratio the model returned)
+ * into a 9:16 Story-ready image, per the client's own request that the
+ * post and Story should be "the same image, adjusted to fit the Story
+ * format" rather than two separate generations. The foreground is only
+ * ever scaled to fit the width, never cropped, so nothing in it - text,
+ * logo, subject - is ever cut off; a blurred, cropped copy of the same
+ * image fills the background behind it, purely as decoration.
  */
 export async function createStoryImage(sourceImage: Buffer): Promise<Buffer> {
   const background = await sharp(sourceImage)

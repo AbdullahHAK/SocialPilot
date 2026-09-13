@@ -183,7 +183,7 @@ describe("generateAndScheduleContent", () => {
     expect(prompt).toContain(CONTENT_THEMES[4]);
   });
 
-  it("requests the 1024x1536 size, closest to Instagram's 1080x1350 post ratio", async () => {
+  it("doesn't request a specific size, so the post goes out exactly as the model made it, uncropped", async () => {
     const org = await setUpReadyOrg();
 
     await generateAndScheduleContent({
@@ -192,7 +192,7 @@ describe("generateAndScheduleContent", () => {
       scheduledFor: new Date(),
     });
 
-    expect(generateImageMock.mock.calls[0]![0].size).toBe("1024x1536");
+    expect(generateImageMock.mock.calls[0]![0].size).toBeUndefined();
   });
 
   describe("one AI image per organization per calendar day (client's explicit cost rule)", () => {

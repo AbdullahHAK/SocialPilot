@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { createStoryImage, cropToPostFormat } from "./story-image";
+import { createStoryImage } from "./story-image";
 
 async function makeTestImage(width: number, height: number): Promise<Buffer> {
   return sharp({
@@ -15,58 +15,64 @@ async function makeTestImage(width: number, height: number): Promise<Buffer> {
     .toBuffer();
 }
 
-describe("cropToPostFormat", () => {
-  it("crops the AI's native portrait output down to Instagram's 1080x1350 (4:5) post ratio", async () => {
-    const source = await makeTestImage(1024, 1536);
-
-    const result = await cropToPostFormat(source);
-
-    const metadata = await sharp(result).metadata();
-    expect(metadata.width).toBe(1080);
-    expect(metadata.height).toBe(1350);
-    expect(metadata.format).toBe("png");
-  });
-
-  it("also works from a square source", async () => {
-    const source = await makeTestImage(1024, 1024);
-
-    const result = await cropToPostFormat(source);
-
-    const metadata = await sharp(result).metadata();
-    expect(metadata.width).toBe(1080);
-    expect(metadata.height).toBe(1350);
-  });
-
-  it("keeps the very top of the image intact, cropping only from the bottom", async () => {
-    // The AI consistently places headline/banner text right at the top of
-    // the frame - a center crop sliced through it (the client's exact
-    // "text cut off" report). This proves a marker band at row 0 survives.
-    const background = await sharp({
-      create: { width: 1024, height: 1536, channels: 3, background: { r: 10, g: 10, b: 10 } },
-    })
-      .png()
-      .toBuffer();
-    const topBand = await sharp({
-      create: { width: 1024, height: 40, channels: 3, background: { r: 255, g: 0, b: 0 } },
-    })
-      .png()
-      .toBuffer();
-    const source = await sharp(background)
-      .composite([{ input: topBand, top: 0, left: 0 }])
-      .png()
-      .toBuffer();
-
-    const result = await cropToPostFormat(source);
-
-    const topPixel = await sharp(result)
-      .extract({ left: 0, top: 0, width: 1, height: 1 })
-      .raw()
-      .toBuffer();
-    expect([topPixel[0], topPixel[1], topPixel[2]]).toEqual([255, 0, 0]);
-  });
-});
-
 describe("createStoryImage", () => {
+  it("never crops the foreground - a marker at the very top and bottom of the source both survive", async () => {
+    // The client's exact complaint: text/logo near the edge of the source
+    // getting cut off. The foreground must only ever be scaled to fit the
+    // width, never cropped, so a marker band at the very top row and one
+    // at the very bottom row of the source must both still be visible,
+    // just inside the letterboxed foreground rather than sliced away.
+    const sourceWidth = 1024;
+    const sourceHeight = 1200;
+    const bandHeight = 30;
+
+    const source = await sharp({
+      create: { width: sourceWidth, height: sourceHeight, channels: 3, background: { r: 10, g: 10, b: 10 } },
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: { width: sourceWidth, height: bandHeight, channels: 3, background: { r: 255, g: 0, b: 0 } },
+          })
+            .png()
+            .toBuffer(),
+          top: 0,
+          left: 0,
+        },
+        {
+          input: await sharp({
+            create: { width: sourceWidth, height: bandHeight, channels: 3, background: { r: 0, g: 255, b: 0 } },
+          })
+            .png()
+            .toBuffer(),
+          top: sourceHeight - bandHeight,
+          left: 0,
+        },
+      ])
+      .png()
+      .toBuffer();
+
+    const result = await createStoryImage(source);
+    const { data, info } = await sharp(result).raw().toBuffer({ resolveWithObject: true });
+
+    function pixelAt(x: number, y: number) {
+      const i = (y * info.width + x) * info.channels;
+      return [data[i], data[i + 1], data[i + 2]];
+    }
+
+    // Mirrors createStoryImage's own math for where the letterboxed
+    // foreground lands, to sample just inside its top and bottom edges.
+    const foregroundHeight = Math.round((info.width * sourceHeight) / sourceWidth);
+    const top = Math.round((info.height - foregroundHeight) / 2);
+    const centerX = Math.floor(info.width / 2);
+
+    const [rTop, gTop, bTop] = pixelAt(centerX, top + 3);
+    const [rBottom, gBottom, bBottom] = pixelAt(centerX, top + foregroundHeight - 4);
+
+    expect([rTop > 200, gTop < 60, bTop < 60]).toEqual([true, true, true]);
+    expect([gBottom > 200, rBottom < 60, bBottom < 60]).toEqual([true, true, true]);
+  });
+
   it("produces a 1080x1920 (9:16) image from a square source", async () => {
     const source = await makeTestImage(1024, 1024);
 
