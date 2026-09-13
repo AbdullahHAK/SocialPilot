@@ -36,6 +36,34 @@ describe("cropToPostFormat", () => {
     expect(metadata.width).toBe(1080);
     expect(metadata.height).toBe(1350);
   });
+
+  it("keeps the very top of the image intact, cropping only from the bottom", async () => {
+    // The AI consistently places headline/banner text right at the top of
+    // the frame - a center crop sliced through it (the client's exact
+    // "text cut off" report). This proves a marker band at row 0 survives.
+    const background = await sharp({
+      create: { width: 1024, height: 1536, channels: 3, background: { r: 10, g: 10, b: 10 } },
+    })
+      .png()
+      .toBuffer();
+    const topBand = await sharp({
+      create: { width: 1024, height: 40, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    const source = await sharp(background)
+      .composite([{ input: topBand, top: 0, left: 0 }])
+      .png()
+      .toBuffer();
+
+    const result = await cropToPostFormat(source);
+
+    const topPixel = await sharp(result)
+      .extract({ left: 0, top: 0, width: 1, height: 1 })
+      .raw()
+      .toBuffer();
+    expect([topPixel[0], topPixel[1], topPixel[2]]).toEqual([255, 0, 0]);
+  });
 });
 
 describe("createStoryImage", () => {

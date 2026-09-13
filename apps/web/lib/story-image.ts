@@ -10,10 +10,17 @@ const STORY_HEIGHT = 1920;
  * Instagram's actual recommended post ratio, 1080x1350 (4:5) - the client
  * was explicit that this, not a square, should be the one "master" image
  * generation everything else derives from.
+ *
+ * Anchored to the top rather than centered: the model consistently places
+ * headline/banner text right at the top of the frame (e.g. "SPECIAL
+ * WEEKEND OFFER"), and a center crop sliced straight through it since the
+ * native 1024x1536 output is noticeably taller than the 4:5 target. Cropping
+ * from the bottom instead keeps that text intact - the bottom of these
+ * shots is reliably just background/surface, never the headline.
  */
 export async function cropToPostFormat(sourceImage: Buffer): Promise<Buffer> {
   return sharp(sourceImage)
-    .resize(POST_WIDTH, POST_HEIGHT, { fit: "cover" })
+    .resize(POST_WIDTH, POST_HEIGHT, { fit: "cover", position: "top" })
     .png()
     .toBuffer();
 }
