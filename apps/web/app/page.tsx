@@ -264,6 +264,17 @@ export default function Home() {
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} SocialPilot. All rights reserved.
           </p>
+          <nav className="flex gap-4 text-sm text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground hover:underline">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground hover:underline">
+              Terms
+            </Link>
+            <Link href="/data-deletion" className="hover:text-foreground hover:underline">
+              Data deletion
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>
