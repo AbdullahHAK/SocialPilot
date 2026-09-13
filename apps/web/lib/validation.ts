@@ -71,13 +71,24 @@ export const scheduleSlotSchema = z.object({
 
 export type ScheduleSlotInput = z.infer<typeof scheduleSlotSchema>;
 
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a date as YYYY-MM-DD");
+const hhmmTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a time as HH:MM");
+
 export const oneTimePostSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a date as YYYY-MM-DD"),
-  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a time as HH:MM"),
+  date: isoDateSchema,
+  time: hhmmTimeSchema,
   platform: z.enum(["INSTAGRAM", "FACEBOOK"]),
 });
 
 export type OneTimePostInput = z.infer<typeof oneTimePostSchema>;
+
+export const editContentPostSchema = z.object({
+  caption: z.string().trim().max(2200, "Keep the caption under 2200 characters"),
+  date: isoDateSchema,
+  time: hhmmTimeSchema,
+});
+
+export type EditContentPostInput = z.infer<typeof editContentPostSchema>;
 
 /** The IANA zone name a browser reports for "Add posting time" submissions,
  * so a picked time is interpreted as that person's local time rather than

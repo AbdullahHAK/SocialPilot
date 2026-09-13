@@ -89,3 +89,35 @@ export function listContentPostsInRange(
     orderBy: [{ scheduledFor: "asc" }, { publishedAt: "asc" }],
   });
 }
+
+export interface UpdateContentPostInput {
+  caption?: string;
+  scheduledFor?: Date;
+}
+
+/** Edits a not-yet-published post's caption and/or scheduled time -
+ * scoped to the organization like updateScheduleSlot, so one org can
+ * never touch another's posts. */
+export async function updateContentPost(
+  organizationId: string,
+  postId: string,
+  data: UpdateContentPostInput,
+) {
+  const post = await prisma.contentPost.findFirst({
+    where: { id: postId, organizationId },
+  });
+  if (!post) return null;
+  return prisma.contentPost.update({ where: { id: postId }, data });
+}
+
+/** Removes a post from the calendar - scoped to the organization like
+ * deleteScheduleSlot. */
+export async function deleteContentPost(
+  organizationId: string,
+  postId: string,
+): Promise<boolean> {
+  const result = await prisma.contentPost.deleteMany({
+    where: { id: postId, organizationId },
+  });
+  return result.count > 0;
+}

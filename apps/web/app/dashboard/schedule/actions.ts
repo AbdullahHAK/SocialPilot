@@ -59,22 +59,25 @@ export async function addScheduleSlotAction(formData: FormData) {
   const timezone = parseTimezone(formData.get("timezone"));
   await setPublishingScheduleTimezone(session.organizationId, timezone);
 
-  // One time/platform can be applied to several days at once (the "repeat
-  // on these days" pattern from alarm apps) - a plain <form> naturally
-  // collects multiple same-named fields via getAll, one per checked day.
+  // One time can be applied to several days and/or both platforms at once
+  // (the "repeat on these days" pattern from alarm apps, extended to
+  // platforms too) - a plain <form> naturally collects multiple
+  // same-named fields via getAll, one per checked day/platform.
   const days = formData.getAll("dayOfWeek");
   const time = formData.get("time");
-  const platform = formData.get("platform");
+  const platforms = formData.getAll("platform");
 
   for (const dayOfWeek of days) {
-    const parsed = scheduleSlotSchema.safeParse({ dayOfWeek, time, platform });
-    if (!parsed.success) continue;
+    for (const platform of platforms) {
+      const parsed = scheduleSlotSchema.safeParse({ dayOfWeek, time, platform });
+      if (!parsed.success) continue;
 
-    await addScheduleSlot({
-      organizationId: session.organizationId,
-      ...parsed.data,
-    });
-    await generateForImmediateOccurrence(session.organizationId, parsed.data, timezone);
+      await addScheduleSlot({
+        organizationId: session.organizationId,
+        ...parsed.data,
+      });
+      await generateForImmediateOccurrence(session.organizationId, parsed.data, timezone);
+    }
   }
   revalidatePath("/dashboard/schedule");
 }
@@ -108,43 +111,54 @@ export interface OneTimePostResult {
   reason?: "not_ready" | "invalid";
 }
 
-/** Schedules a single post for one specific calendar date, bypassing the
- * recurring weekly slots entirely - for "just this one day" instead of
- * "every Monday". Generates immediately, same as a new weekly slot does,
- * so it shows up on the Content Calendar right away rather than waiting
- * for the once-daily lookahead job. */
+/** Schedules a post for one specific calendar date on one or both
+ * platforms at once, bypassing the recurring weekly slots entirely - for
+ * "just this one day" instead of "every Monday". Generates immediately,
+ * same as a new weekly slot does, so it shows up on the Content Calendar
+ * right away rather than waiting for the once-daily lookahead job. */
 export async function addOneTimePostAction(
   formData: FormData,
 ): Promise<OneTimePostResult> {
   const session = await getSession();
   if (!session) return { ok: false, reason: "invalid" };
 
-  const parsed = oneTimePostSchema.safeParse({
-    date: formData.get("date"),
-    time: formData.get("time"),
-    platform: formData.get("platform"),
-  });
-  if (!parsed.success) return { ok: false, reason: "invalid" };
+  const date = formData.get("date");
+  const time = formData.get("time");
+  const platforms = formData.getAll("platform");
+  if (platforms.length === 0) return { ok: false, reason: "invalid" };
 
   const timezone = parseTimezone(formData.get("timezone"));
   await setPublishingScheduleTimezone(session.organizationId, timezone);
 
-  const [year, month, day] = parsed.data.date.split("-").map(Number);
-  const [hour, minute] = parsed.data.time.split(":").map(Number);
-  const scheduledFor = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
+  let anySucceeded = false;
+  let lastReason: OneTimePostResult["reason"];
 
-  try {
-    const result = await generateAndScheduleContent({
-      organizationId: session.organizationId,
-      platform: parsed.data.platform,
-      scheduledFor,
-    });
-    revalidatePath("/dashboard/calendar");
-    return result.success ? { ok: true } : { ok: false, reason: result.skipped };
-  } catch (error) {
-    console.error("One-time content generation failed", error);
-    return { ok: false };
+  for (const platform of platforms) {
+    const parsed = oneTimePostSchema.safeParse({ date, time, platform });
+    if (!parsed.success) {
+      lastReason = "invalid";
+      continue;
+    }
+
+    const [year, month, day] = parsed.data.date.split("-").map(Number);
+    const [hour, minute] = parsed.data.time.split(":").map(Number);
+    const scheduledFor = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
+
+    try {
+      const result = await generateAndScheduleContent({
+        organizationId: session.organizationId,
+        platform: parsed.data.platform,
+        scheduledFor,
+      });
+      if (result.success) anySucceeded = true;
+      else lastReason = result.skipped;
+    } catch (error) {
+      console.error("One-time content generation failed", error);
+    }
   }
+
+  revalidatePath("/dashboard/calendar");
+  return anySucceeded ? { ok: true } : { ok: false, reason: lastReason };
 }
 
 export async function removeScheduleSlotAction(formData: FormData) {

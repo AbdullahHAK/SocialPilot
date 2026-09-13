@@ -1,0 +1,152 @@
+"use client";
+
+import { Loader2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { useState, useTransition } from "react";
+import { MiniDatePicker } from "@/components/mini-date-picker";
+import { TimeOfDayPicker } from "@/components/time-of-day-picker";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { dateKey, MONTH_LABELS } from "@/lib/calendar";
+import { from24Hour, to24Hour, type Meridiem } from "@/lib/time-of-day";
+import { getZonedDateParts } from "@/lib/timezone";
+import type { EditContentPostResult } from "@/app/dashboard/calendar/actions";
+
+function initialStateFor(scheduledForIso: string) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zoned = getZonedDateParts(new Date(scheduledForIso), timezone);
+  const { hour12, minute, meridiem } = from24Hour(
+    `${String(zoned.hour).padStart(2, "0")}:${String(zoned.minute).padStart(2, "0")}`,
+  );
+  return {
+    date: new Date(Date.UTC(zoned.year, zoned.month - 1, zoned.day)),
+    hour12,
+    minute,
+    meridiem,
+  };
+}
+
+export function EditPostDialog({
+  postId,
+  caption,
+  scheduledForIso,
+  action,
+  trigger,
+}: {
+  postId: string;
+  caption: string;
+  scheduledForIso: string;
+  action: (formData: FormData) => Promise<EditContentPostResult>;
+  trigger: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [captionText, setCaptionText] = useState(caption);
+  const [state, setState] = useState(() => initialStateFor(scheduledForIso));
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function reset() {
+    setCaptionText(caption);
+    setState(initialStateFor(scheduledForIso));
+    setError(null);
+  }
+
+  function handleSubmit() {
+    setError(null);
+    const formData = new FormData();
+    formData.set("postId", postId);
+    formData.set("caption", captionText);
+    formData.set("date", dateKey(state.date));
+    formData.set(
+      "time",
+      to24Hour({ hour12: state.hour12, minute: state.minute, meridiem: state.meridiem }),
+    );
+    formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+    startTransition(async () => {
+      const result = await action(formData);
+      if (!result.ok) {
+        setError("Couldn't save those changes. Please try again.");
+        return;
+      }
+      setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (isPending) return;
+        setOpen(next);
+        if (!next) reset();
+      }}
+    >
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit post</DialogTitle>
+          <DialogDescription>
+            Change the caption or move it to a different date and time.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className="mb-2 text-sm font-medium">Caption</p>
+            <Textarea
+              value={captionText}
+              onChange={(e) => setCaptionText(e.target.value)}
+              rows={4}
+              maxLength={2200}
+            />
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-medium">Time</p>
+            <TimeOfDayPicker
+              hour12={state.hour12}
+              minute={state.minute}
+              meridiem={state.meridiem}
+              onHourChange={(hour12) => setState((s) => ({ ...s, hour12 }))}
+              onMinuteChange={(minute) => setState((s) => ({ ...s, minute }))}
+              onMeridiemChange={(meridiem: Meridiem) => setState((s) => ({ ...s, meridiem }))}
+            />
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-medium">
+              Date —{" "}
+              <span className="font-normal text-muted-foreground">
+                {MONTH_LABELS[state.date.getUTCMonth()]} {state.date.getUTCDate()},{" "}
+                {state.date.getUTCFullYear()}
+              </span>
+            </p>
+            <MiniDatePicker
+              selected={state.date}
+              onSelect={(date) => setState((s) => ({ ...s, date }))}
+            />
+          </div>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} className="gap-2">
+            {isPending && <Loader2 className="size-4 animate-spin" />}
+            {isPending ? "Saving…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

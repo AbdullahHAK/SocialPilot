@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   createContentPost,
+  deleteContentPost,
   getLastPublishedPost,
   getNextScheduledPost,
   listContentPostsInRange,
   listDuePosts,
   markContentPostFailed,
   markContentPostPublished,
+  updateContentPost,
 } from "./content-post";
 import { prisma } from "./index";
 
@@ -254,5 +256,80 @@ describe("getNextScheduledPost", () => {
       new Date("2026-09-13T00:00:00Z"),
     );
     expect(result).toBeNull();
+  });
+});
+
+describe("updateContentPost", () => {
+  it("updates the caption and scheduled time of a post belonging to the organization", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const post = await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      caption: "Old caption",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+    });
+
+    const updated = await updateContentPost(org.id, post.id, {
+      caption: "New caption",
+      scheduledFor: new Date("2026-09-15T10:00:00Z"),
+    });
+
+    expect(updated?.caption).toBe("New caption");
+    expect(updated?.scheduledFor?.toISOString()).toBe("2026-09-15T10:00:00.000Z");
+  });
+
+  it("returns null and does not update a post belonging to a different organization", async () => {
+    const orgA = await prisma.organization.create({ data: { name: "A" } });
+    const orgB = await prisma.organization.create({ data: { name: "B" } });
+    const post = await createContentPost({
+      organizationId: orgA.id,
+      platform: "INSTAGRAM",
+      caption: "Original",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+    });
+
+    const result = await updateContentPost(orgB.id, post.id, { caption: "Hacked" });
+    expect(result).toBeNull();
+
+    const untouched = await prisma.contentPost.findUniqueOrThrow({ where: { id: post.id } });
+    expect(untouched.caption).toBe("Original");
+  });
+});
+
+describe("deleteContentPost", () => {
+  it("deletes a post belonging to the organization", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const post = await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+    });
+
+    const deleted = await deleteContentPost(org.id, post.id);
+    expect(deleted).toBe(true);
+
+    await expect(
+      prisma.contentPost.findUniqueOrThrow({ where: { id: post.id } }),
+    ).rejects.toThrow();
+  });
+
+  it("does not delete a post belonging to a different organization", async () => {
+    const orgA = await prisma.organization.create({ data: { name: "A" } });
+    const orgB = await prisma.organization.create({ data: { name: "B" } });
+    const post = await createContentPost({
+      organizationId: orgA.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+    });
+
+    const deleted = await deleteContentPost(orgB.id, post.id);
+    expect(deleted).toBe(false);
+
+    const stillThere = await prisma.contentPost.findUnique({ where: { id: post.id } });
+    expect(stillThere).not.toBeNull();
   });
 });

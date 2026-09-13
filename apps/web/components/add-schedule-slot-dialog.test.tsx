@@ -36,6 +36,8 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "W" }));
+    // Instagram is selected by default - switch to Facebook only.
+    fireEvent.click(screen.getByRole("button", { name: /instagram/i }));
     fireEvent.click(screen.getByRole("button", { name: /facebook/i }));
     fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
@@ -43,7 +45,33 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
     const formData = action.mock.calls[0][0] as FormData;
     expect(formData.getAll("dayOfWeek")).toEqual(["WEDNESDAY"]);
     expect(formData.get("time")).toBe("18:00");
-    expect(formData.get("platform")).toBe("FACEBOOK");
+    expect(formData.getAll("platform")).toEqual(["FACEBOOK"]);
+  });
+
+  it("allows selecting both platforms at once", async () => {
+    const action = vi.fn().mockResolvedValue(undefined);
+    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
+    openDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "W" }));
+    // Instagram is already selected by default - also add Facebook.
+    fireEvent.click(screen.getByRole("button", { name: /facebook/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const formData = action.mock.calls[0][0] as FormData;
+    expect(formData.getAll("platform").sort()).toEqual(["FACEBOOK", "INSTAGRAM"]);
+  });
+
+  it("requires at least one platform", async () => {
+    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} />);
+    openDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "W" }));
+    fireEvent.click(screen.getByRole("button", { name: /instagram/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    expect(screen.getByText(/pick at least one platform/i)).toBeVisible();
   });
 
   it("includes the browser's own timezone so the time isn't misread as UTC", async () => {
@@ -91,7 +119,7 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
     );
     expect(formData.get("date")).toBe(expectedKey);
     expect(formData.get("time")).toBe("18:00");
-    expect(formData.get("platform")).toBe("INSTAGRAM");
+    expect(formData.getAll("platform")).toEqual(["INSTAGRAM"]);
 
     expect(push).toHaveBeenCalledWith(
       `/dashboard/calendar?month=${formatMonthParam(today.getUTCFullYear(), today.getUTCMonth())}`,

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
 import { MiniDatePicker } from "@/components/mini-date-picker";
+import { TimeOfDayPicker } from "@/components/time-of-day-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,13 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { dateKey, formatMonthParam, MONTH_LABELS } from "@/lib/calendar";
 import { to24Hour, type Meridiem } from "@/lib/time-of-day";
 import { cn } from "@/lib/utils";
@@ -37,9 +31,6 @@ const DAY_OPTIONS: { value: DayOfWeek; label: string }[] = [
   { value: "FRIDAY", label: "F" },
   { value: "SATURDAY", label: "S" },
 ];
-
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
-const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
 type Mode = "weekly" | "once";
 
@@ -63,7 +54,7 @@ export function AddScheduleSlotDialog({
   const [hour12, setHour12] = useState(6);
   const [minute, setMinute] = useState(0);
   const [meridiem, setMeridiem] = useState<Meridiem>("PM");
-  const [platform, setPlatform] = useState<Platform>("INSTAGRAM");
+  const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["INSTAGRAM"]));
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -76,6 +67,15 @@ export function AddScheduleSlotDialog({
     });
   }
 
+  function togglePlatform(platform: Platform) {
+    setPlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
+      return next;
+    });
+  }
+
   function reset() {
     setMode("weekly");
     setDays(new Set());
@@ -83,13 +83,17 @@ export function AddScheduleSlotDialog({
     setHour12(6);
     setMinute(0);
     setMeridiem("PM");
-    setPlatform("INSTAGRAM");
+    setPlatforms(new Set(["INSTAGRAM"]));
     setError(null);
   }
 
   function handleSubmit() {
     if (mode === "weekly" && days.size === 0) {
       setError("Pick at least one day.");
+      return;
+    }
+    if (platforms.size === 0) {
+      setError("Pick at least one platform.");
       return;
     }
     setError(null);
@@ -103,8 +107,8 @@ export function AddScheduleSlotDialog({
     if (mode === "weekly") {
       const formData = new FormData();
       for (const day of days) formData.append("dayOfWeek", day);
+      for (const platform of platforms) formData.append("platform", platform);
       formData.set("time", time);
-      formData.set("platform", platform);
       formData.set("timezone", timezone);
 
       startTransition(async () => {
@@ -116,9 +120,9 @@ export function AddScheduleSlotDialog({
     }
 
     const formData = new FormData();
+    for (const platform of platforms) formData.append("platform", platform);
     formData.set("date", dateKey(date));
     formData.set("time", time);
-    formData.set("platform", platform);
     formData.set("timezone", timezone);
 
     startTransition(async () => {
@@ -189,57 +193,14 @@ export function AddScheduleSlotDialog({
 
           <div>
             <p className="mb-2 text-sm font-medium">Time</p>
-            <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-4">
-              <Select
-                value={String(hour12)}
-                onValueChange={(v) => setHour12(Number(v))}
-              >
-                <SelectTrigger className="h-14 w-20 justify-center text-2xl font-semibold [&>svg]:hidden">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HOURS.map((h) => (
-                    <SelectItem key={h} value={String(h)} className="justify-center text-base">
-                      {h}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-2xl font-semibold text-muted-foreground">:</span>
-              <Select
-                value={String(minute)}
-                onValueChange={(v) => setMinute(Number(v))}
-              >
-                <SelectTrigger className="h-14 w-20 justify-center text-2xl font-semibold [&>svg]:hidden">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MINUTES.map((m) => (
-                    <SelectItem key={m} value={String(m)} className="justify-center text-base">
-                      {String(m).padStart(2, "0")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="ml-2 flex flex-col gap-1">
-                {(["AM", "PM"] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setMeridiem(option)}
-                    className={cn(
-                      "rounded-md px-3 py-1.5 text-sm font-semibold transition-colors",
-                      meridiem === option
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <TimeOfDayPicker
+              hour12={hour12}
+              minute={minute}
+              meridiem={meridiem}
+              onHourChange={setHour12}
+              onMinuteChange={setMinute}
+              onMeridiemChange={setMeridiem}
+            />
           </div>
 
           {mode === "weekly" ? (
@@ -281,15 +242,20 @@ export function AddScheduleSlotDialog({
           )}
 
           <div>
-            <p className="mb-2 text-sm font-medium">Platform</p>
+            <p className="mb-2 text-sm font-medium">
+              Platform{" "}
+              <span className="font-normal text-muted-foreground">
+                (pick one or both)
+              </span>
+            </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setPlatform("INSTAGRAM")}
-                aria-pressed={platform === "INSTAGRAM"}
+                onClick={() => togglePlatform("INSTAGRAM")}
+                aria-pressed={platforms.has("INSTAGRAM")}
                 className={cn(
                   "flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                  platform === "INSTAGRAM"
+                  platforms.has("INSTAGRAM")
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
@@ -299,11 +265,11 @@ export function AddScheduleSlotDialog({
               </button>
               <button
                 type="button"
-                onClick={() => setPlatform("FACEBOOK")}
-                aria-pressed={platform === "FACEBOOK"}
+                onClick={() => togglePlatform("FACEBOOK")}
+                aria-pressed={platforms.has("FACEBOOK")}
                 className={cn(
                   "flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                  platform === "FACEBOOK"
+                  platforms.has("FACEBOOK")
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}

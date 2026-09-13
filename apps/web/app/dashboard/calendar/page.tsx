@@ -2,10 +2,11 @@ import { listContentPostsInRange } from "@socialpilot/db";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
+import { PostHoverCard } from "@/components/post-hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
 import {
   dateKey,
   formatMonthParam,
@@ -15,6 +16,7 @@ import {
   WEEKDAY_LABELS,
 } from "@/lib/calendar";
 import { getSession } from "@/lib/session";
+import { deleteContentPostAction, editContentPostAction } from "./actions";
 
 const STATUS_BADGE_VARIANT = {
   DRAFT: "secondary",
@@ -133,24 +135,40 @@ export default async function CalendarPage({
                 </span>
                 <div className="flex flex-col gap-1">
                   {dayPosts.map((post) => (
-                    <div
+                    <PostHoverCard
                       key={post.id}
-                      className="flex items-center justify-center gap-1 rounded-md bg-accent/60 px-1.5 py-1 text-[11px] font-medium sm:justify-start"
-                      title={post.caption ?? post.type}
+                      post={{
+                        id: post.id,
+                        platform: post.platform,
+                        status: post.status,
+                        caption: post.caption,
+                        imageUrls: post.imageUrls,
+                        // Every post reaching this list has at least one of
+                        // these set - that's the filter used to place it on
+                        // the calendar in the first place.
+                        scheduledFor: (post.scheduledFor ?? post.publishedAt)!.toISOString(),
+                      }}
+                      editAction={editContentPostAction}
+                      deleteAction={deleteContentPostAction}
                     >
-                      {post.platform === "INSTAGRAM" ? (
-                        <InstagramIcon className="size-3 shrink-0" />
-                      ) : (
-                        <FacebookIcon className="size-3 shrink-0" />
-                      )}
-                      {/* Below `sm`, cells are only ~35px wide - a couple of
-                          truncated letters read as broken, not helpful, so
-                          just show the platform icon as a glance indicator
-                          and rely on the title tooltip / tapping through. */}
-                      <span className="hidden min-w-0 truncate sm:inline">
-                        {post.caption ?? post.type}
-                      </span>
-                    </div>
+                      <button
+                        type="button"
+                        className="flex w-full cursor-default items-center justify-center gap-1 rounded-md bg-accent/60 px-1.5 py-1 text-[11px] font-medium transition-colors hover:bg-accent sm:justify-start"
+                      >
+                        {post.platform === "INSTAGRAM" ? (
+                          <InstagramIcon className="size-3 shrink-0" />
+                        ) : (
+                          <FacebookIcon className="size-3 shrink-0" />
+                        )}
+                        {/* Below `sm`, cells are only ~35px wide - a couple
+                            of truncated letters read as broken, not
+                            helpful, so just show the platform icon and
+                            rely on the hover card for detail. */}
+                        <span className="hidden min-w-0 truncate sm:inline">
+                          {post.caption ?? post.type}
+                        </span>
+                      </button>
+                    </PostHoverCard>
                   ))}
                 </div>
               </div>
