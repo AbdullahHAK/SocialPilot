@@ -1,4 +1,5 @@
 import {
+  countContentPosts,
   createContentPost,
   getBrandCreativeProfile,
   getBrandProfile,
@@ -8,6 +9,7 @@ import { asStringArray } from "./brand-fields";
 import { buildImagePrompt } from "./brand-prompt";
 import { fetchImageBuffer } from "./fetch-image";
 import { generateCaption, generateImage } from "./openai";
+import { createStoryImage } from "./story-image";
 import { uploadGeneratedImage } from "./storage";
 
 // Cycled by call index so a run of daily/weekly content doesn't repeat the
@@ -21,6 +23,24 @@ export const CONTENT_THEMES = [
   "Highlight a special offer or promotion in broad terms, without inventing a specific price.",
   "Center the content on the customer experience and enjoyment of the brand.",
   "Focus on the brand's atmosphere and personality rather than one specific product.",
+] as const;
+
+// A second, independent axis of variety (composition/lighting/setting)
+// cycled alongside CONTENT_THEMES. Deliberately not a multiple of
+// CONTENT_THEMES.length (7) so the two only repeat the same *combination*
+// once every 7*11 = 77 posts, even though each cycles on its own.
+export const CONTENT_TREATMENTS = [
+  "Shot as a close-up, shallow depth of field.",
+  "Overhead flat-lay composition on a styled surface.",
+  "Wide shot showing the product in its surroundings.",
+  "Bright, airy natural daylight setting.",
+  "Moody, dramatic lighting with strong shadows.",
+  "Candid lifestyle scene with the product being enjoyed.",
+  "Minimalist studio shot on a clean, simple background.",
+  "Dynamic angle capturing movement or action.",
+  "Warm, cozy, golden-hour lighting.",
+  "Editorial-style composition with generous negative space.",
+  "Rustic, textured setting emphasizing natural materials.",
 ] as const;
 
 export interface GenerateAndScheduleInput {
@@ -51,7 +71,13 @@ export async function generateAndScheduleContent(
   }
 
   const brief = creativeProfile.promptTemplateAdditions ?? "on-brand social media content";
-  const theme = CONTENT_THEMES[(input.themeIndex ?? 0) % CONTENT_THEMES.length];
+  // Falls back to how many posts this org already has, rather than
+  // literally 0, so two posts triggered independently (e.g. a one-time
+  // date add followed by a schedule slot add) don't both land on the same
+  // "first" theme and end up looking like near-duplicates.
+  const resolvedIndex = input.themeIndex ?? (await countContentPosts(input.organizationId));
+  const theme = CONTENT_THEMES[resolvedIndex % CONTENT_THEMES.length];
+  const treatment = CONTENT_TREATMENTS[resolvedIndex % CONTENT_TREATMENTS.length];
   const brandContext = {
     businessName: brandProfile.businessName,
     category: brandProfile.category,
@@ -85,11 +111,23 @@ export async function generateAndScheduleContent(
       prompt: buildImagePrompt(
         brief,
         brandContext,
-        `${theme} Consistent with the brand's established visual style.`,
+        `${theme} ${treatment} Consistent with the brand's established visual style.`,
       ),
       referenceImages,
     });
     const imageUrl = await uploadGeneratedImage(input.organizationId, imageBuffer);
+
+    // Best-effort: the post itself is the primary deliverable, so a
+    // failure here shouldn't block it - it just means this post won't
+    // also go out as a Story.
+    let storyImageUrl: string | undefined;
+    try {
+      const storyBuffer = await createStoryImage(imageBuffer);
+      storyImageUrl = await uploadGeneratedImage(input.organizationId, storyBuffer, "stories");
+    } catch (error) {
+      console.error("Generating the Story-format version of the image failed", error);
+    }
+
     const { caption, hashtags } = await generateCaption({
       businessName: brandProfile.businessName,
       tone: brandProfile.tone ?? undefined,
@@ -99,6 +137,7 @@ export async function generateAndScheduleContent(
       organizationId: input.organizationId,
       platform: input.platform,
       imageUrls: [imageUrl],
+      storyImageUrl,
       caption,
       hashtags,
       scheduledFor: input.scheduledFor,

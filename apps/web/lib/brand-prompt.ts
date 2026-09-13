@@ -14,6 +14,17 @@ export interface BrandContext {
 const BRAND_BUILDING_GUIDANCE =
   "Prioritize brand recognition, product quality, and an appetizing, memorable presentation over price promotion. Do not add specific prices, discount percentages, or \"sale\"/\"% off\" banners to the image unless the request above explicitly asks for a price or promotion - prefer broader messages like a special offer, a limited-time promotion, or simply showcasing the product beautifully.";
 
+// The client's explicit complaint: two auto-generated posts came out
+// looking almost identical. Reference images are there to anchor overall
+// brand style (color grading, mood, logo placement), not to be redrawn
+// verbatim each time - without saying so explicitly, the model tends to
+// stay very close to whatever reference it's given.
+const VARIETY_GUIDANCE =
+  "Treat any reference images only as a guide to the brand's overall visual style, color palette, and mood - do not recreate their exact composition, camera angle, framing, or subject arrangement. Invent a fresh, distinct composition for this image.";
+
+const QUALITY_GUIDANCE =
+  "Photorealistic professional photography, natural realistic lighting and textures, sharp focus, no distorted or extra objects, no warped text or watermark artifacts, no plastic or uncanny surfaces - it should not look AI-generated.";
+
 export function buildImagePrompt(
   userPrompt: string,
   brand: BrandContext | null,
@@ -34,6 +45,8 @@ export function buildImagePrompt(
   }
   if (extra) parts.push(extra);
   parts.push(BRAND_BUILDING_GUIDANCE);
+  parts.push(VARIETY_GUIDANCE);
+  parts.push(QUALITY_GUIDANCE);
   parts.push(
     "Square, social-media-ready composition, professional photography quality.",
   );

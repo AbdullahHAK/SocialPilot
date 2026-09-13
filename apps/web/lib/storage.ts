@@ -51,14 +51,16 @@ export async function uploadLogo(
 
 /** Uploads an AI-generated concept/content image (PNG) and returns its
  * public URL. Filenames are unique per call so multiple concepts/posts
- * never collide. */
+ * never collide. `prefix` just organizes the bucket (e.g. "stories" for
+ * the 9:16 versions rendered alongside a post) - doesn't change behavior. */
 export async function uploadGeneratedImage(
   organizationId: string,
   imageBuffer: Buffer,
+  prefix: string = "generated",
 ): Promise<string> {
   const bucket = requireEnv("STORAGE_BUCKET");
   const publicUrl = requireEnv("STORAGE_PUBLIC_URL");
-  const key = `generated/${organizationId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
+  const key = `${prefix}/${organizationId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
 
   await getClient().send(
     new PutObjectCommand({

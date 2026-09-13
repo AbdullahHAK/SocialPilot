@@ -121,3 +121,81 @@ export async function publishToFacebook(
 
   return post_id ?? id;
 }
+
+export interface PublishStoryInput {
+  pageAccessToken: string;
+  /** The IG Business account id for Instagram, the Page id for Facebook. */
+  accountId: string;
+  imageUrl: string;
+}
+
+/** Instagram Stories go through the same container flow as a feed post,
+ * just with media_type=STORIES - and unlike a feed post, a Story
+ * container takes no caption (the API has no field for it). */
+export async function publishInstagramStory(
+  input: PublishStoryInput,
+  pollOptions?: { pollIntervalMs?: number; timeoutMs?: number },
+): Promise<string> {
+  const createParams = new URLSearchParams({
+    image_url: input.imageUrl,
+    media_type: "STORIES",
+    access_token: input.pageAccessToken,
+  });
+  const createRes = await fetch(
+    `${GRAPH_API_BASE}/${input.accountId}/media?${createParams}`,
+    { method: "POST" },
+  );
+  const { id: creationId } = await parseGraphResponse<{ id: string }>(
+    createRes,
+    "Instagram Story container creation",
+  );
+
+  await waitForContainerReady(creationId, input.pageAccessToken, pollOptions);
+
+  const publishParams = new URLSearchParams({
+    creation_id: creationId,
+    access_token: input.pageAccessToken,
+  });
+  const publishRes = await fetch(
+    `${GRAPH_API_BASE}/${input.accountId}/media_publish?${publishParams}`,
+    { method: "POST" },
+  );
+  const { id: storyId } = await parseGraphResponse<{ id: string }>(
+    publishRes,
+    "Instagram Story publish",
+  );
+
+  return storyId;
+}
+
+/** Facebook Page Stories are a separate two-step flow from a feed photo
+ * post: upload the photo unpublished first, then turn that photo into a
+ * Story. */
+export async function publishFacebookStory(input: PublishStoryInput): Promise<string> {
+  const uploadParams = new URLSearchParams({
+    url: input.imageUrl,
+    published: "false",
+    access_token: input.pageAccessToken,
+  });
+  const uploadRes = await fetch(`${GRAPH_API_BASE}/${input.accountId}/photos?${uploadParams}`, {
+    method: "POST",
+  });
+  const { id: photoId } = await parseGraphResponse<{ id: string }>(
+    uploadRes,
+    "Facebook Story photo upload",
+  );
+
+  const storyParams = new URLSearchParams({
+    photo_id: photoId,
+    access_token: input.pageAccessToken,
+  });
+  const storyRes = await fetch(`${GRAPH_API_BASE}/${input.accountId}/photo_stories?${storyParams}`, {
+    method: "POST",
+  });
+  const { post_id, id } = await parseGraphResponse<{ post_id?: string; id: string }>(
+    storyRes,
+    "Facebook Story publish",
+  );
+
+  return post_id ?? id;
+}

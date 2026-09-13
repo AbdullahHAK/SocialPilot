@@ -17,6 +17,8 @@ describe("buildImagePrompt", () => {
     expect(result).toContain("Bold and fun");
     expect(result).toContain("#ff0000, #111111");
     expect(result).toMatch(/do not add specific prices/i);
+    expect(result).toMatch(/do not recreate their exact composition/i);
+    expect(result).toMatch(/should not look ai-generated/i);
   });
 
   it("works with no brand context", () => {

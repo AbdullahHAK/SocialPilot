@@ -7,6 +7,7 @@ export interface CreateContentPostInput {
   caption?: string;
   hashtags?: string[];
   imageUrls: string[];
+  storyImageUrl?: string;
   scheduledFor: Date;
 }
 
@@ -20,7 +21,46 @@ export function createContentPost(input: CreateContentPostInput) {
       caption: input.caption,
       hashtags: input.hashtags ?? [],
       imageUrls: input.imageUrls,
+      storyImageUrl: input.storyImageUrl,
       scheduledFor: input.scheduledFor,
+    },
+  });
+}
+
+/** How many posts an org has ever had generated - used as a stable,
+ * ever-increasing seed for picking a theme/treatment so consecutive posts
+ * (whether triggered by the cron job, a new schedule slot, or a one-time
+ * date) never land on the same combination by coincidence. */
+export function countContentPosts(organizationId: string): Promise<number> {
+  return prisma.contentPost.count({ where: { organizationId } });
+}
+
+export interface RecordPublishedStoryInput {
+  organizationId: string;
+  platform: Platform;
+  caption?: string;
+  hashtags?: string[];
+  imageUrls: string[];
+  externalPostId: string;
+}
+
+/** Records a Story that was published immediately (right after its
+ * matching feed post), rather than scheduled ahead of time - there's no
+ * "SCHEDULED" phase for it to go through. */
+export function recordPublishedStory(input: RecordPublishedStoryInput) {
+  const now = new Date();
+  return prisma.contentPost.create({
+    data: {
+      organizationId: input.organizationId,
+      platform: input.platform,
+      type: "STORY",
+      status: "PUBLISHED",
+      caption: input.caption,
+      hashtags: input.hashtags ?? [],
+      imageUrls: input.imageUrls,
+      scheduledFor: now,
+      publishedAt: now,
+      externalPostId: input.externalPostId,
     },
   });
 }

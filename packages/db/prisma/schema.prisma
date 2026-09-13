@@ -248,6 +248,11 @@ model ContentPost {
   caption        String?
   hashtags       String[]
   imageUrls      String[]
+  // Pre-rendered 9:16 version of imageUrls[0], generated once alongside it
+  // so the worker can also auto-publish this same post as a Story on the
+  // same platform without doing any image processing itself at publish
+  // time - just null for STORY-type rows themselves.
+  storyImageUrl  String?
   scheduledFor   DateTime?
   publishedAt    DateTime?
   externalPostId String?

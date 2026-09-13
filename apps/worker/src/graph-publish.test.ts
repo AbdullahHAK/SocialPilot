@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { publishToFacebook, publishToInstagram } from "./graph-publish";
+import {
+  publishFacebookStory,
+  publishInstagramStory,
+  publishToFacebook,
+  publishToInstagram,
+} from "./graph-publish";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -169,5 +174,83 @@ describe("publishToFacebook", () => {
     });
 
     expect(postId).toBe("456");
+  });
+});
+
+describe("publishInstagramStory", () => {
+  it("creates a STORIES container (no caption) then publishes it", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "creation-1" }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "story-1" }), { status: 200 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const storyId = await publishInstagramStory({
+      pageAccessToken: "token",
+      accountId: "ig-1",
+      imageUrl: "https://example.com/a.png",
+    });
+
+    expect(storyId).toBe("story-1");
+    const createUrl = String(fetchMock.mock.calls[0]![0]);
+    expect(createUrl).toContain("/ig-1/media?");
+    expect(createUrl).toContain("media_type=STORIES");
+    expect(createUrl).not.toContain("caption=");
+    expect(String(fetchMock.mock.calls[2]![0])).toContain("/ig-1/media_publish?");
+  });
+});
+
+describe("publishFacebookStory", () => {
+  it("uploads an unpublished photo, then turns it into a Story", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "photo-1" }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ post_id: "page_1_story_1", id: "story-1" }), {
+          status: 200,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const storyId = await publishFacebookStory({
+      pageAccessToken: "token",
+      accountId: "page-1",
+      imageUrl: "https://example.com/a.png",
+    });
+
+    expect(storyId).toBe("page_1_story_1");
+    const uploadUrl = String(fetchMock.mock.calls[0]![0]);
+    expect(uploadUrl).toContain("/page-1/photos?");
+    expect(uploadUrl).toContain("published=false");
+    const storyUrl = String(fetchMock.mock.calls[1]![0]);
+    expect(storyUrl).toContain("/page-1/photo_stories?");
+    expect(storyUrl).toContain("photo_id=photo-1");
+  });
+
+  it("falls back to the bare id when post_id is absent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "photo-1" }), { status: 200 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "story-1" }), { status: 200 })),
+    );
+
+    const storyId = await publishFacebookStory({
+      pageAccessToken: "token",
+      accountId: "page-1",
+      imageUrl: "https://example.com/a.png",
+    });
+
+    expect(storyId).toBe("story-1");
   });
 });

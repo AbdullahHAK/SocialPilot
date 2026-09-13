@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  countContentPosts,
   createContentPost,
   deleteContentPost,
   getContentPost,
@@ -9,6 +10,7 @@ import {
   listDuePosts,
   markContentPostFailed,
   markContentPostPublished,
+  recordPublishedStory,
   updateContentPost,
 } from "./content-post";
 import { prisma } from "./index";
@@ -34,6 +36,74 @@ describe("createContentPost", () => {
     expect(post.type).toBe("POST");
     expect(post.caption).toBe("New arrivals!");
     expect(post.hashtags).toEqual(["#new", "#sale"]);
+    expect(post.storyImageUrl).toBeNull();
+  });
+
+  it("stores a pre-rendered story image URL alongside the post when given one", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+
+    const post = await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      storyImageUrl: "https://example.com/a-story.png",
+      scheduledFor: new Date("2026-09-20T09:00:00Z"),
+    });
+
+    expect(post.storyImageUrl).toBe("https://example.com/a-story.png");
+  });
+});
+
+describe("countContentPosts", () => {
+  it("counts only posts belonging to the organization", async () => {
+    const orgA = await prisma.organization.create({ data: { name: "A" } });
+    const orgB = await prisma.organization.create({ data: { name: "B" } });
+    await createContentPost({
+      organizationId: orgA.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-20T09:00:00Z"),
+    });
+    await createContentPost({
+      organizationId: orgA.id,
+      platform: "FACEBOOK",
+      imageUrls: ["https://example.com/b.png"],
+      scheduledFor: new Date("2026-09-21T09:00:00Z"),
+    });
+    await createContentPost({
+      organizationId: orgB.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/c.png"],
+      scheduledFor: new Date("2026-09-20T09:00:00Z"),
+    });
+
+    expect(await countContentPosts(orgA.id)).toBe(2);
+    expect(await countContentPosts(orgB.id)).toBe(1);
+  });
+
+  it("returns 0 for an organization with no posts", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    expect(await countContentPosts(org.id)).toBe(0);
+  });
+});
+
+describe("recordPublishedStory", () => {
+  it("creates an already-PUBLISHED STORY post", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+
+    const story = await recordPublishedStory({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      caption: "Weekend special!",
+      hashtags: ["#offer"],
+      imageUrls: ["https://example.com/story.png"],
+      externalPostId: "ig-story-123",
+    });
+
+    expect(story.type).toBe("STORY");
+    expect(story.status).toBe("PUBLISHED");
+    expect(story.publishedAt).not.toBeNull();
+    expect(story.externalPostId).toBe("ig-story-123");
   });
 });
 
