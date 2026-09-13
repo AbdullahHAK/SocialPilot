@@ -78,3 +78,17 @@ export const oneTimePostSchema = z.object({
 });
 
 export type OneTimePostInput = z.infer<typeof oneTimePostSchema>;
+
+/** The IANA zone name a browser reports for "Add posting time" submissions,
+ * so a picked time is interpreted as that person's local time rather than
+ * literally the same clock reading in UTC. Validated against Intl itself
+ * rather than a regex, since a bogus value would otherwise throw deep
+ * inside the timezone-conversion code instead of failing validation. */
+export const timezoneSchema = z.string().refine((value) => {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}, "Invalid timezone");

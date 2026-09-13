@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
     const occurrences = computeUpcomingSlotOccurrences(slots, {
       from: now,
       days: Math.ceil(LOOKAHEAD_HOURS / 24) + 1,
+      timezone: org.publishingSchedule?.timezone ?? "UTC",
     }).filter((occurrence) => occurrence.date <= lookaheadEnd);
 
     let generatedForOrg = 0;

@@ -3,6 +3,7 @@ import {
   addScheduleSlot,
   deleteScheduleSlot,
   getPublishingSchedule,
+  setPublishingScheduleTimezone,
   updateScheduleSlot,
 } from "./publishing-schedule";
 import { prisma } from "./index";
@@ -101,6 +102,17 @@ describe("updateScheduleSlot", () => {
 
     const schedule = await getPublishingSchedule(orgA.id);
     expect(schedule.slots[0]?.enabled).toBe(true);
+  });
+});
+
+describe("setPublishingScheduleTimezone", () => {
+  it("updates the schedule's timezone", async () => {
+    const org = await createOrgWithSchedule("Acme");
+    expect((await getPublishingSchedule(org.id)).timezone).toBe("UTC");
+
+    await setPublishingScheduleTimezone(org.id, "Asia/Karachi");
+
+    expect((await getPublishingSchedule(org.id)).timezone).toBe("Asia/Karachi");
   });
 });
 

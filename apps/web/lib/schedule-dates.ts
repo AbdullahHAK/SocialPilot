@@ -1,3 +1,5 @@
+import { getZonedDateParts, zonedTimeToUtc } from "./timezone";
+
 export interface ScheduleSlotLike {
   dayOfWeek:
     | "MONDAY"
@@ -28,44 +30,56 @@ const DAY_INDEX: Record<ScheduleSlotLike["dayOfWeek"], number> = {
 
 /**
  * Expands enabled schedule slots into their next occurrence dates over the
- * given window, in chronological order. Times are treated as UTC - this
- * powers content generation timing, not a user-facing display, so exact
- * IANA timezone conversion isn't load-bearing yet.
+ * given window, in chronological order. `time` and `dayOfWeek` are wall-
+ * clock values in the org's own timezone (default UTC for orgs that
+ * haven't been auto-detected yet) - each occurrence's actual UTC instant
+ * is computed fresh so daylight saving shifts are handled correctly.
  */
 export function computeUpcomingSlotOccurrences(
   slots: ScheduleSlotLike[],
-  options: { from?: Date; days?: number } = {},
+  options: { from?: Date; days?: number; timezone?: string } = {},
 ): UpcomingSlotOccurrence[] {
   const from = options.from ?? new Date();
   const days = options.days ?? 30;
+  const timezone = options.timezone ?? "UTC";
   const windowEnd = new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 
+  const fromParts = getZonedDateParts(from, timezone);
   const occurrences: UpcomingSlotOccurrence[] = [];
 
   for (const slot of slots) {
     const [hours, minutes] = slot.time.split(":").map(Number);
     const targetDay = DAY_INDEX[slot.dayOfWeek];
+    const dayDelta = (targetDay - fromParts.weekday + 7) % 7;
 
-    const cursor = new Date(
-      Date.UTC(
-        from.getUTCFullYear(),
-        from.getUTCMonth(),
-        from.getUTCDate(),
-        hours,
-        minutes,
-        0,
-        0,
-      ),
+    // `calendarCursor` only tracks a local calendar date (year/month/day) -
+    // it's a plain UTC-labeled Date used purely for day arithmetic. The
+    // real UTC instant for each occurrence comes from zonedTimeToUtc.
+    const calendarCursor = new Date(
+      Date.UTC(fromParts.year, fromParts.month - 1, fromParts.day + dayDelta),
     );
-    const dayDelta = (targetDay - cursor.getUTCDay() + 7) % 7;
-    cursor.setUTCDate(cursor.getUTCDate() + dayDelta);
-    if (cursor < from) {
-      cursor.setUTCDate(cursor.getUTCDate() + 7);
+    const occurrenceAt = () =>
+      zonedTimeToUtc(
+        {
+          year: calendarCursor.getUTCFullYear(),
+          month: calendarCursor.getUTCMonth() + 1,
+          day: calendarCursor.getUTCDate(),
+          hour: hours,
+          minute: minutes,
+        },
+        timezone,
+      );
+
+    let occurrence = occurrenceAt();
+    if (occurrence < from) {
+      calendarCursor.setUTCDate(calendarCursor.getUTCDate() + 7);
+      occurrence = occurrenceAt();
     }
 
-    while (cursor <= windowEnd) {
-      occurrences.push({ date: new Date(cursor), platform: slot.platform });
-      cursor.setUTCDate(cursor.getUTCDate() + 7);
+    while (occurrence <= windowEnd) {
+      occurrences.push({ date: occurrence, platform: slot.platform });
+      calendarCursor.setUTCDate(calendarCursor.getUTCDate() + 7);
+      occurrence = occurrenceAt();
     }
   }
 

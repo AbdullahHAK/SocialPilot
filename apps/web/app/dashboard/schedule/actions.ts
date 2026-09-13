@@ -1,6 +1,12 @@
 "use server";
 
-import { addScheduleSlot, deleteScheduleSlot, updateScheduleSlot } from "@socialpilot/db";
+import {
+  addScheduleSlot,
+  deleteScheduleSlot,
+  getPublishingSchedule,
+  setPublishingScheduleTimezone,
+  updateScheduleSlot,
+} from "@socialpilot/db";
 import { revalidatePath } from "next/cache";
 import { generateAndScheduleContent } from "@/lib/generate-content";
 import {
@@ -8,7 +14,18 @@ import {
   type ScheduleSlotLike,
 } from "@/lib/schedule-dates";
 import { getSession } from "@/lib/session";
-import { oneTimePostSchema, scheduleSlotSchema } from "@/lib/validation";
+import { zonedTimeToUtc } from "@/lib/timezone";
+import { oneTimePostSchema, scheduleSlotSchema, timezoneSchema } from "@/lib/validation";
+
+/** A submitted timezone always comes from the browser's own
+ * Intl.DateTimeFormat, so it should already be valid - this is just
+ * defense in depth against a missing/garbled field, falling back to UTC
+ * (the previous, always-correct-for-UTC-orgs behavior) rather than
+ * throwing. */
+function parseTimezone(value: FormDataEntryValue | null): string {
+  const parsed = timezoneSchema.safeParse(value);
+  return parsed.success ? parsed.data : "UTC";
+}
 
 /** Generates content for just one slot's immediate next occurrence -
  * whether that's 5 minutes away or a week away - so a newly added (or
@@ -19,8 +36,9 @@ import { oneTimePostSchema, scheduleSlotSchema } from "@/lib/validation";
 async function generateForImmediateOccurrence(
   organizationId: string,
   slot: ScheduleSlotLike,
+  timezone: string,
 ) {
-  const [occurrence] = computeUpcomingSlotOccurrences([slot], { days: 8 });
+  const [occurrence] = computeUpcomingSlotOccurrences([slot], { days: 8, timezone });
   if (!occurrence) return;
 
   try {
@@ -38,6 +56,9 @@ export async function addScheduleSlotAction(formData: FormData) {
   const session = await getSession();
   if (!session) return;
 
+  const timezone = parseTimezone(formData.get("timezone"));
+  await setPublishingScheduleTimezone(session.organizationId, timezone);
+
   // One time/platform can be applied to several days at once (the "repeat
   // on these days" pattern from alarm apps) - a plain <form> naturally
   // collects multiple same-named fields via getAll, one per checked day.
@@ -53,7 +74,7 @@ export async function addScheduleSlotAction(formData: FormData) {
       organizationId: session.organizationId,
       ...parsed.data,
     });
-    await generateForImmediateOccurrence(session.organizationId, parsed.data);
+    await generateForImmediateOccurrence(session.organizationId, parsed.data, timezone);
   }
   revalidatePath("/dashboard/schedule");
 }
@@ -72,11 +93,12 @@ export async function toggleScheduleSlotAction(formData: FormData) {
   // Re-enabling a slot is just as likely to need content ready soon as
   // adding a brand new one.
   if (updated && !currentlyEnabled) {
-    await generateForImmediateOccurrence(session.organizationId, {
-      dayOfWeek: updated.dayOfWeek,
-      time: updated.time,
-      platform: updated.platform,
-    });
+    const schedule = await getPublishingSchedule(session.organizationId);
+    await generateForImmediateOccurrence(
+      session.organizationId,
+      { dayOfWeek: updated.dayOfWeek, time: updated.time, platform: updated.platform },
+      schedule.timezone,
+    );
   }
   revalidatePath("/dashboard/schedule");
 }
@@ -104,9 +126,12 @@ export async function addOneTimePostAction(
   });
   if (!parsed.success) return { ok: false, reason: "invalid" };
 
+  const timezone = parseTimezone(formData.get("timezone"));
+  await setPublishingScheduleTimezone(session.organizationId, timezone);
+
   const [year, month, day] = parsed.data.date.split("-").map(Number);
   const [hour, minute] = parsed.data.time.split(":").map(Number);
-  const scheduledFor = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const scheduledFor = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
 
   try {
     const result = await generateAndScheduleContent({

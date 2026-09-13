@@ -47,6 +47,16 @@ export async function updateScheduleSlot(
   return prisma.scheduleSlot.update({ where: { id: slotId }, data });
 }
 
+/** Keeps the org's stored timezone in sync with what their browser
+ * reports, so recurring slots and one-time posts publish at the time the
+ * person actually meant, not literally that clock reading in UTC. */
+export function setPublishingScheduleTimezone(organizationId: string, timezone: string) {
+  return prisma.publishingSchedule.update({
+    where: { organizationId },
+    data: { timezone },
+  });
+}
+
 export async function deleteScheduleSlot(
   organizationId: string,
   slotId: string,

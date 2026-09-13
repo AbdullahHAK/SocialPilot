@@ -95,12 +95,17 @@ export function AddScheduleSlotDialog({
     setError(null);
 
     const time = to24Hour({ hour12, minute, meridiem });
+    // Read fresh at submit time rather than caching in state - this is
+    // what makes a picked "10:55 AM" mean 10:55 where the person actually
+    // is, instead of literally 10:55 UTC.
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     if (mode === "weekly") {
       const formData = new FormData();
       for (const day of days) formData.append("dayOfWeek", day);
       formData.set("time", time);
       formData.set("platform", platform);
+      formData.set("timezone", timezone);
 
       startTransition(async () => {
         await action(formData);
@@ -114,6 +119,7 @@ export function AddScheduleSlotDialog({
     formData.set("date", dateKey(date));
     formData.set("time", time);
     formData.set("platform", platform);
+    formData.set("timezone", timezone);
 
     startTransition(async () => {
       const result = await onceAction(formData);

@@ -46,6 +46,19 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
     expect(formData.get("platform")).toBe("FACEBOOK");
   });
 
+  it("includes the browser's own timezone so the time isn't misread as UTC", async () => {
+    const action = vi.fn().mockResolvedValue(undefined);
+    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
+    openDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "M" }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const formData = action.mock.calls[0][0] as FormData;
+    expect(formData.get("timezone")).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  });
+
   it("allows selecting multiple days for one time", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
     render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
