@@ -8,6 +8,7 @@ import {
 import { redirect } from "next/navigation";
 import { buildLogoPrompt } from "@/lib/brand-prompt";
 import { generateImage } from "@/lib/openai";
+import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
 import { uploadGeneratedImage } from "@/lib/storage";
 
@@ -16,20 +17,6 @@ export interface GenerateLogoFormState {
 }
 
 const LOGO_CONCEPT_COUNT = 3;
-
-function safeReturnTo(value: FormDataEntryValue | null): string {
-  // Only ever redirect back within our own app - a same-origin relative
-  // path starting with a single "/", never a protocol-relative "//host"
-  // that would actually send the browser somewhere external.
-  if (
-    typeof value === "string" &&
-    value.startsWith("/") &&
-    !value.startsWith("//")
-  ) {
-    return value;
-  }
-  return "/dashboard/brand";
-}
 
 export async function generateLogoConceptsAction(
   _prevState: GenerateLogoFormState,
@@ -47,7 +34,7 @@ export async function generateLogoConceptsAction(
   if (prompt.length > 500) {
     return { error: "Keep the description under 500 characters." };
   }
-  const returnTo = safeReturnTo(formData.get("returnTo"));
+  const returnTo = safeReturnTo(formData.get("returnTo"), "/dashboard/brand");
 
   const brand = await getBrandProfile(session.organizationId);
   const fullPrompt = buildLogoPrompt(prompt, brand?.businessName);
@@ -89,7 +76,7 @@ export async function approveLogoAction(formData: FormData) {
 
   await setBrandLogo(session.organizationId, imageUrl);
 
-  const returnTo = safeReturnTo(formData.get("returnTo"));
+  const returnTo = safeReturnTo(formData.get("returnTo"), "/dashboard/brand");
   const separator = returnTo.includes("?") ? "&" : "?";
   redirect(`${returnTo}${separator}logoApproved=1`);
 }

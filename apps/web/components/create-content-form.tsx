@@ -45,7 +45,13 @@ export type CreateContentAction = (
   formData: FormData,
 ) => Promise<CreateContentFormState>;
 
-export function CreateContentForm({ action }: { action: CreateContentAction }) {
+export function CreateContentForm({
+  action,
+  returnTo,
+}: {
+  action: CreateContentAction;
+  returnTo?: string;
+}) {
   const [state, formAction, isPending] = useActionState<
     CreateContentFormState,
     FormData
@@ -72,6 +78,7 @@ export function CreateContentForm({ action }: { action: CreateContentAction }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           What do you want to create?

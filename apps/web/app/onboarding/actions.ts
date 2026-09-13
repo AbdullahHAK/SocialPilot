@@ -96,5 +96,8 @@ export async function saveBrandProfileAction(
     ...(logoUrl ? { logoUrl } : {}),
   });
 
-  redirect("/dashboard");
+  // Straight into the one-time brand setup (logo, then an approved visual
+  // style) rather than a dashboard that would otherwise sit there looking
+  // ready without anything to actually generate content from yet.
+  redirect("/dashboard/create");
 }

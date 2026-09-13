@@ -6,12 +6,12 @@ import {
   getPublishingSchedule,
   listSocialAccounts,
 } from "@socialpilot/db";
-import { CalendarClock, Palette, Share2, Sparkles } from "lucide-react";
+import { CalendarClock, Palette, Share2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PublishingStatusCard } from "@/components/publishing-status-card";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isBrandSetupComplete } from "@/lib/brand-setup";
 import { getSession } from "@/lib/session";
 
 export default async function DashboardPage() {
@@ -30,6 +30,17 @@ export default async function DashboardPage() {
       getNextScheduledPost(session.organizationId),
     ]);
 
+  // The one-time brand setup (logo + an approved visual style) has to
+  // happen before there's anything for the automatic pipeline to work
+  // from - send anyone who hasn't finished it straight there instead of
+  // showing a dashboard that looks ready but won't actually publish
+  // anything. This also resumes an account that only got partway through
+  // (e.g. closed the tab after the logo step) right where it left off,
+  // since /dashboard/create's own gate picks up whichever step is missing.
+  if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
+    redirect("/dashboard/create");
+  }
+
   const activeSlots = schedule.slots.filter((slot) => slot.enabled).length;
 
   const stats = [
@@ -37,8 +48,8 @@ export default async function DashboardPage() {
       href: "/dashboard/brand",
       icon: Palette,
       label: "Brand profile",
-      value: brandProfile ? brandProfile.businessName : "Not set up",
-      hint: brandProfile ? "Set up" : "Complete onboarding to set this up",
+      value: brandProfile!.businessName,
+      hint: "Business name, logo, and style",
     },
     {
       href: "/dashboard/accounts",
@@ -85,27 +96,6 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
-
-      <Card>
-        <CardHeader className="flex-row items-center gap-3 space-y-0">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="size-4.5" />
-          </span>
-          <CardTitle>
-            {creativeProfile ? "Create your next post" : "Create your first post"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            {creativeProfile
-              ? "Describe what you want and SocialPilot's AI will generate on-brand concepts for you to review."
-              : "Describe what you want to create, and SocialPilot's AI will generate three concepts to choose your visual style from."}
-          </p>
-          <Button asChild className="ml-auto shrink-0">
-            <Link href="/dashboard/create">Create Content</Link>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

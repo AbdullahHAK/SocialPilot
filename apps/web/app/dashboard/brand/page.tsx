@@ -1,5 +1,5 @@
-import { getBrandProfile } from "@socialpilot/db";
-import { CheckCircle2 } from "lucide-react";
+import { getBrandCreativeProfile, getBrandProfile } from "@socialpilot/db";
+import { CheckCircle2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -7,7 +7,7 @@ import {
   type BrandProfileDefaults,
 } from "@/components/brand-settings-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { asStringArray } from "@/lib/brand-fields";
 import { getSession } from "@/lib/session";
 import { updateBrandProfileAction } from "./actions";
@@ -22,7 +22,10 @@ export default async function BrandSettingsPage({
 
   const { logoApproved } = await searchParams;
 
-  const profile = await getBrandProfile(session.organizationId);
+  const [profile, creativeProfile] = await Promise.all([
+    getBrandProfile(session.organizationId),
+    getBrandCreativeProfile(session.organizationId),
+  ]);
 
   if (!profile) {
     return (
@@ -61,6 +64,8 @@ export default async function BrandSettingsPage({
     productsServices: asStringArray(profile.productsServices) ?? [],
   };
 
+  const referenceImage = creativeProfile?.referenceImageUrls[0];
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -79,17 +84,55 @@ export default async function BrandSettingsPage({
         </div>
       )}
 
-      {!defaults.logoUrl && (
-        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          Don&apos;t have a logo yet?{" "}
-          <Link
-            href="/dashboard/logo"
-            className="font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Generate one with AI
-          </Link>
-        </div>
-      )}
+      <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+        {defaults.logoUrl ? "Want a different logo?" : "Don't have a logo yet?"}{" "}
+        <Link
+          href={`/dashboard/logo?returnTo=${encodeURIComponent("/dashboard/brand")}`}
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {defaults.logoUrl ? "Regenerate with AI" : "Generate one with AI"}
+        </Link>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Visual style</CardTitle>
+          <CardDescription>
+            The approved look SocialPilot uses to generate every image.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-4">
+          {referenceImage ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={referenceImage}
+                alt="Approved brand style"
+                className="size-20 shrink-0 rounded-lg border border-border object-cover"
+              />
+              <Button asChild variant="outline" className="gap-2">
+                <Link href={`/dashboard/create?returnTo=${encodeURIComponent("/dashboard/brand")}`}>
+                  <Wand2 className="size-4" />
+                  Choose a different style
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                No visual style set yet — SocialPilot needs one before it can
+                generate content.
+              </p>
+              <Button asChild className="ml-auto shrink-0 gap-2">
+                <Link href={`/dashboard/create?returnTo=${encodeURIComponent("/dashboard/brand")}`}>
+                  <Wand2 className="size-4" />
+                  Set up with AI
+                </Link>
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <BrandSettingsForm action={updateBrandProfileAction} defaults={defaults} />
     </div>

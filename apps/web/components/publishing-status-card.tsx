@@ -60,10 +60,10 @@ export function PublishingStatusCard({
               <p className="text-sm font-medium text-muted-foreground">
                 Nothing scheduled —{" "}
                 <Link
-                  href="/dashboard/style"
+                  href="/dashboard/schedule"
                   className="text-primary underline-offset-4 hover:underline"
                 >
-                  generate this month&apos;s content
+                  add a posting time
                 </Link>
               </p>
             )}

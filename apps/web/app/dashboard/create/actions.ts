@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { asStringArray } from "@/lib/brand-fields";
 import { buildImagePrompt, type BrandContext } from "@/lib/brand-prompt";
 import { fetchImageBuffer } from "@/lib/fetch-image";
+import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
 import { generateImage } from "@/lib/openai";
 import { uploadGeneratedImage } from "@/lib/storage";
@@ -18,6 +19,11 @@ import {
   REFERENCE_IMAGE_MAX_BYTES,
   REFERENCE_IMAGE_MAX_COUNT,
 } from "@/lib/validation";
+
+// Once a style is approved, "now go set posting times" is the natural
+// next step - the whole point of this pipeline is that content generates
+// itself from there on, so there's nothing else to "create" first.
+const DEFAULT_RETURN_TO = "/dashboard/schedule";
 
 export interface CreateContentFormState {
   error?: string;
@@ -112,7 +118,8 @@ export async function generateConceptsAction(
     imageUrls,
   });
 
-  redirect(`/dashboard/create/${concept.id}`);
+  const returnTo = safeReturnTo(formData.get("returnTo"), DEFAULT_RETURN_TO);
+  redirect(`/dashboard/create/${concept.id}?returnTo=${encodeURIComponent(returnTo)}`);
 }
 
 export async function approveConceptAction(formData: FormData) {
@@ -127,7 +134,7 @@ export async function approveConceptAction(formData: FormData) {
 
   await approveCreativeConcept(session.organizationId, conceptId, imageUrl);
 
-  redirect("/dashboard/style");
+  redirect(safeReturnTo(formData.get("returnTo"), DEFAULT_RETURN_TO));
 }
 
 export interface RegenerateConceptFormState {
@@ -199,5 +206,6 @@ export async function regenerateConceptAction(
     imageUrls,
   });
 
-  redirect(`/dashboard/create/${newConcept.id}`);
+  const returnTo = safeReturnTo(formData.get("returnTo"), DEFAULT_RETURN_TO);
+  redirect(`/dashboard/create/${newConcept.id}?returnTo=${encodeURIComponent(returnTo)}`);
 }

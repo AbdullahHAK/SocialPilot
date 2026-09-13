@@ -4,22 +4,37 @@ import { redirect } from "next/navigation";
 import { CreateContentForm } from "@/components/create-content-form";
 import { GenerateLogoForm } from "@/components/generate-logo-form";
 import { generateLogoConceptsAction } from "@/app/dashboard/logo/actions";
+import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
 import { generateConceptsAction } from "./actions";
 
-export default async function CreateContentPage() {
+export default async function CreateContentPage({
+  searchParams,
+}: PageProps<"/dashboard/create">) {
   const session = await getSession();
   if (!session) {
     redirect("/login");
   }
+
+  const { returnTo: returnToParam } = await searchParams;
+  const returnTo =
+    typeof returnToParam === "string"
+      ? safeReturnTo(returnToParam, "/dashboard/schedule")
+      : undefined;
 
   const brand = await getBrandProfile(session.organizationId);
 
   // A logo is required before any content generation - there's no
   // consistent brand identity to keep every image on without one, so this
   // gate is enforced here (not just suggested), right in the same window
-  // rather than as a separate settings step to go find.
+  // rather than as a separate settings step to go find. Preserves an
+  // incoming returnTo (e.g. from Brand Settings) through the round trip
+  // to the logo flow and back here.
   if (!brand?.logoUrl) {
+    const logoReturnTo = returnTo
+      ? `/dashboard/create?returnTo=${encodeURIComponent(returnTo)}`
+      : "/dashboard/create";
+
     return (
       <div className="flex flex-col gap-6">
         <div className="flex items-center gap-3">
@@ -36,13 +51,10 @@ export default async function CreateContentPage() {
             </p>
           </div>
         </div>
-        <GenerateLogoForm
-          action={generateLogoConceptsAction}
-          returnTo="/dashboard/create"
-        />
+        <GenerateLogoForm action={generateLogoConceptsAction} returnTo={logoReturnTo} />
       </div>
     );
   }
 
-  return <CreateContentForm action={generateConceptsAction} />;
+  return <CreateContentForm action={generateConceptsAction} returnTo={returnTo} />;
 }

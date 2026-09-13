@@ -1,9 +1,12 @@
 import {
+  getBrandCreativeProfile,
+  getBrandProfile,
   getLastPublishedPost,
   getNextScheduledPost,
   getPublishingSchedule,
 } from "@socialpilot/db";
-import { Trash2 } from "lucide-react";
+import { Sparkles, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddScheduleSlotDialog } from "@/components/add-schedule-slot-dialog";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
@@ -11,6 +14,7 @@ import { PublishingStatusCard } from "@/components/publishing-status-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isBrandSetupComplete } from "@/lib/brand-setup";
 import { getSession } from "@/lib/session";
 import { formatTime12Hour } from "@/lib/time-of-day";
 import {
@@ -46,11 +50,48 @@ export default async function SchedulePage() {
     redirect("/login");
   }
 
-  const [schedule, lastPublished, nextScheduled] = await Promise.all([
-    getPublishingSchedule(session.organizationId),
-    getLastPublishedPost(session.organizationId),
-    getNextScheduledPost(session.organizationId),
-  ]);
+  const [schedule, lastPublished, nextScheduled, brandProfile, creativeProfile] =
+    await Promise.all([
+      getPublishingSchedule(session.organizationId),
+      getLastPublishedPost(session.organizationId),
+      getNextScheduledPost(session.organizationId),
+      getBrandProfile(session.organizationId),
+      getBrandCreativeProfile(session.organizationId),
+    ]);
+
+  if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Publishing Schedule
+          </h1>
+          <p className="mt-1 max-w-2xl text-muted-foreground">
+            Pick a time and the days it repeats on — SocialPilot generates
+            and publishes the content automatically.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Sparkles className="size-6" />
+            </span>
+            <p className="font-medium">Finish setting up your brand first</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              SocialPilot needs a logo and an approved visual style before it
+              can generate content for your schedule — it&apos;s a one-time
+              step.
+            </p>
+            <Button asChild>
+              <Link href="/dashboard/create?returnTo=/dashboard/schedule">
+                Finish setup
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const slotsByDay = DAY_ORDER.map((day) => ({
     day,

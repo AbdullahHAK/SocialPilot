@@ -15,9 +15,11 @@ export type RegenerateConceptAction = (
 export function RegenerateConceptForm({
   action,
   conceptId,
+  returnTo,
 }: {
   action: RegenerateConceptAction;
   conceptId: string;
+  returnTo?: string;
 }) {
   const [state, formAction, isPending] = useActionState<
     RegenerateConceptFormState,
@@ -30,6 +32,7 @@ export function RegenerateConceptForm({
       className="flex flex-col gap-3 rounded-lg border border-border p-4"
     >
       <input type="hidden" name="conceptId" value={conceptId} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <Label htmlFor="feedback">Not quite right? Describe what to change</Label>
       <Textarea
         id="feedback"

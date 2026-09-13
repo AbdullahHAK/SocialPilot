@@ -107,8 +107,8 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
               className="sr-only"
             />
             <p className="text-xs text-muted-foreground">
-              Don&apos;t have a logo yet? Skip this for now — you can
-              generate one with AI from the Logo page once setup is done.
+              Don&apos;t have a logo yet? Skip this for now — the next step
+              can generate one with AI for you.
             </p>
           </div>
 

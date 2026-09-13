@@ -4,26 +4,26 @@ import {
   CalendarClock,
   CalendarDays,
   CreditCard,
-  ImagePlus,
   LayoutDashboard,
   Palette,
   Share2,
-  Sparkles,
-  Wand2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
+// Logo generation, style approval, and "Brand Style" used to be their own
+// nav items even though they're one-time setup steps, not daily-use
+// tabs - that's exactly what made the app feel like a pile of disconnected
+// stages instead of "just schedule it." They're still reachable (from
+// Brand Settings, or automatically via the setup gate on Overview/
+// Schedule) - just not permanent fixtures in the sidebar.
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/create", label: "Create Content", icon: Sparkles },
-  { href: "/dashboard/style", label: "Brand Style", icon: Wand2 },
-  { href: "/dashboard/logo", label: "Logo", icon: ImagePlus },
+  { href: "/dashboard/schedule", label: "Publishing Schedule", icon: CalendarClock },
   { href: "/dashboard/calendar", label: "Content Calendar", icon: CalendarDays },
   { href: "/dashboard/accounts", label: "Connected Accounts", icon: Share2 },
   { href: "/dashboard/brand", label: "Brand Settings", icon: Palette },
-  { href: "/dashboard/schedule", label: "Publishing Schedule", icon: CalendarClock },
   { href: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
 ] as const;
 
