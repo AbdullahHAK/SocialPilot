@@ -8,7 +8,7 @@ import {
   type ScheduleSlotLike,
 } from "@/lib/schedule-dates";
 import { getSession } from "@/lib/session";
-import { scheduleSlotSchema } from "@/lib/validation";
+import { oneTimePostSchema, scheduleSlotSchema } from "@/lib/validation";
 
 /** Generates content for just one slot's immediate next occurrence -
  * whether that's 5 minutes away or a week away - so a newly added (or
@@ -79,6 +79,47 @@ export async function toggleScheduleSlotAction(formData: FormData) {
     });
   }
   revalidatePath("/dashboard/schedule");
+}
+
+export interface OneTimePostResult {
+  ok: boolean;
+  reason?: "not_ready" | "invalid";
+}
+
+/** Schedules a single post for one specific calendar date, bypassing the
+ * recurring weekly slots entirely - for "just this one day" instead of
+ * "every Monday". Generates immediately, same as a new weekly slot does,
+ * so it shows up on the Content Calendar right away rather than waiting
+ * for the once-daily lookahead job. */
+export async function addOneTimePostAction(
+  formData: FormData,
+): Promise<OneTimePostResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, reason: "invalid" };
+
+  const parsed = oneTimePostSchema.safeParse({
+    date: formData.get("date"),
+    time: formData.get("time"),
+    platform: formData.get("platform"),
+  });
+  if (!parsed.success) return { ok: false, reason: "invalid" };
+
+  const [year, month, day] = parsed.data.date.split("-").map(Number);
+  const [hour, minute] = parsed.data.time.split(":").map(Number);
+  const scheduledFor = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
+  try {
+    const result = await generateAndScheduleContent({
+      organizationId: session.organizationId,
+      platform: parsed.data.platform,
+      scheduledFor,
+    });
+    revalidatePath("/dashboard/calendar");
+    return result.success ? { ok: true } : { ok: false, reason: result.skipped };
+  } catch (error) {
+    console.error("One-time content generation failed", error);
+    return { ok: false };
+  }
 }
 
 export async function removeScheduleSlotAction(formData: FormData) {

@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
 import { formatTime12Hour } from "@/lib/time-of-day";
 import {
+  addOneTimePostAction,
   addScheduleSlotAction,
   removeScheduleSlotAction,
   toggleScheduleSlotAction,
@@ -70,7 +71,10 @@ export default async function SchedulePage() {
             doesn&apos;t create a post immediately.
           </p>
         </div>
-        <AddScheduleSlotDialog action={addScheduleSlotAction} />
+        <AddScheduleSlotDialog
+          action={addScheduleSlotAction}
+          onceAction={addOneTimePostAction}
+        />
       </div>
 
       <PublishingStatusCard lastPublished={lastPublished} nextScheduled={nextScheduled} />

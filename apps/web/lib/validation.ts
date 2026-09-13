@@ -70,3 +70,11 @@ export const scheduleSlotSchema = z.object({
 });
 
 export type ScheduleSlotInput = z.infer<typeof scheduleSlotSchema>;
+
+export const oneTimePostSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a date as YYYY-MM-DD"),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a time as HH:MM"),
+  platform: z.enum(["INSTAGRAM", "FACEBOOK"]),
+});
+
+export type OneTimePostInput = z.infer<typeof oneTimePostSchema>;

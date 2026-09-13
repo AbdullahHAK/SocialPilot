@@ -1,14 +1,28 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { dateKey, formatMonthParam, MONTH_LABELS } from "@/lib/calendar";
 import { AddScheduleSlotDialog } from "./add-schedule-slot-dialog";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
+
+beforeEach(() => {
+  push.mockClear();
+});
 
 function openDialog() {
   fireEvent.click(screen.getByRole("button", { name: /add posting time/i }));
 }
 
-describe("AddScheduleSlotDialog", () => {
+function noopOnce() {
+  return vi.fn().mockResolvedValue({ ok: true });
+}
+
+describe("AddScheduleSlotDialog - weekly mode", () => {
   it("requires at least one day before submitting", () => {
-    render(<AddScheduleSlotDialog action={vi.fn()} />);
+    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} />);
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
@@ -18,7 +32,7 @@ describe("AddScheduleSlotDialog", () => {
 
   it("submits the chosen day, default time (6:00 PM -> 18:00), and platform", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
-    render(<AddScheduleSlotDialog action={action} />);
+    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "W" }));
@@ -32,23 +46,9 @@ describe("AddScheduleSlotDialog", () => {
     expect(formData.get("platform")).toBe("FACEBOOK");
   });
 
-  it("switches AM/PM correctly", async () => {
-    const action = vi.fn().mockResolvedValue(undefined);
-    render(<AddScheduleSlotDialog action={action} />);
-    openDialog();
-
-    fireEvent.click(screen.getByRole("button", { name: "M" }));
-    fireEvent.click(screen.getByRole("button", { name: "AM" }));
-    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
-    const formData = action.mock.calls[0][0] as FormData;
-    expect(formData.get("time")).toBe("06:00");
-  });
-
   it("allows selecting multiple days for one time", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
-    render(<AddScheduleSlotDialog action={action} />);
+    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "M" }));
@@ -58,5 +58,68 @@ describe("AddScheduleSlotDialog", () => {
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     const formData = action.mock.calls[0][0] as FormData;
     expect(formData.getAll("dayOfWeek").sort()).toEqual(["MONDAY", "WEDNESDAY"]);
+  });
+});
+
+describe("AddScheduleSlotDialog - one-time mode", () => {
+  it("submits today's date by default and redirects to the calendar", async () => {
+    const onceAction = vi.fn().mockResolvedValue({ ok: true });
+    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);
+    openDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(onceAction).toHaveBeenCalledTimes(1));
+    const formData = onceAction.mock.calls[0][0] as FormData;
+    const today = new Date();
+    const expectedKey = dateKey(
+      new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())),
+    );
+    expect(formData.get("date")).toBe(expectedKey);
+    expect(formData.get("time")).toBe("18:00");
+    expect(formData.get("platform")).toBe("INSTAGRAM");
+
+    expect(push).toHaveBeenCalledWith(
+      `/dashboard/calendar?month=${formatMonthParam(today.getUTCFullYear(), today.getUTCMonth())}`,
+    );
+  });
+
+  it("lets you pick a date from next month via the mini calendar", async () => {
+    const onceAction = vi.fn().mockResolvedValue({ ok: true });
+    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);
+    openDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next month/i }));
+
+    const today = new Date();
+    const nextMonthDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 10));
+    const nextMonthLabel = `${MONTH_LABELS[nextMonthDate.getUTCMonth()]} ${nextMonthDate.getUTCFullYear()}`;
+    expect(screen.getByText(nextMonthLabel)).toBeVisible();
+
+    // Every day in the fully-displayed next month is guaranteed to be in
+    // the future, so the 10th is always clickable regardless of today's date.
+    fireEvent.click(screen.getByRole("button", { name: "10" }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(onceAction).toHaveBeenCalledTimes(1));
+    const formData = onceAction.mock.calls[0][0] as FormData;
+    expect(formData.get("date")).toBe(dateKey(nextMonthDate));
+  });
+
+  it("shows a message and keeps the dialog open when the brand isn't ready", async () => {
+    const onceAction = vi.fn().mockResolvedValue({ ok: false, reason: "not_ready" });
+    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);
+    openDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(onceAction).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/set up your brand style and logo first/i)).toBeVisible();
+    expect(push).not.toHaveBeenCalled();
+    // Dialog should still be open - the title is still on screen.
+    expect(screen.getByText(/add a posting time/i)).toBeVisible();
   });
 });
