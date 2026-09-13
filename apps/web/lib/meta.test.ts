@@ -5,6 +5,7 @@ import {
   getManagedPagesWithInstagram,
   getMetaOAuthUrl,
   getPageById,
+  updateFacebookPostCaption,
 } from "./meta";
 
 beforeEach(() => {
@@ -172,5 +173,34 @@ describe("getPageById", () => {
       },
     });
     expect(String(fetchMock.mock.calls[0]![0])).toContain("/page-1?");
+  });
+});
+
+describe("updateFacebookPostCaption", () => {
+  it("posts the new message to the post's Graph API endpoint", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ success: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await updateFacebookPostCaption("page-token", "page_123_456", "Updated caption");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = String(fetchMock.mock.calls[0]![0]);
+    expect(url).toContain("/page_123_456?");
+    expect(url).toContain("message=Updated+caption");
+    expect(url).toContain("access_token=page-token");
+    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ method: "POST" });
+  });
+
+  it("throws with the response body when the update fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("expired token", { status: 401 })),
+    );
+
+    await expect(
+      updateFacebookPostCaption("page-token", "page_123_456", "Updated caption"),
+    ).rejects.toThrow(/expired token/);
   });
 });

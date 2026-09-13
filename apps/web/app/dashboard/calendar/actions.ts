@@ -1,10 +1,18 @@
 "use server";
 
-import { deleteContentPost, setPublishingScheduleTimezone, updateContentPost } from "@socialpilot/db";
+import {
+  decryptToken,
+  deleteContentPost,
+  getContentPost,
+  listSocialAccounts,
+  setPublishingScheduleTimezone,
+  updateContentPost,
+} from "@socialpilot/db";
 import { revalidatePath } from "next/cache";
+import { updateFacebookPostCaption } from "@/lib/meta";
 import { getSession } from "@/lib/session";
 import { zonedTimeToUtc } from "@/lib/timezone";
-import { editContentPostSchema, timezoneSchema } from "@/lib/validation";
+import { editContentPostSchema, editPublishedPostSchema, timezoneSchema } from "@/lib/validation";
 
 function parseTimezone(value: FormDataEntryValue | null): string {
   const parsed = timezoneSchema.safeParse(value);
@@ -13,6 +21,10 @@ function parseTimezone(value: FormDataEntryValue | null): string {
 
 export interface EditContentPostResult {
   ok: boolean;
+  /** Shown to the user after a successful save when something about the
+   * edit didn't fully apply - e.g. Instagram not supporting caption edits
+   * after publishing, or the live Facebook update failing. */
+  note?: string;
 }
 
 export async function editContentPostAction(
@@ -23,6 +35,48 @@ export async function editContentPostAction(
 
   const postId = formData.get("postId");
   if (typeof postId !== "string") return { ok: false };
+
+  const existing = await getContentPost(session.organizationId, postId);
+  if (!existing) return { ok: false };
+
+  // A post that already went out can't be rescheduled - only its caption
+  // is still meaningfully editable, and even then only Facebook's API
+  // supports pushing that change to the live post.
+  if (existing.status === "PUBLISHED") {
+    const parsed = editPublishedPostSchema.safeParse({ caption: formData.get("caption") });
+    if (!parsed.success) return { ok: false };
+
+    const updated = await updateContentPost(session.organizationId, postId, {
+      caption: parsed.data.caption,
+    });
+    if (!updated) return { ok: false };
+
+    let note: string | undefined;
+    if (updated.platform === "FACEBOOK" && updated.externalPostId) {
+      const accounts = await listSocialAccounts(session.organizationId);
+      const facebookAccount = accounts.find((account) => account.provider === "FACEBOOK");
+      if (facebookAccount) {
+        try {
+          await updateFacebookPostCaption(
+            decryptToken(facebookAccount.accessToken),
+            updated.externalPostId,
+            parsed.data.caption,
+          );
+        } catch (error) {
+          console.error("Updating the live Facebook post caption failed", error);
+          note = "Saved here, but couldn't update the caption on the live Facebook post.";
+        }
+      } else {
+        note = "Saved here, but no connected Facebook account was found to update the live post.";
+      }
+    } else if (updated.platform === "INSTAGRAM") {
+      note =
+        "Instagram doesn't support editing a caption after it's published, so this only updates your record here.";
+    }
+
+    revalidatePath("/dashboard/calendar");
+    return { ok: true, note };
+  }
 
   const parsed = editContentPostSchema.safeParse({
     caption: formData.get("caption"),

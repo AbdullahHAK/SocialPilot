@@ -82,13 +82,21 @@ export const oneTimePostSchema = z.object({
 
 export type OneTimePostInput = z.infer<typeof oneTimePostSchema>;
 
+const captionSchema = z.string().trim().max(2200, "Keep the caption under 2200 characters");
+
 export const editContentPostSchema = z.object({
-  caption: z.string().trim().max(2200, "Keep the caption under 2200 characters"),
+  caption: captionSchema,
   date: isoDateSchema,
   time: hhmmTimeSchema,
 });
 
 export type EditContentPostInput = z.infer<typeof editContentPostSchema>;
+
+/** A published post's schedule can't change (it already went out) - only
+ * the caption is still editable. */
+export const editPublishedPostSchema = z.object({
+  caption: captionSchema,
+});
 
 /** The IANA zone name a browser reports for "Add posting time" submissions,
  * so a picked time is interpreted as that person's local time rather than

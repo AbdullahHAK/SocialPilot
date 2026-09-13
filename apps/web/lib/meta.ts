@@ -186,3 +186,21 @@ export async function getPageById(
       : undefined,
   };
 }
+
+/** Updates the caption on an already-published Facebook Page post.
+ * Instagram has no equivalent - the Content Publishing API has no way to
+ * edit a caption after publishing, so this only exists for Facebook. */
+export async function updateFacebookPostCaption(
+  pageAccessToken: string,
+  postId: string,
+  caption: string,
+): Promise<void> {
+  const params = new URLSearchParams({
+    message: caption,
+    access_token: pageAccessToken,
+  });
+  const res = await fetch(`${GRAPH_API_BASE}/${postId}?${params}`, {
+    method: "POST",
+  });
+  await parseGraphResponse<{ success: boolean }>(res, "Updating Facebook post caption");
+}

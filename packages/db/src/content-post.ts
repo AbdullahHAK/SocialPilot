@@ -90,14 +90,21 @@ export function listContentPostsInRange(
   });
 }
 
+/** Fetches one post scoped to the organization - used before an edit to
+ * check its current status (e.g. whether it's already published, which
+ * changes what's safe to edit) without exposing other orgs' posts. */
+export function getContentPost(organizationId: string, postId: string) {
+  return prisma.contentPost.findFirst({ where: { id: postId, organizationId } });
+}
+
 export interface UpdateContentPostInput {
   caption?: string;
   scheduledFor?: Date;
 }
 
-/** Edits a not-yet-published post's caption and/or scheduled time -
- * scoped to the organization like updateScheduleSlot, so one org can
- * never touch another's posts. */
+/** Edits a post's caption and/or scheduled time - scoped to the
+ * organization like updateScheduleSlot, so one org can never touch
+ * another's posts. */
 export async function updateContentPost(
   organizationId: string,
   postId: string,

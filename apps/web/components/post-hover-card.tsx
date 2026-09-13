@@ -95,20 +95,20 @@ export function PostHoverCard({
         </p>
 
         <div className="mt-3 flex justify-end gap-1.5 border-t border-border pt-3">
-          {post.status !== "PUBLISHED" && (
-            <EditPostDialog
-              postId={post.id}
-              caption={post.caption ?? ""}
-              scheduledForIso={post.scheduledFor}
-              action={editAction}
-              trigger={
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <Pencil className="size-3.5" />
-                  Edit
-                </Button>
-              }
-            />
-          )}
+          <EditPostDialog
+            postId={post.id}
+            caption={post.caption ?? ""}
+            scheduledForIso={post.scheduledFor}
+            status={post.status}
+            platform={post.platform}
+            action={editAction}
+            trigger={
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Pencil className="size-3.5" />
+                Edit
+              </Button>
+            }
+          />
           <Button
             type="button"
             variant={confirmingDelete ? "destructive" : "outline"}

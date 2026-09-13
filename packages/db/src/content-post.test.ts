@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   createContentPost,
   deleteContentPost,
+  getContentPost,
   getLastPublishedPost,
   getNextScheduledPost,
   listContentPostsInRange,
@@ -256,6 +257,34 @@ describe("getNextScheduledPost", () => {
       new Date("2026-09-13T00:00:00Z"),
     );
     expect(result).toBeNull();
+  });
+});
+
+describe("getContentPost", () => {
+  it("returns a post belonging to the organization", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const post = await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+    });
+
+    const result = await getContentPost(org.id, post.id);
+    expect(result?.id).toBe(post.id);
+  });
+
+  it("returns null for a post belonging to a different organization", async () => {
+    const orgA = await prisma.organization.create({ data: { name: "A" } });
+    const orgB = await prisma.organization.create({ data: { name: "B" } });
+    const post = await createContentPost({
+      organizationId: orgA.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+    });
+
+    expect(await getContentPost(orgB.id, post.id)).toBeNull();
   });
 });
 

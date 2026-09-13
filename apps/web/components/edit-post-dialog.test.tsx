@@ -7,21 +7,18 @@ function openDialog() {
   fireEvent.click(screen.getByRole("button", { name: /^edit$/i }));
 }
 
-describe("EditPostDialog", () => {
+const defaultProps = {
+  postId: "post-1",
+  caption: "Original caption",
+  scheduledForIso: "2026-09-13T14:30:00.000Z",
+  status: "SCHEDULED" as const,
+  platform: "INSTAGRAM" as const,
+  trigger: <button>Edit</button>,
+};
+
+describe("EditPostDialog - not yet published", () => {
   it("pre-fills the caption and the scheduled time in the browser's local time", () => {
-    // 2026-09-13T14:30:00Z. In whatever timezone the test runner uses,
-    // this should round-trip back to the same instant on save - we just
-    // check the caption is pre-filled here since the exact displayed
-    // hour depends on the runner's local timezone.
-    render(
-      <EditPostDialog
-        postId="post-1"
-        caption="Original caption"
-        scheduledForIso="2026-09-13T14:30:00.000Z"
-        action={vi.fn().mockResolvedValue({ ok: true })}
-        trigger={<button>Edit</button>}
-      />,
-    );
+    render(<EditPostDialog {...defaultProps} action={vi.fn().mockResolvedValue({ ok: true })} />);
     openDialog();
 
     expect(screen.getByDisplayValue("Original caption")).toBeVisible();
@@ -29,16 +26,7 @@ describe("EditPostDialog", () => {
 
   it("submits the edited caption and the postId, preserving the original instant", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true });
-    const scheduledForIso = "2026-09-13T14:30:00.000Z";
-    render(
-      <EditPostDialog
-        postId="post-1"
-        caption="Original caption"
-        scheduledForIso={scheduledForIso}
-        action={action}
-        trigger={<button>Edit</button>}
-      />,
-    );
+    render(<EditPostDialog {...defaultProps} action={action} />);
     openDialog();
 
     const textarea = screen.getByDisplayValue("Original caption");
@@ -61,19 +49,11 @@ describe("EditPostDialog", () => {
     const [hour, minute] = time.split(":").map(Number);
     const { zonedTimeToUtc } = await import("@/lib/timezone");
     const reconstructed = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
-    expect(reconstructed.toISOString()).toBe(scheduledForIso);
+    expect(reconstructed.toISOString()).toBe(defaultProps.scheduledForIso);
   });
 
   it("closes without submitting when the dialog is dismissed and reopened", () => {
-    render(
-      <EditPostDialog
-        postId="post-1"
-        caption="Original caption"
-        scheduledForIso="2026-09-13T14:30:00.000Z"
-        action={vi.fn().mockResolvedValue({ ok: true })}
-        trigger={<button>Edit</button>}
-      />,
-    );
+    render(<EditPostDialog {...defaultProps} action={vi.fn().mockResolvedValue({ ok: true })} />);
     openDialog();
 
     const textarea = screen.getByDisplayValue("Original caption");
@@ -86,15 +66,7 @@ describe("EditPostDialog", () => {
 
   it("uses today's date key format for the date field", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true });
-    render(
-      <EditPostDialog
-        postId="post-1"
-        caption=""
-        scheduledForIso="2026-09-13T14:30:00.000Z"
-        action={action}
-        trigger={<button>Edit</button>}
-      />,
-    );
+    render(<EditPostDialog {...defaultProps} caption="" action={action} />);
     openDialog();
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -102,5 +74,83 @@ describe("EditPostDialog", () => {
     const formData = action.mock.calls[0][0] as FormData;
     expect(String(formData.get("date"))).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(dateKey(new Date(String(formData.get("date"))))).toBe(formData.get("date"));
+  });
+});
+
+describe("EditPostDialog - already published", () => {
+  it("hides the time and date pickers", () => {
+    render(
+      <EditPostDialog
+        {...defaultProps}
+        status="PUBLISHED"
+        action={vi.fn().mockResolvedValue({ ok: true })}
+      />,
+    );
+    openDialog();
+
+    expect(screen.queryByText(/^time$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^date/i)).not.toBeInTheDocument();
+  });
+
+  it("submits only the caption and postId, no date/time fields", async () => {
+    const action = vi.fn().mockResolvedValue({ ok: true });
+    render(<EditPostDialog {...defaultProps} status="PUBLISHED" action={action} />);
+    openDialog();
+
+    fireEvent.change(screen.getByDisplayValue("Original caption"), {
+      target: { value: "Updated after publish" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const formData = action.mock.calls[0][0] as FormData;
+    expect(formData.get("postId")).toBe("post-1");
+    expect(formData.get("caption")).toBe("Updated after publish");
+    expect(formData.get("date")).toBeNull();
+    expect(formData.get("time")).toBeNull();
+  });
+
+  it("warns up front that Instagram won't reflect the edit", () => {
+    render(
+      <EditPostDialog
+        {...defaultProps}
+        status="PUBLISHED"
+        platform="INSTAGRAM"
+        action={vi.fn().mockResolvedValue({ ok: true })}
+      />,
+    );
+    openDialog();
+
+    expect(screen.getByText(/doesn't support editing a caption/i)).toBeVisible();
+  });
+
+  it("tells the user a Facebook post's live caption will also update", () => {
+    render(
+      <EditPostDialog
+        {...defaultProps}
+        status="PUBLISHED"
+        platform="FACEBOOK"
+        action={vi.fn().mockResolvedValue({ ok: true })}
+      />,
+    );
+    openDialog();
+
+    expect(screen.getByText(/will also update the caption on the live facebook post/i)).toBeVisible();
+  });
+
+  it("keeps the dialog open and shows a note instead of closing when the server returns one", async () => {
+    const action = vi.fn().mockResolvedValue({
+      ok: true,
+      note: "Saved here, but couldn't update the caption on the live Facebook post.",
+    });
+    render(<EditPostDialog {...defaultProps} status="PUBLISHED" action={action} />);
+    openDialog();
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/couldn't update the caption on the live facebook post/i)).toBeVisible(),
+    );
+    // Still open - the title is still on screen.
+    expect(screen.getByText(/^edit post$/i)).toBeVisible();
   });
 });

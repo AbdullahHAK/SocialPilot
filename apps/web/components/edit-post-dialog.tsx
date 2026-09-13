@@ -39,43 +39,59 @@ export function EditPostDialog({
   postId,
   caption,
   scheduledForIso,
+  status,
+  platform,
   action,
   trigger,
 }: {
   postId: string;
   caption: string;
   scheduledForIso: string;
+  status: "DRAFT" | "QUEUED" | "SCHEDULED" | "PUBLISHED" | "FAILED";
+  platform: "INSTAGRAM" | "FACEBOOK";
   action: (formData: FormData) => Promise<EditContentPostResult>;
   trigger: ReactNode;
 }) {
+  const isPublished = status === "PUBLISHED";
   const [open, setOpen] = useState(false);
   const [captionText, setCaptionText] = useState(caption);
   const [state, setState] = useState(() => initialStateFor(scheduledForIso));
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function reset() {
     setCaptionText(caption);
     setState(initialStateFor(scheduledForIso));
     setError(null);
+    setNote(null);
   }
 
   function handleSubmit() {
     setError(null);
+    setNote(null);
     const formData = new FormData();
     formData.set("postId", postId);
     formData.set("caption", captionText);
-    formData.set("date", dateKey(state.date));
-    formData.set(
-      "time",
-      to24Hour({ hour12: state.hour12, minute: state.minute, meridiem: state.meridiem }),
-    );
-    formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+    if (!isPublished) {
+      formData.set("date", dateKey(state.date));
+      formData.set(
+        "time",
+        to24Hour({ hour12: state.hour12, minute: state.minute, meridiem: state.meridiem }),
+      );
+      formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+    }
 
     startTransition(async () => {
       const result = await action(formData);
       if (!result.ok) {
         setError("Couldn't save those changes. Please try again.");
+        return;
+      }
+      if (result.note) {
+        // Keep the dialog open so they actually see the caveat instead of
+        // it flashing by as the dialog closes.
+        setNote(result.note);
         return;
       }
       setOpen(false);
@@ -96,7 +112,9 @@ export function EditPostDialog({
         <DialogHeader>
           <DialogTitle>Edit post</DialogTitle>
           <DialogDescription>
-            Change the caption or move it to a different date and time.
+            {isPublished
+              ? "This post already went out - you can still update its caption."
+              : "Change the caption or move it to a different date and time."}
           </DialogDescription>
         </DialogHeader>
 
@@ -109,35 +127,54 @@ export function EditPostDialog({
               rows={4}
               maxLength={2200}
             />
+            {/* Once a save returns a note, it says the same thing more
+                specifically (e.g. whether the live push actually
+                succeeded) - no need to show both. */}
+            {!note && isPublished && platform === "INSTAGRAM" && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Instagram doesn&apos;t support editing a caption after it&apos;s published -
+                saving here only updates your record, not the live post.
+              </p>
+            )}
+            {!note && isPublished && platform === "FACEBOOK" && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                This will also update the caption on the live Facebook post.
+              </p>
+            )}
           </div>
 
-          <div>
-            <p className="mb-2 text-sm font-medium">Time</p>
-            <TimeOfDayPicker
-              hour12={state.hour12}
-              minute={state.minute}
-              meridiem={state.meridiem}
-              onHourChange={(hour12) => setState((s) => ({ ...s, hour12 }))}
-              onMinuteChange={(minute) => setState((s) => ({ ...s, minute }))}
-              onMeridiemChange={(meridiem: Meridiem) => setState((s) => ({ ...s, meridiem }))}
-            />
-          </div>
+          {!isPublished && (
+            <>
+              <div>
+                <p className="mb-2 text-sm font-medium">Time</p>
+                <TimeOfDayPicker
+                  hour12={state.hour12}
+                  minute={state.minute}
+                  meridiem={state.meridiem}
+                  onHourChange={(hour12) => setState((s) => ({ ...s, hour12 }))}
+                  onMinuteChange={(minute) => setState((s) => ({ ...s, minute }))}
+                  onMeridiemChange={(meridiem: Meridiem) => setState((s) => ({ ...s, meridiem }))}
+                />
+              </div>
 
-          <div>
-            <p className="mb-2 text-sm font-medium">
-              Date —{" "}
-              <span className="font-normal text-muted-foreground">
-                {MONTH_LABELS[state.date.getUTCMonth()]} {state.date.getUTCDate()},{" "}
-                {state.date.getUTCFullYear()}
-              </span>
-            </p>
-            <MiniDatePicker
-              selected={state.date}
-              onSelect={(date) => setState((s) => ({ ...s, date }))}
-            />
-          </div>
+              <div>
+                <p className="mb-2 text-sm font-medium">
+                  Date —{" "}
+                  <span className="font-normal text-muted-foreground">
+                    {MONTH_LABELS[state.date.getUTCMonth()]} {state.date.getUTCDate()},{" "}
+                    {state.date.getUTCFullYear()}
+                  </span>
+                </p>
+                <MiniDatePicker
+                  selected={state.date}
+                  onSelect={(date) => setState((s) => ({ ...s, date }))}
+                />
+              </div>
+            </>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {note && <p className="text-sm text-muted-foreground">{note}</p>}
         </div>
 
         <DialogFooter>
