@@ -353,6 +353,45 @@ describe("generateAndScheduleContent", () => {
       expect(generateCaptionMock).toHaveBeenCalledTimes(2);
     });
 
+    it("does not generate twice when two requests for the same day race each other (production incident)", async () => {
+      // Real bug: a double-click / retry / two platforms submitted close
+      // together each independently saw "nothing generated yet" and each
+      // paid for its own AI image - discovered when a client's Instagram
+      // and Facebook posts (and even two Facebook posts for the same
+      // slot) came back with three different images on what should have
+      // been a single-image day. withDayImageLock serializes this with a
+      // real Postgres advisory lock, so firing both calls concurrently
+      // (not awaiting one before starting the next) must still only
+      // generate once - the loser blocks on the lock and then reuses the
+      // winner's image, rather than racing ahead.
+      const org = await setUpReadyOrg();
+      const scheduledFor = new Date("2026-09-15T09:00:00Z");
+
+      const [resultA, resultB] = await Promise.all([
+        generateAndScheduleContent({
+          organizationId: org.id,
+          platform: "INSTAGRAM",
+          scheduledFor,
+        }),
+        generateAndScheduleContent({
+          organizationId: org.id,
+          platform: "FACEBOOK",
+          scheduledFor,
+        }),
+      ]);
+
+      expect(resultA).toEqual({ success: true });
+      expect(resultB).toEqual({ success: true });
+      expect(generateImageMock).toHaveBeenCalledTimes(1);
+
+      const posts = await prisma.contentPost.findMany({
+        where: { organizationId: org.id },
+        orderBy: { platform: "asc" },
+      });
+      expect(posts).toHaveLength(2);
+      expect(posts[0]!.imageUrls[0]).toBe(posts[1]!.imageUrls[0]);
+    });
+
     it("reuses the same day's image for a second post at a different time, same platform", async () => {
       const org = await setUpReadyOrg();
 

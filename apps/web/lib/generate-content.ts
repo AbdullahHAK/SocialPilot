@@ -6,6 +6,7 @@ import {
   getBrandProfile,
   getPublishingSchedule,
   getRecentCreativeMetadata,
+  withDayImageLock,
   type Platform,
 } from "@socialpilot/db";
 import { asStringArray } from "./brand-fields";
@@ -171,97 +172,116 @@ export async function generateAndScheduleContent(
 
   try {
     const { start, end } = getLocalDayBoundsUtc(input.scheduledFor, schedule.timezone);
-    const dayImage = await findImageForDay(input.organizationId, start, end);
-
-    // A cached day-image only counts if it was generated *after* the
-    // brand/creative profile's last edit - otherwise a business corrected
-    // mid-setup (e.g. placeholder test info replaced with the real brand)
-    // would keep having its old, now-wrong-brand image reused for the
-    // rest of that calendar day, which is worse than one extra generation.
-    const existingDayImage =
-      dayImage &&
-      dayImage.createdAt > brandProfile.updatedAt &&
-      dayImage.createdAt > creativeProfile.updatedAt
-        ? dayImage
-        : null;
-
-    let imageUrl: string;
-    let storyImageUrl: string | undefined;
-    let creativeMetadata: object | undefined;
-
-    if (existingDayImage) {
-      imageUrl = existingDayImage.imageUrl;
-      storyImageUrl = existingDayImage.storyImageUrl ?? undefined;
-    } else {
-      const brandContext = {
-        businessName: brandProfile.businessName,
-        category: brandProfile.category,
-        tone: brandProfile.tone,
-        description: brandProfile.description,
-        colors: asStringArray(brandProfile.colors),
-      };
-
-      // Only the logo goes in as an image reference now - the approved
-      // concept photo is deliberately NOT included here. Passing it as an
-      // edit reference anchored composition, camera angle, and subject far
-      // more than intended (the client's exact complaint: posts came out
-      // looking like copies of the approved image). Its visual STYLE is
-      // captured in styleDescriptors (see analyzeBrandStyle) and given as
-      // text guidance instead - brand-consistent without being a template.
-      const referenceImages = brandProfile.logoUrl
-        ? await (async () => {
-            try {
-              return [await fetchImageBuffer(brandProfile.logoUrl!)];
-            } catch (error) {
-              console.error("Fetching the logo reference image failed", error);
-              return [];
-            }
-          })()
-        : [];
-
-      const styleProfile = parseStyleProfile(creativeProfile.styleDescriptors);
-      const recentMetadata = await getRecentCreativeMetadata(input.organizationId, 3);
-
-      // Square (1:1) - safely inside Instagram's accepted post aspect
-      // ratio range (4:5 to 1.91:1) as-is, so the post goes out exactly as
-      // the model made it, with no cropping that could cut into text, a
-      // logo, or the subject itself (the client's explicit complaint about
-      // an earlier, taller size that got center-cropped for the post).
-      const masterImage = await generateImage({
-        prompt: buildContentPrompt(brief, brandContext, styleProfile, variation, recentMetadata),
-        referenceImages,
-      });
-      imageUrl = await uploadGeneratedImage(input.organizationId, masterImage);
-      creativeMetadata = { ...variation, language: brandProfile.language };
-
-      // Best-effort: the post itself is the primary deliverable, so a
-      // failure here shouldn't block it - it just means this post won't
-      // also go out as a Story. Built from the same untouched master
-      // image (not a cropped copy) - createStoryImage letterboxes it into
-      // the 9:16 frame rather than cropping, so nothing is cut here either.
-      try {
-        const storyBuffer = await createStoryImage(masterImage);
-        storyImageUrl = await uploadGeneratedImage(input.organizationId, storyBuffer, "stories");
-      } catch (error) {
-        console.error("Generating the Story-format version of the image failed", error);
-      }
-    }
 
     const { caption, hashtags } = await generateCaption({
       businessName: brandProfile.businessName,
       tone: brandProfile.tone ?? undefined,
       brief: `${brief} ${theme}`,
     });
-    await createContentPost({
-      organizationId: input.organizationId,
-      platform: input.platform,
-      imageUrls: [imageUrl],
-      storyImageUrl,
-      creativeMetadata,
-      caption,
-      hashtags,
-      scheduledFor: input.scheduledFor,
+
+    // The whole "does today already have an image? if not, make one" check
+    // is serialized per org+day behind a database lock - without it, two
+    // requests landing close together (a double-click, a retry, two
+    // platforms submitted at once) can both see "nothing yet" and both pay
+    // for a fresh AI generation, which happened in production. A losing
+    // request blocks until the winner commits, then finds and reuses its
+    // image instead of racing ahead to generate its own.
+    await withDayImageLock(input.organizationId, start.toISOString(), async (db) => {
+      const dayImage = await findImageForDay(input.organizationId, start, end, db);
+
+      // A cached day-image only counts if it was generated *after* the
+      // brand/creative profile's last edit - otherwise a business
+      // corrected mid-setup (e.g. placeholder test info replaced with the
+      // real brand) would keep having its old, now-wrong-brand image
+      // reused for the rest of that calendar day, which is worse than one
+      // extra generation.
+      const existingDayImage =
+        dayImage &&
+        dayImage.createdAt > brandProfile.updatedAt &&
+        dayImage.createdAt > creativeProfile.updatedAt
+          ? dayImage
+          : null;
+
+      let imageUrl: string;
+      let storyImageUrl: string | undefined;
+      let creativeMetadata: object | undefined;
+
+      if (existingDayImage) {
+        imageUrl = existingDayImage.imageUrl;
+        storyImageUrl = existingDayImage.storyImageUrl ?? undefined;
+      } else {
+        const brandContext = {
+          businessName: brandProfile.businessName,
+          category: brandProfile.category,
+          tone: brandProfile.tone,
+          description: brandProfile.description,
+          colors: asStringArray(brandProfile.colors),
+        };
+
+        // Only the logo goes in as an image reference now - the approved
+        // concept photo is deliberately NOT included here. Passing it as
+        // an edit reference anchored composition, camera angle, and
+        // subject far more than intended (the client's exact complaint:
+        // posts came out looking like copies of the approved image). Its
+        // visual STYLE is captured in styleDescriptors (see
+        // analyzeBrandStyle) and given as text guidance instead - brand-
+        // consistent without being a template.
+        const referenceImages = brandProfile.logoUrl
+          ? await (async () => {
+              try {
+                return [await fetchImageBuffer(brandProfile.logoUrl!)];
+              } catch (error) {
+                console.error("Fetching the logo reference image failed", error);
+                return [];
+              }
+            })()
+          : [];
+
+        const styleProfile = parseStyleProfile(creativeProfile.styleDescriptors);
+        const recentMetadata = await getRecentCreativeMetadata(input.organizationId, 3);
+
+        // Square (1:1) - safely inside Instagram's accepted post aspect
+        // ratio range (4:5 to 1.91:1) as-is, so the post goes out exactly
+        // as the model made it, with no cropping that could cut into
+        // text, a logo, or the subject itself (the client's explicit
+        // complaint about an earlier, taller size that got center-cropped
+        // for the post).
+        const masterImage = await generateImage({
+          prompt: buildContentPrompt(brief, brandContext, styleProfile, variation, recentMetadata),
+          referenceImages,
+        });
+        imageUrl = await uploadGeneratedImage(input.organizationId, masterImage);
+        creativeMetadata = { ...variation, language: brandProfile.language };
+
+        // Best-effort: the post itself is the primary deliverable, so a
+        // failure here shouldn't block it - it just means this post won't
+        // also go out as a Story. Built from the same untouched master
+        // image (not a cropped copy) - createStoryImage letterboxes it
+        // into the 9:16 frame rather than cropping, so nothing is cut
+        // here either.
+        try {
+          const storyBuffer = await createStoryImage(masterImage);
+          storyImageUrl = await uploadGeneratedImage(input.organizationId, storyBuffer, "stories");
+        } catch (error) {
+          console.error("Generating the Story-format version of the image failed", error);
+        }
+      }
+
+      await createContentPost(
+        {
+          organizationId: input.organizationId,
+          platform: input.platform,
+          imageUrls: [imageUrl],
+          storyImageUrl,
+          creativeMetadata,
+          caption,
+          hashtags,
+          scheduledFor: input.scheduledFor,
+        },
+        db,
+      );
     });
+
     return { success: true };
   } catch (error) {
     console.error("Content generation failed", error);

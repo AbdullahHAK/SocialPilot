@@ -1,6 +1,12 @@
 import { Prisma, type Platform } from "@prisma/client";
 import { prisma } from "./index";
 
+// Either the module-level client or a transaction client from
+// withDayImageLock - lets findImageForDay/createContentPost run either
+// standalone (existing callers, tests) or inside the locked transaction
+// that makes the day-image check-then-generate sequence atomic.
+type Db = Pick<typeof prisma, "contentPost">;
+
 export interface CreateContentPostInput {
   organizationId: string;
   platform: Platform;
@@ -15,8 +21,8 @@ export interface CreateContentPostInput {
   scheduledFor: Date;
 }
 
-export function createContentPost(input: CreateContentPostInput) {
-  return prisma.contentPost.create({
+export function createContentPost(input: CreateContentPostInput, db: Db = prisma) {
+  return db.contentPost.create({
     data: {
       organizationId: input.organizationId,
       platform: input.platform,
@@ -30,6 +36,33 @@ export function createContentPost(input: CreateContentPostInput) {
       scheduledFor: input.scheduledFor,
     },
   });
+}
+
+/**
+ * Serializes the "does today already have an image? if not, generate one"
+ * sequence per organization+day using a Postgres advisory lock, so two
+ * requests landing close together (a double-click, a retry, two platforms
+ * submitted at once) can't both see "nothing yet" and both pay for a fresh
+ * AI generation - discovered in production when exactly this happened
+ * several times in one day. `fn` receives a transaction client to run its
+ * own findImageForDay/createContentPost calls through, so a request that
+ * loses the race blocks until the winner commits, then re-checks and finds
+ * the winner's image instead of generating its own. The generous timeout
+ * accounts for `fn` doing real work (an OpenAI call, an upload) while
+ * holding the lock, not just a couple of queries.
+ */
+export function withDayImageLock<T>(
+  organizationId: string,
+  dayKey: string,
+  fn: (db: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${organizationId}:${dayKey}`}))`;
+      return fn(tx);
+    },
+    { timeout: 120_000, maxWait: 120_000 },
+  );
 }
 
 /** The most recent posts' creative-variation choices, most recent first -
@@ -71,8 +104,9 @@ export async function findImageForDay(
   organizationId: string,
   dayStart: Date,
   dayEnd: Date,
+  db: Db = prisma,
 ): Promise<{ imageUrl: string; storyImageUrl: string | null; createdAt: Date } | null> {
-  const existing = await prisma.contentPost.findFirst({
+  const existing = await db.contentPost.findFirst({
     where: {
       organizationId,
       type: "POST",
