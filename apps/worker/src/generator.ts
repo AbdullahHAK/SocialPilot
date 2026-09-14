@@ -4,11 +4,11 @@ import {
   getBrandCreativeProfile,
   getBrandProfile,
   getSubscription,
-  isSubscriptionActive,
   listGenerationCandidates,
   markContentJobCancelled,
   markContentJobGenerationFailed,
   type ContentJob,
+  type SubscriptionStatus,
 } from "@socialpilot/db";
 import { generateContentForJob, isBrandSetupComplete } from "@socialpilot/content-engine";
 
@@ -24,11 +24,30 @@ export const GENERATION_STALE_CUTOFF_HOURS = 24;
 export const MAX_GENERATION_ATTEMPTS = 3;
 const GENERATION_BATCH_SIZE = 10;
 
+// Billing enforcement isn't actually wired up anywhere else in this
+// product yet (apps/web/app/dashboard/subscription/page.tsx only ever
+// *displays* isSubscriptionActive - nothing gates on it) - confirmed live
+// in production, every real account (including the paying client's) has
+// no Subscription row at all, since they were never run through Stripe
+// checkout. Blocking generation on "no ACTIVE/TRIALING row" therefore
+// cancelled every real customer's scheduled content the first time this
+// shipped. CANCELED is the one unambiguous "this customer is gone"
+// signal the client's spec actually needs guarded against; treat every
+// other state - no row, INCOMPLETE (Stripe checkout never finished),
+// PAST_DUE (a grace period, not a cancellation), TRIALING, ACTIVE - as
+// still eligible, so this stays consistent with how the rest of the app
+// already treats subscription status until real billing enforcement
+// exists.
+function isEligibleToGenerate(subscription: { status: SubscriptionStatus } | null): boolean {
+  return subscription?.status !== "CANCELED";
+}
+
 /** Re-checks everything that could have changed since this job was
- * materialized: the org's subscription must still be active, and its
- * brand/creative setup must still be complete (a business could delete
- * its logo, or the slot that produced this job could have been removed
- * out from under it in a narrow window between materialize cycles). */
+ * materialized: the org must not have explicitly cancelled its
+ * subscription, and its brand/creative setup must still be complete (a
+ * business could delete its logo, or the slot that produced this job
+ * could have been removed out from under it in a narrow window between
+ * materialize cycles). */
 async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok: false; reason: string }> {
   const [subscription, brandProfile, creativeProfile] = await Promise.all([
     getSubscription(job.organizationId),
@@ -36,8 +55,8 @@ async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok
     getBrandCreativeProfile(job.organizationId),
   ]);
 
-  if (!isSubscriptionActive(subscription)) {
-    return { ok: false, reason: "Subscription is no longer active" };
+  if (!isEligibleToGenerate(subscription)) {
+    return { ok: false, reason: "Subscription was cancelled" };
   }
   if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
     return { ok: false, reason: "Brand setup is no longer complete" };

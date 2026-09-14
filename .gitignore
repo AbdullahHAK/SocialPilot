@@ -36,3 +36,12 @@ packages/db/generated/
 
 .vercel
 .env*
+
+# scratch scripts and pulled credentials used for one-off local/production
+# verification (e.g. packages/db/.worker.env, *.local.ts, *.local.mjs) -
+# never meant to be committed, but ".env*" alone doesn't catch a
+# ".<name>.env" file since it doesn't start with "env".
+*.env
+*.local.ts
+*.local.mjs
+*.local.js

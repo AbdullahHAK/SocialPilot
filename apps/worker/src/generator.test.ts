@@ -56,6 +56,46 @@ describe("runGenerationCycle", () => {
     expect(generateContentForJobMock.mock.calls[0]![0].id).toBe(job.id);
   });
 
+  it("still generates when the org has no subscription row at all (billing isn't enforced yet - real production incident)", async () => {
+    // Confirmed in production: every real account, including the paying
+    // client's, has no Subscription row (never run through Stripe
+    // checkout) - nothing else in the app gates on subscription status
+    // either, so requiring an ACTIVE/TRIALING row here cancelled every
+    // real customer's scheduled content the first time this shipped.
+    const org = await prisma.organization.create({ data: { name: "Acme", publishingSchedule: { create: {} } } });
+    await upsertBrandProfile({
+      organizationId: org.id,
+      businessName: "Acme",
+      language: "en",
+      logoUrl: "https://example.com/logo.png",
+    });
+    await prisma.brandCreativeProfile.create({
+      data: { organizationId: org.id, promptTemplateAdditions: "content" },
+    });
+    const now = new Date("2026-09-15T12:00:00Z");
+    const job = await createJob(org.id, new Date(now.getTime() + 60_000));
+
+    await runGenerationCycle(now);
+
+    expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+    const updated = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
+    expect(updated.status).not.toBe("CANCELLED");
+  });
+
+  it.each(["INCOMPLETE", "PAST_DUE", "TRIALING"] as const)(
+    "still generates when the subscription status is %s (only an explicit CANCELED blocks)",
+    async (status) => {
+      const org = await setUpReadyOrg();
+      await prisma.subscription.update({ where: { organizationId: org.id }, data: { status } });
+      const now = new Date("2026-09-15T12:00:00Z");
+      await createJob(org.id, new Date(now.getTime() + 60_000));
+
+      await runGenerationCycle(now);
+
+      expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("does not generate a job that's still days away", async () => {
     const org = await setUpReadyOrg();
     const now = new Date("2026-09-15T12:00:00Z");
