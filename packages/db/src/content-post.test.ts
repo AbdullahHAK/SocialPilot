@@ -157,6 +157,75 @@ describe("findImageForDay", () => {
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
     expect(await findImageForDay(org.id, todayStart, todayEnd)).toBeNull();
   });
+
+  describe("createdAfter", () => {
+    // createdAt is DB-assigned (Prisma's @default(now())), not settable
+    // via the fixture, so the cutoff has to be captured live between the
+    // two creates rather than hardcoded.
+    async function sleepPastDbClockTick() {
+      // Guarantees ordering despite the app clock (this cutoff) and the
+      // DB clock (createdAt's @default(now())) being read at slightly
+      // different moments, on potentially different clocks.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    it("skips a row created at or before the cutoff and finds a later valid one", async () => {
+      // Production bug: this used to always fetch the single oldest POST
+      // of the day, with no way to skip past a stale one to find a later
+      // valid one - once one row earlier that day predated a brand
+      // correction, it permanently shadowed every later, actually-valid
+      // image for the rest of that day.
+      const org = await prisma.organization.create({ data: { name: "Acme" } });
+      await createContentPost({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        imageUrls: ["https://example.com/stale.png"],
+        scheduledFor: new Date("2026-09-13T09:00:00.000Z"),
+      });
+
+      await sleepPastDbClockTick();
+      const cutoff = new Date();
+      await sleepPastDbClockTick();
+
+      await createContentPost({
+        organizationId: org.id,
+        platform: "FACEBOOK",
+        imageUrls: ["https://example.com/valid.png"],
+        scheduledFor: new Date("2026-09-13T10:00:00.000Z"),
+      });
+
+      const result = await findImageForDay(org.id, dayStart, dayEnd, undefined, cutoff);
+      expect(result?.imageUrl).toBe("https://example.com/valid.png");
+    });
+
+    it("returns null when every row for that day is at or before the cutoff", async () => {
+      const org = await prisma.organization.create({ data: { name: "Acme" } });
+      await createContentPost({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        imageUrls: ["https://example.com/stale.png"],
+        scheduledFor: new Date("2026-09-13T09:00:00.000Z"),
+      });
+
+      await sleepPastDbClockTick();
+      const cutoff = new Date();
+
+      expect(await findImageForDay(org.id, dayStart, dayEnd, undefined, cutoff)).toBeNull();
+    });
+
+    it("behaves exactly as before when no cutoff is given", async () => {
+      const org = await prisma.organization.create({ data: { name: "Acme" } });
+      await createContentPost({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        imageUrls: ["https://example.com/only.png"],
+        scheduledFor: new Date("2026-09-13T09:00:00.000Z"),
+      });
+
+      const result = await findImageForDay(org.id, dayStart, dayEnd);
+      expect(result?.imageUrl).toBe("https://example.com/only.png");
+    });
+  });
 });
 
 describe("recordPublishedStory", () => {

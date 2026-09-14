@@ -186,21 +186,21 @@ export async function generateAndScheduleContent(
     // for a fresh AI generation, which happened in production. A losing
     // request blocks until the winner commits, then finds and reuses its
     // image instead of racing ahead to generate its own.
-    await withDayImageLock(input.organizationId, start.toISOString(), async (db) => {
-      const dayImage = await findImageForDay(input.organizationId, start, end, db);
+    // A cached day-image only counts if it was generated *after* the
+    // brand/creative profile's last edit - otherwise a business corrected
+    // mid-setup (e.g. placeholder test info replaced with the real brand)
+    // would keep having its old, now-wrong-brand image reused for the
+    // rest of that calendar day, which is worse than one extra
+    // generation. Passed straight into findImageForDay's query (not
+    // checked after the fact) so a stale row earlier in the day can never
+    // shadow a later, genuinely valid one.
+    const validAfter =
+      brandProfile.updatedAt > creativeProfile.updatedAt
+        ? brandProfile.updatedAt
+        : creativeProfile.updatedAt;
 
-      // A cached day-image only counts if it was generated *after* the
-      // brand/creative profile's last edit - otherwise a business
-      // corrected mid-setup (e.g. placeholder test info replaced with the
-      // real brand) would keep having its old, now-wrong-brand image
-      // reused for the rest of that calendar day, which is worse than one
-      // extra generation.
-      const existingDayImage =
-        dayImage &&
-        dayImage.createdAt > brandProfile.updatedAt &&
-        dayImage.createdAt > creativeProfile.updatedAt
-          ? dayImage
-          : null;
+    await withDayImageLock(input.organizationId, start.toISOString(), async (db) => {
+      const existingDayImage = await findImageForDay(input.organizationId, start, end, db, validAfter);
 
       let imageUrl: string;
       let storyImageUrl: string | undefined;

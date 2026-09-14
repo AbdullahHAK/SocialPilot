@@ -516,6 +516,58 @@ describe("generateAndScheduleContent", () => {
       expect(generateImageMock).toHaveBeenCalledTimes(2);
     });
 
+    it("reuses a later, valid image instead of regenerating forever once one stale row exists earlier that day (production incident)", async () => {
+      // Real bug: findImageForDay fetched only the single OLDEST post of
+      // the day and let the caller reject it as stale with no fallback.
+      // Once any one row earlier that day predated a brand correction,
+      // EVERY later call kept finding that same stale oldest row,
+      // rejecting it, and concluding "nothing valid" - paying for a brand
+      // new image on every single call for the rest of the day, even
+      // though a perfectly good post-correction image already existed
+      // from the previous call. A third call must find the SECOND call's
+      // image, not generate its own third one.
+      const org = await setUpReadyOrg();
+
+      // Call 1: generates under the placeholder brand (this becomes the
+      // stale "oldest post of the day").
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-15T09:00:00Z"),
+      });
+
+      await upsertBrandProfile({
+        organizationId: org.id,
+        businessName: "The Real Business",
+        language: "en",
+        logoUrl: "https://example.com/logo.png",
+      });
+
+      // Call 2: correctly rejects call 1's stale image, generates fresh.
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "FACEBOOK",
+        scheduledFor: new Date("2026-09-15T13:00:00Z"),
+      });
+
+      // Call 3: should find and reuse call 2's (valid, post-correction)
+      // image - not treat call 1's stale row as still blocking reuse.
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-15T18:00:00Z"),
+      });
+
+      expect(generateImageMock).toHaveBeenCalledTimes(2);
+      const posts = await prisma.contentPost.findMany({
+        where: { organizationId: org.id },
+        orderBy: { scheduledFor: "asc" },
+      });
+      expect(posts).toHaveLength(3);
+      expect(posts[0]!.imageUrls[0]).not.toBe(posts[1]!.imageUrls[0]);
+      expect(posts[2]!.imageUrls[0]).toBe(posts[1]!.imageUrls[0]);
+    });
+
     it("still reuses the day's image when the brand profile hasn't changed since", async () => {
       const org = await setUpReadyOrg();
 

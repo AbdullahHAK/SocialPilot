@@ -98,13 +98,25 @@ export function countContentPosts(organizationId: string): Promise<number> {
  * AI image generation per day, regardless of how many platforms or posts
  * are scheduled that day. [dayStart, dayEnd) should be one calendar day's
  * bounds in the org's own timezone, converted to UTC (see
- * getLocalDayBoundsUtc). Returns null if nothing's been generated yet for
- * that day, meaning a fresh image is actually needed. */
+ * getLocalDayBoundsUtc). `createdAfter`, when given, excludes rows from
+ * *before* that instant (the brand/creative profile's last edit) directly
+ * in the query - a real production bug: this used to just fetch the
+ * single oldest POST of the day and let the caller reject it as stale,
+ * with no fallback. Once any one row from earlier that day predated a
+ * brand correction, every later call kept finding that same stale oldest
+ * row, rejecting it, and concluding "nothing valid" - generating a brand
+ * new image on every single call for the rest of the day, forever,
+ * instead of ever finding the perfectly good image a previous call in
+ * that same window had already produced. Filtering in the query instead
+ * finds the oldest *valid* row directly. Returns null only when nothing
+ * generated yet for that day actually qualifies, meaning a fresh image
+ * is genuinely needed. */
 export async function findImageForDay(
   organizationId: string,
   dayStart: Date,
   dayEnd: Date,
   db: Db = prisma,
+  createdAfter?: Date,
 ): Promise<{ imageUrl: string; storyImageUrl: string | null; createdAt: Date } | null> {
   const existing = await db.contentPost.findFirst({
     where: {
@@ -112,6 +124,7 @@ export async function findImageForDay(
       type: "POST",
       scheduledFor: { gte: dayStart, lt: dayEnd },
       imageUrls: { isEmpty: false },
+      ...(createdAfter ? { createdAt: { gt: createdAfter } } : {}),
     },
     orderBy: { createdAt: "asc" },
     select: { imageUrls: true, storyImageUrl: true, createdAt: true },
