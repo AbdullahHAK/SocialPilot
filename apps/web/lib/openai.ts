@@ -2,7 +2,7 @@
 // reasoning as meta.ts and stripe.ts. Only ever imported from Server
 // Actions under app/dashboard/create/**.
 
-const IMAGE_MODEL = "gpt-image-1.5";
+const IMAGE_MODEL = "gpt-image-2.5-sunburst";
 const TEXT_MODEL = "gpt-4o-mini";
 
 function requireEnv(name: string): string {
