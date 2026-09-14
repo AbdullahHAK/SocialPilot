@@ -46,7 +46,7 @@ export async function findImageForDay(
   organizationId: string,
   dayStart: Date,
   dayEnd: Date,
-): Promise<{ imageUrl: string; storyImageUrl: string | null } | null> {
+): Promise<{ imageUrl: string; storyImageUrl: string | null; createdAt: Date } | null> {
   const existing = await prisma.contentPost.findFirst({
     where: {
       organizationId,
@@ -55,10 +55,14 @@ export async function findImageForDay(
       imageUrls: { isEmpty: false },
     },
     orderBy: { createdAt: "asc" },
-    select: { imageUrls: true, storyImageUrl: true },
+    select: { imageUrls: true, storyImageUrl: true, createdAt: true },
   });
   if (!existing) return null;
-  return { imageUrl: existing.imageUrls[0]!, storyImageUrl: existing.storyImageUrl };
+  return {
+    imageUrl: existing.imageUrls[0]!,
+    storyImageUrl: existing.storyImageUrl,
+    createdAt: existing.createdAt,
+  };
 }
 
 export interface RecordPublishedStoryInput {

@@ -94,7 +94,19 @@ export async function generateAndScheduleContent(
 
   try {
     const { start, end } = getLocalDayBoundsUtc(input.scheduledFor, schedule.timezone);
-    const existingDayImage = await findImageForDay(input.organizationId, start, end);
+    const dayImage = await findImageForDay(input.organizationId, start, end);
+
+    // A cached day-image only counts if it was generated *after* the
+    // brand/creative profile's last edit - otherwise a business corrected
+    // mid-setup (e.g. placeholder test info replaced with the real brand)
+    // would keep having its old, now-wrong-brand image reused for the
+    // rest of that calendar day, which is worse than one extra generation.
+    const existingDayImage =
+      dayImage &&
+      dayImage.createdAt > brandProfile.updatedAt &&
+      dayImage.createdAt > creativeProfile.updatedAt
+        ? dayImage
+        : null;
 
     let imageUrl: string;
     let storyImageUrl: string | undefined;

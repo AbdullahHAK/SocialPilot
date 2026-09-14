@@ -290,5 +290,82 @@ describe("generateAndScheduleContent", () => {
 
       expect(generateImageMock).toHaveBeenCalledTimes(2);
     });
+
+    it("does not reuse the day's image if the brand profile was corrected after it was generated", async () => {
+      // Real-world case: a business is set up with placeholder info, an
+      // image generates under it, then the real brand details are entered
+      // later the same day - every post since kept the old, now
+      // wrong-brand image because it technically still counted as "today's
+      // image", even though the business it was generated for no longer
+      // matches.
+      const org = await setUpReadyOrg();
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-15T09:00:00Z"),
+      });
+
+      await upsertBrandProfile({
+        organizationId: org.id,
+        businessName: "The Real Business",
+        language: "en",
+        logoUrl: "https://example.com/logo.png",
+      });
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "FACEBOOK",
+        scheduledFor: new Date("2026-09-15T18:00:00Z"),
+      });
+
+      expect(generateImageMock).toHaveBeenCalledTimes(2);
+      const posts = await prisma.contentPost.findMany({
+        where: { organizationId: org.id },
+        orderBy: { scheduledFor: "asc" },
+      });
+      expect(posts[0]!.imageUrls[0]).not.toBe(posts[1]!.imageUrls[0]);
+    });
+
+    it("does not reuse the day's image if the creative profile was corrected after it was generated", async () => {
+      const org = await setUpReadyOrg();
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-15T09:00:00Z"),
+      });
+
+      const creativeProfile = await getBrandCreativeProfile(org.id);
+      await prisma.brandCreativeProfile.update({
+        where: { id: creativeProfile!.id },
+        data: { promptTemplateAdditions: "the corrected, real brief" },
+      });
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "FACEBOOK",
+        scheduledFor: new Date("2026-09-15T18:00:00Z"),
+      });
+
+      expect(generateImageMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("still reuses the day's image when the brand profile hasn't changed since", async () => {
+      const org = await setUpReadyOrg();
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-15T09:00:00Z"),
+      });
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "FACEBOOK",
+        scheduledFor: new Date("2026-09-15T18:00:00Z"),
+      });
+
+      expect(generateImageMock).toHaveBeenCalledTimes(1);
+    });
   });
 });

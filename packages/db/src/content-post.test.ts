@@ -108,10 +108,9 @@ describe("findImageForDay", () => {
     });
 
     const result = await findImageForDay(org.id, dayStart, dayEnd);
-    expect(result).toEqual({
-      imageUrl: "https://example.com/master.png",
-      storyImageUrl: "https://example.com/master-story.png",
-    });
+    expect(result?.imageUrl).toBe("https://example.com/master.png");
+    expect(result?.storyImageUrl).toBe("https://example.com/master-story.png");
+    expect(result?.createdAt).toBeInstanceOf(Date);
   });
 
   it("finds it regardless of which platform the existing post was for", async () => {
