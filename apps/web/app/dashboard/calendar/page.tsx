@@ -1,5 +1,5 @@
 import { getPublishingSchedule, listContentPostsInRange } from "@socialpilot/db";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
@@ -35,10 +35,12 @@ export default async function CalendarPage({
     redirect("/login");
   }
 
-  const { month: monthParam } = await searchParams;
+  const { month: monthParam, failed: failedParam } = await searchParams;
   const { year, month } = parseMonthParam(
     typeof monthParam === "string" ? monthParam : undefined,
   );
+  const failedPlatforms =
+    typeof failedParam === "string" ? failedParam.split(",").filter(Boolean) : [];
 
   const rangeStart = new Date(Date.UTC(year, month, 1));
   const rangeEnd = new Date(Date.UTC(year, month + 1, 1));
@@ -94,6 +96,14 @@ export default async function CalendarPage({
           </Button>
         </div>
       </div>
+
+      {failedPlatforms.length > 0 && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          Couldn&apos;t create a {failedPlatforms.map((p) => p.charAt(0) + p.slice(1).toLowerCase()).join(" or ")}{" "}
+          post for that time - please try again.
+        </div>
+      )}
 
       {posts.length === 0 && (
         <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

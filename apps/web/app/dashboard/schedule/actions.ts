@@ -6,6 +6,7 @@ import {
   getPublishingSchedule,
   setPublishingScheduleTimezone,
   updateScheduleSlot,
+  type Platform,
 } from "@socialpilot/db";
 import { revalidatePath } from "next/cache";
 import { generateAndScheduleContent } from "@/lib/generate-content";
@@ -109,6 +110,11 @@ export async function toggleScheduleSlotAction(formData: FormData) {
 export interface OneTimePostResult {
   ok: boolean;
   reason?: "not_ready" | "invalid";
+  // Platforms that were selected but didn't get a post - e.g. one of two
+  // selected platforms fails while the other succeeds. Without this, that
+  // looked exactly like a full success (ok: true, dialog closes, nothing
+  // on screen suggests half of it silently didn't happen).
+  failedPlatforms?: Platform[];
 }
 
 /** Schedules a post for one specific calendar date on one or both
@@ -132,6 +138,7 @@ export async function addOneTimePostAction(
 
   let anySucceeded = false;
   let lastReason: OneTimePostResult["reason"];
+  const failedPlatforms: Platform[] = [];
 
   for (const platform of platforms) {
     const parsed = oneTimePostSchema.safeParse({ date, time, platform });
@@ -150,15 +157,24 @@ export async function addOneTimePostAction(
         platform: parsed.data.platform,
         scheduledFor,
       });
-      if (result.success) anySucceeded = true;
-      else lastReason = result.skipped;
+      if (result.success) {
+        anySucceeded = true;
+      } else {
+        lastReason = result.skipped;
+        failedPlatforms.push(parsed.data.platform);
+      }
     } catch (error) {
       console.error("One-time content generation failed", error);
+      failedPlatforms.push(parsed.data.platform);
     }
   }
 
   revalidatePath("/dashboard/calendar");
-  return anySucceeded ? { ok: true } : { ok: false, reason: lastReason };
+  if (!anySucceeded) return { ok: false, reason: lastReason };
+  return {
+    ok: true,
+    failedPlatforms: failedPlatforms.length > 0 ? failedPlatforms : undefined,
+  };
 }
 
 export async function removeScheduleSlotAction(formData: FormData) {

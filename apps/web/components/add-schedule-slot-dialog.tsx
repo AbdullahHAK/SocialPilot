@@ -137,7 +137,11 @@ export function AddScheduleSlotDialog({
       }
       setOpen(false);
       reset();
-      router.push(`/dashboard/calendar?month=${formatMonthParam(date.getUTCFullYear(), date.getUTCMonth())}`);
+      const monthParam = formatMonthParam(date.getUTCFullYear(), date.getUTCMonth());
+      const failedParam = result.failedPlatforms?.length
+        ? `&failed=${result.failedPlatforms.join(",")}`
+        : "";
+      router.push(`/dashboard/calendar?month=${monthParam}${failedParam}`);
     });
   }
 
