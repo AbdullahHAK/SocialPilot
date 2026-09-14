@@ -1,4 +1,4 @@
-import type { Platform } from "@prisma/client";
+import { Prisma, type Platform } from "@prisma/client";
 import { prisma } from "./index";
 
 export interface CreateContentPostInput {
@@ -8,6 +8,10 @@ export interface CreateContentPostInput {
   hashtags?: string[];
   imageUrls: string[];
   storyImageUrl?: string;
+  // The creative-variation choices behind imageUrls, when a fresh image
+  // was generated for this post - omitted when reusing another post's
+  // same-day image, since there's nothing new to record.
+  creativeMetadata?: object;
   scheduledFor: Date;
 }
 
@@ -22,9 +26,30 @@ export function createContentPost(input: CreateContentPostInput) {
       hashtags: input.hashtags ?? [],
       imageUrls: input.imageUrls,
       storyImageUrl: input.storyImageUrl,
+      creativeMetadata: input.creativeMetadata,
       scheduledFor: input.scheduledFor,
     },
   });
+}
+
+/** The most recent posts' creative-variation choices, most recent first -
+ * fed back into the next generation's prompt as an explicit "don't repeat
+ * these" list, on top of the deterministic cycling that already keeps
+ * consecutive posts on different axes. Skips rows with no metadata (a
+ * reused same-day image, or content from before this field existed). */
+export async function getRecentCreativeMetadata(
+  organizationId: string,
+  limit: number,
+): Promise<object[]> {
+  const posts = await prisma.contentPost.findMany({
+    where: { organizationId, type: "POST", creativeMetadata: { not: Prisma.JsonNull } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { creativeMetadata: true },
+  });
+  return posts
+    .map((p) => p.creativeMetadata)
+    .filter((m): m is object => m !== null && typeof m === "object");
 }
 
 /** How many posts an org has ever had generated - used as a stable,

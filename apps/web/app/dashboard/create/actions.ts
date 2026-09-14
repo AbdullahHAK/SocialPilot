@@ -12,7 +12,7 @@ import { buildImagePrompt, type BrandContext } from "@/lib/brand-prompt";
 import { fetchImageBuffer } from "@/lib/fetch-image";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
-import { generateImage } from "@/lib/openai";
+import { analyzeBrandStyle, generateImage } from "@/lib/openai";
 import { uploadGeneratedImage } from "@/lib/storage";
 import {
   REFERENCE_IMAGE_ALLOWED_TYPES,
@@ -132,7 +132,26 @@ export async function approveConceptAction(formData: FormData) {
   const imageUrl = formData.get("imageUrl")?.toString();
   if (!conceptId || !imageUrl) return;
 
-  await approveCreativeConcept(session.organizationId, conceptId, imageUrl);
+  // Best-effort: extracts the approved image's transferable visual style
+  // (palette, photography/lighting style, personality, aesthetic) so daily
+  // content generation can stay on-brand from a text description instead
+  // of using this image as a composition template. A failed analysis
+  // shouldn't block approval - it just means generation falls back to the
+  // business's plain brand fields until the next successful approval.
+  let styleDescriptors: object | undefined;
+  try {
+    const brand = await getBrandProfile(session.organizationId);
+    if (brand) {
+      styleDescriptors = await analyzeBrandStyle(imageUrl, {
+        businessName: brand.businessName,
+        category: brand.category,
+      });
+    }
+  } catch (error) {
+    console.error("Analyzing the approved concept's brand style failed", error);
+  }
+
+  await approveCreativeConcept(session.organizationId, conceptId, imageUrl, styleDescriptors);
 
   redirect(safeReturnTo(formData.get("returnTo"), DEFAULT_RETURN_TO));
 }

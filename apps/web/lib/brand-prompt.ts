@@ -1,3 +1,5 @@
+import type { BrandStyleProfile } from "./openai";
+
 export interface BrandContext {
   businessName: string;
   category?: string | null;
@@ -50,6 +52,90 @@ export function buildImagePrompt(
   parts.push(
     "Square, social-media-ready composition, professional photography quality.",
   );
+  return parts.join(" ");
+}
+
+export interface CreativeVariation {
+  contentTheme: string;
+  subject: string;
+  cameraAngle: string;
+  cameraDistance: string;
+  composition: string;
+  environment: string;
+  lighting: string;
+}
+
+function styleProfileText(profile: BrandStyleProfile): string {
+  const parts: string[] = [];
+  if (profile.colors.length > 0) parts.push(`Brand colors: ${profile.colors.join(", ")}.`);
+  if (profile.photographyStyle) parts.push(`Photography style: ${profile.photographyStyle}`);
+  if (profile.lightingStyle) parts.push(`Lighting style: ${profile.lightingStyle}`);
+  if (profile.visualQuality) parts.push(`Visual quality: ${profile.visualQuality}`);
+  if (profile.brandPersonality) parts.push(`Brand personality: ${profile.brandPersonality}`);
+  if (profile.designAesthetic) parts.push(`Design aesthetic: ${profile.designAesthetic}`);
+  if (profile.logoUsage) parts.push(`Logo usage: ${profile.logoUsage}`);
+  return parts.join(" ");
+}
+
+function describeMetadata(metadata: Record<string, unknown>): string {
+  const fields = ["subject", "cameraAngle", "cameraDistance", "composition", "environment", "lighting"];
+  return fields
+    .map((f) => metadata[f])
+    .filter((v): v is string => typeof v === "string" && v.length > 0)
+    .join(", ");
+}
+
+/**
+ * Builds the prompt for the recurring daily-content pipeline - distinct
+ * from buildImagePrompt (used for the initial concept proposals and their
+ * feedback-driven regeneration, where staying close to prior images is the
+ * point). This is the client's explicit fix for posts looking repetitive:
+ * the approved concept is described in words (styleProfile) rather than
+ * handed to the model as an image to redraw, and each call is assigned a
+ * different combination of subject/angle/distance/composition/environment/
+ * lighting, with recent posts' actual choices spelled out as what NOT to
+ * repeat.
+ */
+export function buildContentPrompt(
+  brief: string,
+  brand: BrandContext,
+  styleProfile: BrandStyleProfile | null,
+  variation: CreativeVariation,
+  recentMetadata: object[],
+): string {
+  const parts = [brief];
+  parts.push(
+    `Business: ${brand.businessName}${brand.category ? ` (${brand.category})` : ""}.`,
+  );
+  if (brand.description) parts.push(`About the business: ${brand.description}`);
+  if (brand.tone) parts.push(`Tone: ${brand.tone}.`);
+  if (brand.colors && brand.colors.length > 0 && !styleProfile) {
+    parts.push(`Favor these brand colors where natural: ${brand.colors.join(", ")}.`);
+  }
+
+  if (styleProfile) {
+    parts.push(
+      "Preserve the approved brand's visual identity, described below - but this must be a completely new visual concept, not another image similar to any previously approved or generated one.",
+    );
+    parts.push(styleProfileText(styleProfile));
+  }
+
+  parts.push(
+    `This specific post: ${variation.contentTheme} Subject: ${variation.subject} Camera angle: ${variation.cameraAngle} Camera distance: ${variation.cameraDistance} Composition: ${variation.composition} Environment: ${variation.environment} Lighting: ${variation.lighting}`,
+  );
+
+  const avoidList = recentMetadata
+    .map((m) => describeMetadata(m as Record<string, unknown>))
+    .filter((s) => s.length > 0);
+  if (avoidList.length > 0) {
+    parts.push(
+      `Do not repeat these exact combinations used in recent posts: ${avoidList.join(" | ")}.`,
+    );
+  }
+
+  parts.push(BRAND_BUILDING_GUIDANCE);
+  parts.push(QUALITY_GUIDANCE);
+  parts.push("Square, social-media-ready composition, professional photography quality.");
   return parts.join(" ");
 }
 

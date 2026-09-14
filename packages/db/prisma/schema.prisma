@@ -253,6 +253,12 @@ model ContentPost {
   // same platform without doing any image processing itself at publish
   // time - just null for STORY-type rows themselves.
   storyImageUrl  String?
+  // The resolved creative-variation choices behind this post's image
+  // (subject, camera angle/distance, composition, environment, lighting,
+  // theme, language) - null for STORY-type rows and reused-image posts
+  // that didn't generate fresh. Read back to steer future generations
+  // away from repeating the same combination.
+  creativeMetadata Json?
   scheduledFor   DateTime?
   publishedAt    DateTime?
   externalPostId String?

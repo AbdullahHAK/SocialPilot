@@ -1,6 +1,12 @@
 import { getBrandCreativeProfile, prisma, upsertBrandProfile } from "@socialpilot/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONTENT_THEMES, generateAndScheduleContent } from "./generate-content";
+import {
+  CAMERA_ANGLES,
+  CONTENT_THEMES,
+  ENVIRONMENTS,
+  generateAndScheduleContent,
+  SUBJECTS,
+} from "./generate-content";
 
 // A real (if trivial) 1x1 PNG so createStoryImage can actually process it,
 // rather than a fake buffer that would just make that best-effort step
@@ -22,6 +28,11 @@ vi.mock("./storage", () => ({
   uploadGeneratedImage: (...args: unknown[]) => uploadGeneratedImageMock(...args),
 }));
 
+const fetchImageBufferMock = vi.fn().mockResolvedValue(TINY_PNG);
+vi.mock("./fetch-image", () => ({
+  fetchImageBuffer: (...args: unknown[]) => fetchImageBufferMock(...args),
+}));
+
 const generateImageMock = vi.fn().mockResolvedValue(TINY_PNG);
 const generateCaptionMock = vi
   .fn()
@@ -37,6 +48,7 @@ afterEach(async () => {
   generateImageMock.mockClear();
   generateCaptionMock.mockClear();
   uploadGeneratedImageMock.mockClear();
+  fetchImageBufferMock.mockClear();
 });
 
 async function setUpReadyOrg(name = "Acme") {
@@ -193,6 +205,120 @@ describe("generateAndScheduleContent", () => {
     });
 
     expect(generateImageMock.mock.calls[0]![0].size).toBeUndefined();
+  });
+
+  describe("creative diversity (client's explicit fix for repetitive-looking posts)", () => {
+    it("does not pass the approved concept image as a reference - only the logo", async () => {
+      // The client's root-cause diagnosis: handing the approved concept
+      // photo to the image-edit endpoint as a reference anchored
+      // composition/angle far more than intended, so posts kept coming
+      // out looking like copies of it. Style now travels as text
+      // (styleDescriptors), never as this image.
+      const org = await setUpReadyOrg();
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date(),
+      });
+
+      const referenceImages = generateImageMock.mock.calls[0]![0].referenceImages;
+      expect(referenceImages).toHaveLength(1);
+    });
+
+    it("stores creative metadata describing the resolved variation for a freshly generated image", async () => {
+      const org = await setUpReadyOrg();
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date(),
+        themeIndex: 3,
+      });
+
+      const post = await prisma.contentPost.findFirst({ where: { organizationId: org.id } });
+      const metadata = post?.creativeMetadata as Record<string, string> | null;
+      expect(metadata).not.toBeNull();
+      expect(metadata!.subject).toBe(SUBJECTS[3 % SUBJECTS.length]);
+      expect(metadata!.cameraAngle).toBe(CAMERA_ANGLES[3 % CAMERA_ANGLES.length]);
+      expect(metadata!.environment).toBe(ENVIRONMENTS[3 % ENVIRONMENTS.length]);
+      expect(metadata!.language).toBe("en");
+    });
+
+    it("varies subject, camera angle, and environment independently across different indices", async () => {
+      const org = await setUpReadyOrg();
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-15T09:00:00Z"),
+        themeIndex: 0,
+      });
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-16T09:00:00Z"),
+        themeIndex: 1,
+      });
+
+      const promptA = String(generateImageMock.mock.calls[0]![0].prompt);
+      const promptB = String(generateImageMock.mock.calls[1]![0].prompt);
+      expect(promptA).toContain(SUBJECTS[0]);
+      expect(promptB).toContain(SUBJECTS[1]);
+      expect(promptA).toContain(CAMERA_ANGLES[0]);
+      expect(promptB).toContain(CAMERA_ANGLES[1]);
+    });
+
+    it("includes the approved style profile as text guidance, not the image itself", async () => {
+      const org = await setUpReadyOrg();
+      await prisma.brandCreativeProfile.update({
+        where: { organizationId: org.id },
+        data: {
+          styleDescriptors: {
+            colors: ["deep red", "cream"],
+            typographyDirection: "",
+            logoUsage: "",
+            photographyStyle: "warm, rustic food photography",
+            lightingStyle: "",
+            visualQuality: "",
+            brandPersonality: "cozy and inviting",
+            designAesthetic: "",
+          },
+        },
+      });
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date(),
+      });
+
+      const prompt = String(generateImageMock.mock.calls[0]![0].prompt);
+      expect(prompt).toContain("warm, rustic food photography");
+      expect(prompt).toContain("cozy and inviting");
+      expect(prompt).toContain("completely new visual concept");
+    });
+
+    it("tells the model not to repeat the most recent posts' actual creative choices", async () => {
+      const org = await setUpReadyOrg();
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-15T09:00:00Z"),
+        themeIndex: 0,
+      });
+
+      await generateAndScheduleContent({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        scheduledFor: new Date("2026-09-16T09:00:00Z"),
+        themeIndex: 1,
+      });
+
+      const secondPrompt = String(generateImageMock.mock.calls[1]![0].prompt);
+      expect(secondPrompt).toContain("Do not repeat");
+      expect(secondPrompt).toContain(SUBJECTS[0]);
+    });
   });
 
   describe("one AI image per organization per calendar day (client's explicit cost rule)", () => {

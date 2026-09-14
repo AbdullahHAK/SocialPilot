@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { analyzeBrandDescription, generateCaption, generateImage } from "./openai";
+import { analyzeBrandDescription, analyzeBrandStyle, generateCaption, generateImage } from "./openai";
 
 beforeEach(() => {
   vi.stubEnv("OPENAI_API_KEY", "test-key");
@@ -157,6 +157,80 @@ describe("analyzeBrandDescription", () => {
       tone: null,
       productsServices: [],
       language: null,
+    });
+  });
+});
+
+describe("analyzeBrandStyle", () => {
+  it("sends the image as a vision message and parses the structured style profile", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  colors: ["deep red", "cream"],
+                  typographyDirection: "Bold, condensed sans-serif.",
+                  logoUsage: "Small, corner-placed mark.",
+                  photographyStyle: "Warm, rustic food photography.",
+                  lightingStyle: "Golden-hour natural light.",
+                  visualQuality: "Premium, editorial polish.",
+                  brandPersonality: "Cozy and inviting.",
+                  designAesthetic: "Rustic-modern.",
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await analyzeBrandStyle("https://example.com/approved.png", {
+      businessName: "Acme Bakery",
+      category: "Bakery",
+    });
+
+    expect(result).toEqual({
+      colors: ["deep red", "cream"],
+      typographyDirection: "Bold, condensed sans-serif.",
+      logoUsage: "Small, corner-placed mark.",
+      photographyStyle: "Warm, rustic food photography.",
+      lightingStyle: "Golden-hour natural light.",
+      visualQuality: "Premium, editorial polish.",
+      brandPersonality: "Cozy and inviting.",
+      designAesthetic: "Rustic-modern.",
+    });
+
+    const [, options] = fetchMock.mock.calls[0];
+    const body = JSON.parse(options.body);
+    const userMessage = body.messages.find((m: { role: string }) => m.role === "user");
+    const imagePart = userMessage.content.find((c: { type: string }) => c.type === "image_url");
+    expect(imagePart.image_url.url).toBe("https://example.com/approved.png");
+  });
+
+  it("defaults missing fields to empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }), { status: 200 }),
+      ),
+    );
+
+    const result = await analyzeBrandStyle("https://example.com/approved.png", {
+      businessName: "Acme",
+    });
+    expect(result).toEqual({
+      colors: [],
+      typographyDirection: "",
+      logoUsage: "",
+      photographyStyle: "",
+      lightingStyle: "",
+      visualQuality: "",
+      brandPersonality: "",
+      designAesthetic: "",
     });
   });
 });

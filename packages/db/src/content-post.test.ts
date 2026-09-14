@@ -7,6 +7,7 @@ import {
   getContentPost,
   getLastPublishedPost,
   getNextScheduledPost,
+  getRecentCreativeMetadata,
   listContentPostsInRange,
   listDuePosts,
   markContentPostFailed,
@@ -501,5 +502,77 @@ describe("deleteContentPost", () => {
 
     const stillThere = await prisma.contentPost.findUnique({ where: { id: post.id } });
     expect(stillThere).not.toBeNull();
+  });
+});
+
+describe("getRecentCreativeMetadata", () => {
+  it("returns the most recent posts' creative metadata, most recent first", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+      creativeMetadata: { subject: "first" },
+    });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/b.png"],
+      scheduledFor: new Date("2026-09-15T09:00:00Z"),
+      creativeMetadata: { subject: "second" },
+    });
+
+    const recent = await getRecentCreativeMetadata(org.id, 5);
+    expect(recent).toEqual([{ subject: "second" }, { subject: "first" }]);
+  });
+
+  it("respects the limit", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    for (let i = 0; i < 4; i++) {
+      await createContentPost({
+        organizationId: org.id,
+        platform: "INSTAGRAM",
+        imageUrls: [`https://example.com/${i}.png`],
+        scheduledFor: new Date(`2026-09-${14 + i}T09:00:00Z`),
+        creativeMetadata: { subject: `post-${i}` },
+      });
+    }
+
+    const recent = await getRecentCreativeMetadata(org.id, 2);
+    expect(recent).toHaveLength(2);
+  });
+
+  it("skips posts with no stored metadata (a reused same-day image)", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+      // No creativeMetadata - e.g. reused another post's same-day image.
+    });
+
+    expect(await getRecentCreativeMetadata(org.id, 5)).toEqual([]);
+  });
+
+  it("does not include STORY-type rows", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createContentPost({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      scheduledFor: new Date("2026-09-14T09:00:00Z"),
+      creativeMetadata: { subject: "post" },
+    });
+    await recordPublishedStory({
+      organizationId: org.id,
+      platform: "INSTAGRAM",
+      imageUrls: ["https://example.com/a.png"],
+      externalPostId: "story-1",
+    });
+
+    const recent = await getRecentCreativeMetadata(org.id, 5);
+    expect(recent).toEqual([{ subject: "post" }]);
   });
 });
