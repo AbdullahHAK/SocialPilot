@@ -4,10 +4,43 @@ import {
   publishInstagramStory,
   publishToFacebook,
   publishToInstagram,
+  verifyGraphObjectExists,
 } from "./graph-publish";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("verifyGraphObjectExists", () => {
+  it("returns true when the object resolves with an id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ id: "post-1" }), { status: 200 })),
+    );
+
+    expect(await verifyGraphObjectExists("post-1", "token")).toBe(true);
+  });
+
+  it("returns false on a non-200 response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response("not found", { status: 404 })));
+
+    expect(await verifyGraphObjectExists("post-1", "token")).toBe(false);
+  });
+
+  it("returns false when the response has no id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 })),
+    );
+
+    expect(await verifyGraphObjectExists("post-1", "token")).toBe(false);
+  });
+
+  it("returns false rather than throwing when the network call itself fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(new Error("network down")));
+
+    expect(await verifyGraphObjectExists("post-1", "token")).toBe(false);
+  });
 });
 
 describe("publishToInstagram", () => {

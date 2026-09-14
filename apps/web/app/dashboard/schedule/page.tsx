@@ -1,10 +1,11 @@
 import {
   getBrandCreativeProfile,
   getBrandProfile,
-  getLastPublishedPost,
-  getNextScheduledPost,
+  getLastPublishedContentJob,
+  getNextScheduledContentJob,
   getPublishingSchedule,
 } from "@socialpilot/db";
+import { isBrandSetupComplete } from "@socialpilot/content-engine";
 import { Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,7 +15,6 @@ import { PublishingStatusCard } from "@/components/publishing-status-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isBrandSetupComplete } from "@/lib/brand-setup";
 import { getSession } from "@/lib/session";
 import { formatTime12Hour } from "@/lib/time-of-day";
 import {
@@ -53,8 +53,8 @@ export default async function SchedulePage() {
   const [schedule, lastPublished, nextScheduled, brandProfile, creativeProfile] =
     await Promise.all([
       getPublishingSchedule(session.organizationId),
-      getLastPublishedPost(session.organizationId),
-      getNextScheduledPost(session.organizationId),
+      getLastPublishedContentJob(session.organizationId),
+      getNextScheduledContentJob(session.organizationId),
       getBrandProfile(session.organizationId),
       getBrandCreativeProfile(session.organizationId),
     ]);

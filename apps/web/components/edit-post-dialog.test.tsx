@@ -8,7 +8,7 @@ function openDialog() {
 }
 
 const defaultProps = {
-  postId: "post-1",
+  jobId: "job-1",
   caption: "Original caption",
   scheduledForIso: "2026-09-13T14:30:00.000Z",
   status: "SCHEDULED" as const,
@@ -24,7 +24,7 @@ describe("EditPostDialog - not yet published", () => {
     expect(screen.getByDisplayValue("Original caption")).toBeVisible();
   });
 
-  it("submits the edited caption and the postId, preserving the original instant", async () => {
+  it("submits the edited caption and the jobId, preserving the original instant", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true });
     render(<EditPostDialog {...defaultProps} action={action} />);
     openDialog();
@@ -35,7 +35,7 @@ describe("EditPostDialog - not yet published", () => {
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     const formData = action.mock.calls[0][0] as FormData;
-    expect(formData.get("postId")).toBe("post-1");
+    expect(formData.get("jobId")).toBe("job-1");
     expect(formData.get("caption")).toBe("Updated caption");
     expect(formData.get("timezone")).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
@@ -47,7 +47,7 @@ describe("EditPostDialog - not yet published", () => {
     const timezone = String(formData.get("timezone"));
     const [year, month, day] = date.split("-").map(Number);
     const [hour, minute] = time.split(":").map(Number);
-    const { zonedTimeToUtc } = await import("@/lib/timezone");
+    const { zonedTimeToUtc } = await import("@socialpilot/db");
     const reconstructed = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
     expect(reconstructed.toISOString()).toBe(defaultProps.scheduledForIso);
   });
@@ -92,7 +92,7 @@ describe("EditPostDialog - already published", () => {
     expect(screen.queryByText(/^date/i)).not.toBeInTheDocument();
   });
 
-  it("submits only the caption and postId, no date/time fields", async () => {
+  it("submits only the caption and jobId, no date/time fields", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true });
     render(<EditPostDialog {...defaultProps} status="PUBLISHED" action={action} />);
     openDialog();
@@ -104,7 +104,7 @@ describe("EditPostDialog - already published", () => {
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     const formData = action.mock.calls[0][0] as FormData;
-    expect(formData.get("postId")).toBe("post-1");
+    expect(formData.get("jobId")).toBe("job-1");
     expect(formData.get("caption")).toBe("Updated after publish");
     expect(formData.get("date")).toBeNull();
     expect(formData.get("time")).toBeNull();

@@ -138,10 +138,7 @@ export function AddScheduleSlotDialog({
       setOpen(false);
       reset();
       const monthParam = formatMonthParam(date.getUTCFullYear(), date.getUTCMonth());
-      const failedParam = result.failedPlatforms?.length
-        ? `&failed=${result.failedPlatforms.join(",")}`
-        : "";
-      router.push(`/dashboard/calendar?month=${monthParam}${failedParam}`);
+      router.push(`/dashboard/calendar?month=${monthParam}`);
     });
   }
 

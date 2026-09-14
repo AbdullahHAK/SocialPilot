@@ -18,8 +18,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { dateKey, MONTH_LABELS } from "@/lib/calendar";
 import { from24Hour, to24Hour, type Meridiem } from "@/lib/time-of-day";
-import { getZonedDateParts } from "@/lib/timezone";
-import type { EditContentPostResult } from "@/app/dashboard/calendar/actions";
+// The "./timezone" subpath (not the main @socialpilot/db barrel) keeps
+// this client component's bundle free of server-only Node built-ins that
+// other parts of @socialpilot/db pull in (crypto, bcrypt).
+import { getZonedDateParts } from "@socialpilot/db/timezone";
+import type { EditContentJobResult } from "@/app/dashboard/calendar/actions";
 
 function initialStateFor(scheduledForIso: string) {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -36,7 +39,7 @@ function initialStateFor(scheduledForIso: string) {
 }
 
 export function EditPostDialog({
-  postId,
+  jobId,
   caption,
   scheduledForIso,
   status,
@@ -44,15 +47,18 @@ export function EditPostDialog({
   action,
   trigger,
 }: {
-  postId: string;
+  jobId: string;
   caption: string;
   scheduledForIso: string;
-  status: "DRAFT" | "QUEUED" | "SCHEDULED" | "PUBLISHED" | "FAILED";
+  status: "GENERATING" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED" | "RETRYING" | "CANCELLED";
   platform: "INSTAGRAM" | "FACEBOOK";
-  action: (formData: FormData) => Promise<EditContentPostResult>;
+  action: (formData: FormData) => Promise<EditContentJobResult>;
   trigger: ReactNode;
 }) {
-  const isPublished = status === "PUBLISHED";
+  // A job that's already publishing/published/cancelled can't be
+  // rescheduled - only its caption is still meaningfully editable, mirrors
+  // isLocked() in calendar/actions.ts.
+  const isPublished = status === "PUBLISHING" || status === "PUBLISHED" || status === "CANCELLED";
   const [open, setOpen] = useState(false);
   const [captionText, setCaptionText] = useState(caption);
   const [state, setState] = useState(() => initialStateFor(scheduledForIso));
@@ -71,7 +77,7 @@ export function EditPostDialog({
     setError(null);
     setNote(null);
     const formData = new FormData();
-    formData.set("postId", postId);
+    formData.set("jobId", jobId);
     formData.set("caption", captionText);
     if (!isPublished) {
       formData.set("date", dateKey(state.date));

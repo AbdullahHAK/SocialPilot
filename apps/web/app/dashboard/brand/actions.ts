@@ -1,10 +1,9 @@
 "use server";
 
 import { upsertBrandProfile } from "@socialpilot/db";
+import { analyzeBrandDescription, uploadLogo } from "@socialpilot/content-engine";
 import { revalidatePath } from "next/cache";
-import { analyzeBrandDescription } from "@/lib/openai";
 import { getSession } from "@/lib/session";
-import { uploadLogo } from "@/lib/storage";
 import {
   brandProfileSchema,
   LOGO_ALLOWED_TYPES,

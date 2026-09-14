@@ -5,12 +5,10 @@ import {
   getBrandProfile,
   setBrandLogo,
 } from "@socialpilot/db";
+import { buildLogoPrompt, generateImage, uploadGeneratedImage } from "@socialpilot/content-engine";
 import { redirect } from "next/navigation";
-import { buildLogoPrompt } from "@/lib/brand-prompt";
-import { generateImage } from "@/lib/openai";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
-import { uploadGeneratedImage } from "@/lib/storage";
 
 export interface GenerateLogoFormState {
   error?: string;

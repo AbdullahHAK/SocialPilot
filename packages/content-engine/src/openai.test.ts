@@ -22,7 +22,7 @@ describe("generateImage", () => {
     const result = await generateImage({ prompt: "A latte on a table" });
 
     expect(result.toString()).toBe("fake-png");
-    const [url, options] = fetchMock.mock.calls[0];
+    const [url, options] = fetchMock.mock.calls[0]!;
     expect(url).toBe("https://api.openai.com/v1/images/generations");
     expect(options.method).toBe("POST");
     expect(JSON.parse(options.body).prompt).toBe("A latte on a table");
@@ -42,7 +42,7 @@ describe("generateImage", () => {
     });
 
     expect(result.toString()).toBe("edited-png");
-    const [url, options] = fetchMock.mock.calls[0];
+    const [url, options] = fetchMock.mock.calls[0]!;
     expect(url).toBe("https://api.openai.com/v1/images/edits");
     expect(options.body).toBeInstanceOf(FormData);
   });
@@ -204,7 +204,7 @@ describe("analyzeBrandStyle", () => {
       designAesthetic: "Rustic-modern.",
     });
 
-    const [, options] = fetchMock.mock.calls[0];
+    const [, options] = fetchMock.mock.calls[0]!;
     const body = JSON.parse(options.body);
     const userMessage = body.messages.find((m: { role: string }) => m.role === "user");
     const imagePart = userMessage.content.find((c: { type: string }) => c.type === "image_url");

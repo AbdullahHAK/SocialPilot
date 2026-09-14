@@ -149,23 +149,6 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
     expect(formData.get("date")).toBe(dateKey(nextMonthDate));
   });
 
-  it("carries a failed-platform warning through to the calendar redirect", async () => {
-    // e.g. Instagram succeeded but Facebook silently didn't - the redirect
-    // must say so, rather than looking exactly like a full success.
-    const onceAction = vi.fn().mockResolvedValue({ ok: true, failedPlatforms: ["FACEBOOK"] });
-    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);
-    openDialog();
-
-    fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
-    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() => expect(onceAction).toHaveBeenCalledTimes(1));
-    const today = new Date();
-    expect(push).toHaveBeenCalledWith(
-      `/dashboard/calendar?month=${formatMonthParam(today.getUTCFullYear(), today.getUTCMonth())}&failed=FACEBOOK`,
-    );
-  });
-
   it("shows a message and keeps the dialog open when the brand isn't ready", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: false, reason: "not_ready" });
     render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);

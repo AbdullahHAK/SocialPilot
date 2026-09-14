@@ -8,20 +8,28 @@ import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import type { EditContentPostResult } from "@/app/dashboard/calendar/actions";
+import type { EditContentJobResult } from "@/app/dashboard/calendar/actions";
 
-const STATUS_BADGE_VARIANT = {
-  DRAFT: "secondary",
-  QUEUED: "secondary",
+// A card's status is derived (in calendar/page.tsx) from its ContentJob and
+// ContentPublication together, not read off a single field - GENERATING
+// and SCHEDULED both mean "not published yet" but distinguish whether the
+// shared creative exists yet at all.
+export const STATUS_BADGE_VARIANT = {
+  GENERATING: "secondary",
   SCHEDULED: "default",
+  PUBLISHING: "default",
   PUBLISHED: "success",
   FAILED: "destructive",
+  RETRYING: "outline",
+  CANCELLED: "secondary",
 } as const;
 
+export type CalendarPostStatus = keyof typeof STATUS_BADGE_VARIANT;
+
 export interface CalendarPost {
-  id: string;
+  jobId: string;
   platform: "INSTAGRAM" | "FACEBOOK";
-  status: "DRAFT" | "QUEUED" | "SCHEDULED" | "PUBLISHED" | "FAILED";
+  status: CalendarPostStatus;
   caption: string | null;
   imageUrls: string[];
   scheduledFor: string;
@@ -34,7 +42,7 @@ export function PostHoverCard({
   children,
 }: {
   post: CalendarPost;
-  editAction: (formData: FormData) => Promise<EditContentPostResult>;
+  editAction: (formData: FormData) => Promise<EditContentJobResult>;
   deleteAction: (formData: FormData) => void | Promise<void>;
   children: ReactNode;
 }) {
@@ -55,7 +63,8 @@ export function PostHoverCard({
       return;
     }
     const formData = new FormData();
-    formData.set("postId", post.id);
+    formData.set("jobId", post.jobId);
+    formData.set("platform", post.platform);
     startTransition(async () => {
       await deleteAction(formData);
     });
@@ -67,8 +76,8 @@ export function PostHoverCard({
       <HoverCardContent>
         <div className="flex gap-3">
           {post.imageUrls[0] && (
-            // eslint-disable-next-line @next/next/no-img-element -- remote
-            // generated image, same pattern used elsewhere in the dashboard.
+            // Remote generated image, same pattern used elsewhere in the dashboard.
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={post.imageUrls[0]}
               alt=""
@@ -96,7 +105,7 @@ export function PostHoverCard({
 
         <div className="mt-3 flex justify-end gap-1.5 border-t border-border pt-3">
           <EditPostDialog
-            postId={post.id}
+            jobId={post.jobId}
             caption={post.caption ?? ""}
             scheduledForIso={post.scheduledFor}
             status={post.status}

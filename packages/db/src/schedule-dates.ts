@@ -48,7 +48,10 @@ export function computeUpcomingSlotOccurrences(
   const occurrences: UpcomingSlotOccurrence[] = [];
 
   for (const slot of slots) {
-    const [hours, minutes] = slot.time.split(":").map(Number);
+    // `time` is always "HH:mm" (validated by the caller before it ever
+    // reaches here) - the cast just satisfies noUncheckedIndexedAccess for
+    // a split() result TS can't otherwise know has exactly two parts.
+    const [hours, minutes] = slot.time.split(":").map(Number) as [number, number];
     const targetDay = DAY_INDEX[slot.dayOfWeek];
     const dayDelta = (targetDay - fromParts.weekday + 7) % 7;
 

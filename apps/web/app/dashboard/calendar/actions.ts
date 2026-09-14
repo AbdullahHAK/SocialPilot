@@ -2,16 +2,17 @@
 
 import {
   decryptToken,
-  deleteContentPost,
   ensurePublishingScheduleTimezone,
-  getContentPost,
+  getContentJob,
   listSocialAccounts,
-  updateContentPost,
+  removeContentJobPlatform,
+  rescheduleContentJob,
+  zonedTimeToUtc,
+  type Platform,
 } from "@socialpilot/db";
 import { revalidatePath } from "next/cache";
 import { updateFacebookPostCaption } from "@/lib/meta";
 import { getSession } from "@/lib/session";
-import { zonedTimeToUtc } from "@/lib/timezone";
 import { editContentPostSchema, editPublishedPostSchema, timezoneSchema } from "@/lib/validation";
 
 function parseTimezone(value: FormDataEntryValue | null): string {
@@ -19,47 +20,62 @@ function parseTimezone(value: FormDataEntryValue | null): string {
   return parsed.success ? parsed.data : "UTC";
 }
 
-export interface EditContentPostResult {
+export interface EditContentJobResult {
   ok: boolean;
   /** Shown to the user after a successful save when something about the
    * edit didn't fully apply - e.g. Instagram not supporting caption edits
    * after publishing, or the live Facebook update failing. */
   note?: string;
+  /** Set when a reschedule was rejected because another job already
+   * occupies that exact scheduled time. */
+  error?: "time_taken";
 }
 
-export async function editContentPostAction(
+/** A job that's already publishing/published/cancelled can't be
+ * rescheduled - only its (shared) caption is still meaningfully editable,
+ * and even then only Facebook's API supports pushing that change to the
+ * already-live post. */
+function isLocked(status: string): boolean {
+  return status === "PUBLISHING" || status === "PUBLISHED" || status === "CANCELLED";
+}
+
+export async function editContentJobAction(
   formData: FormData,
-): Promise<EditContentPostResult> {
+): Promise<EditContentJobResult> {
   const session = await getSession();
   if (!session) return { ok: false };
 
-  const postId = formData.get("postId");
-  if (typeof postId !== "string") return { ok: false };
+  const jobId = formData.get("jobId");
+  if (typeof jobId !== "string") return { ok: false };
 
-  const existing = await getContentPost(session.organizationId, postId);
+  const existing = await getContentJob(session.organizationId, jobId);
   if (!existing) return { ok: false };
 
-  // A post that already went out can't be rescheduled - only its caption
-  // is still meaningfully editable, and even then only Facebook's API
-  // supports pushing that change to the live post.
-  if (existing.status === "PUBLISHED") {
+  if (isLocked(existing.status)) {
     const parsed = editPublishedPostSchema.safeParse({ caption: formData.get("caption") });
     if (!parsed.success) return { ok: false };
 
-    const updated = await updateContentPost(session.organizationId, postId, {
+    const updated = await rescheduleContentJob(session.organizationId, jobId, {
       caption: parsed.data.caption,
     });
-    if (!updated) return { ok: false };
+    if ("error" in updated) return { ok: false };
 
     let note: string | undefined;
-    if (updated.platform === "FACEBOOK" && updated.externalPostId) {
+    const facebookPublication = existing.publications.find(
+      (p) => p.platform === "FACEBOOK" && p.status === "PUBLISHED" && p.externalPostId,
+    );
+    const instagramPublished = existing.publications.some(
+      (p) => p.platform === "INSTAGRAM" && p.status === "PUBLISHED",
+    );
+
+    if (facebookPublication) {
       const accounts = await listSocialAccounts(session.organizationId);
       const facebookAccount = accounts.find((account) => account.provider === "FACEBOOK");
       if (facebookAccount) {
         try {
           await updateFacebookPostCaption(
             decryptToken(facebookAccount.accessToken),
-            updated.externalPostId,
+            facebookPublication.externalPostId!,
             parsed.data.caption,
           );
         } catch (error) {
@@ -69,7 +85,7 @@ export async function editContentPostAction(
       } else {
         note = "Saved here, but no connected Facebook account was found to update the live post.";
       }
-    } else if (updated.platform === "INSTAGRAM") {
+    } else if (instagramPublished) {
       note =
         "Instagram doesn't support editing a caption after it's published, so this only updates your record here.";
     }
@@ -92,23 +108,30 @@ export async function editContentPostAction(
   const [hour, minute] = parsed.data.time.split(":").map(Number);
   const scheduledFor = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
 
-  const updated = await updateContentPost(session.organizationId, postId, {
+  const result = await rescheduleContentJob(session.organizationId, jobId, {
     caption: parsed.data.caption,
     scheduledFor,
   });
-  if (!updated) return { ok: false };
+  if ("error" in result) {
+    return result.error === "time_taken" ? { ok: false, error: "time_taken" } : { ok: false };
+  }
 
   revalidatePath("/dashboard/calendar");
   return { ok: true };
 }
 
-export async function deleteContentPostAction(formData: FormData) {
+/** Drops one platform from a job - just that platform's card, or the whole
+ * job if it was the last platform on it. Doesn't touch anything already
+ * live on the platform, only our own scheduling/publication record. */
+export async function deleteContentJobPlatformAction(formData: FormData) {
   const session = await getSession();
   if (!session) return;
 
-  const postId = formData.get("postId");
-  if (typeof postId !== "string") return;
+  const jobId = formData.get("jobId");
+  const platform = formData.get("platform");
+  if (typeof jobId !== "string") return;
+  if (platform !== "INSTAGRAM" && platform !== "FACEBOOK") return;
 
-  await deleteContentPost(session.organizationId, postId);
+  await removeContentJobPlatform(session.organizationId, jobId, platform as Platform);
   revalidatePath("/dashboard/calendar");
 }

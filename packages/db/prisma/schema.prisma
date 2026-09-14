@@ -78,6 +78,37 @@ enum DayOfWeek {
   SUNDAY
 }
 
+// One content job = one scheduled time = one master creative, shared
+// identically across every platform selected for that time. Replaces
+// ContentPost (kept, unused by new code, as a safety net until the
+// deprecation window closes - see packages/db/src/content-post.ts).
+enum ContentJobStatus {
+  PENDING
+  GENERATING
+  READY
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  RETRYING
+  CANCELLED
+}
+
+// Lets the materialize/reconcile cycle tell "a recurring slot's occurrence,
+// safe to delete/update when the live schedule changes" apart from "a
+// customer's explicit one-time post, never touched by reconciliation."
+enum ContentJobOrigin {
+  SLOT
+  ONE_TIME
+}
+
+enum ContentPublicationStatus {
+  PENDING
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  RETRYING
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -105,6 +136,7 @@ model Organization {
   creativeConcepts     CreativeConcept[]
   publishingSchedule   PublishingSchedule?
   contentPosts         ContentPost[]
+  contentJobs          ContentJob[]
 
   @@map("organizations")
 }
@@ -271,4 +303,74 @@ model ContentPost {
   @@index([organizationId])
   @@index([status])
   @@map("content_posts")
+}
+
+// One row per scheduled publishing time, spanning every platform selected
+// for it - the client's explicit fix for Instagram and Facebook sometimes
+// ending up with different AI images for what was meant to be one post.
+// `platforms` + one `ContentPublication` per platform is what makes "no
+// duplicate jobs for the same scheduled time" enforceable: two ScheduleSlot
+// rows landing on the same instant (e.g. Monday-18:00-Instagram and
+// Monday-18:00-Facebook) collapse into a single job here.
+model ContentJob {
+  id             String           @id @default(cuid())
+  organizationId String
+  scheduledFor   DateTime
+  platforms      Platform[]
+  origin         ContentJobOrigin @default(SLOT)
+  status         ContentJobStatus @default(PENDING)
+  // Shared across every platform - captions are identical everywhere, not
+  // generated per platform, per the client's "publish the same content
+  // everywhere" requirement.
+  caption        String?
+  hashtags       String[]
+  masterImageUrl String?
+  storyImageUrl  String?
+  // The resolved creative-variation combination behind masterImageUrl, for
+  // steering future generations away from repeating it (see
+  // getRecentCreativeMetadata-equivalent in content-job.ts).
+  creativeMetadata Json?
+  // Generation attempts only (not publish attempts - those live on
+  // ContentPublication, independently per platform).
+  attempts       Int              @default(0)
+  lastAttemptAt  DateTime?
+  errorMessage   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  publications ContentPublication[]
+
+  // Enforces "one scheduled time = one job" directly at the database level -
+  // the materialize/one-time-post write path upserts against this rather
+  // than ever creating a second job for the same instant.
+  @@unique([organizationId, scheduledFor])
+  @@index([organizationId])
+  @@index([status])
+  @@map("content_jobs")
+}
+
+// One row per (job, platform) - the idempotency and independent-retry unit.
+// Instagram succeeding must never be touched again while only Facebook
+// retries; a stored externalPostId is the durable proof a platform already
+// published, checked before ever calling a Graph API publish endpoint again.
+model ContentPublication {
+  id              String                    @id @default(cuid())
+  contentJobId    String
+  platform        Platform
+  status          ContentPublicationStatus  @default(PENDING)
+  externalPostId  String?
+  externalStoryId String?
+  attempts        Int                       @default(0)
+  lastAttemptAt   DateTime?
+  errorMessage    String?
+  publishedAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  contentJob ContentJob @relation(fields: [contentJobId], references: [id], onDelete: Cascade)
+
+  @@unique([contentJobId, platform])
+  @@index([status])
+  @@map("content_publications")
 }

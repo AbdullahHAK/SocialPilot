@@ -28,7 +28,9 @@ export function getZonedDateParts(
     day: Number(formatted.day),
     hour: formatted.hour === "24" ? 0 : Number(formatted.hour),
     minute: Number(formatted.minute),
-    weekday: WEEKDAY_INDEX[formatted.weekday],
+    // Always one of the three-letter keys above - Intl.DateTimeFormat's
+    // own "short" weekday output for the "en-US" locale used below.
+    weekday: WEEKDAY_INDEX[formatted.weekday]!,
   };
 }
 

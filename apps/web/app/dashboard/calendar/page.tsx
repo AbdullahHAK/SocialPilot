@@ -1,9 +1,14 @@
-import { getPublishingSchedule, listContentPostsInRange } from "@socialpilot/db";
-import { AlertCircle, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { getPublishingSchedule, listContentJobsInRange } from "@socialpilot/db";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
-import { PostHoverCard } from "@/components/post-hover-card";
+import {
+  PostHoverCard,
+  STATUS_BADGE_VARIANT,
+  type CalendarPost,
+  type CalendarPostStatus,
+} from "@/components/post-hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,15 +22,22 @@ import {
   WEEKDAY_LABELS,
 } from "@/lib/calendar";
 import { getSession } from "@/lib/session";
-import { deleteContentPostAction, editContentPostAction } from "./actions";
+import { deleteContentJobPlatformAction, editContentJobAction } from "./actions";
 
-const STATUS_BADGE_VARIANT = {
-  DRAFT: "secondary",
-  QUEUED: "secondary",
-  SCHEDULED: "default",
-  PUBLISHED: "success",
-  FAILED: "destructive",
-} as const;
+/** A card's status combines the shared job's state (has a creative been
+ * generated yet? was it cancelled?) with this specific platform's own
+ * publish state - two platforms on the same job can show different
+ * statuses (e.g. Instagram PUBLISHED, Facebook RETRYING) even though they
+ * share one creative. */
+function displayStatus(
+  jobStatus: string,
+  publicationStatus: string,
+): CalendarPostStatus {
+  if (jobStatus === "CANCELLED") return "CANCELLED";
+  if (publicationStatus !== "PENDING") return publicationStatus as CalendarPostStatus;
+  if (jobStatus === "PENDING" || jobStatus === "GENERATING") return "GENERATING";
+  return "SCHEDULED"; // job's creative is READY (or job is PUBLISHING), this platform hasn't been attempted yet
+}
 
 export default async function CalendarPage({
   searchParams,
@@ -35,28 +47,38 @@ export default async function CalendarPage({
     redirect("/login");
   }
 
-  const { month: monthParam, failed: failedParam } = await searchParams;
+  const { month: monthParam } = await searchParams;
   const { year, month } = parseMonthParam(
     typeof monthParam === "string" ? monthParam : undefined,
   );
-  const failedPlatforms =
-    typeof failedParam === "string" ? failedParam.split(",").filter(Boolean) : [];
 
   const rangeStart = new Date(Date.UTC(year, month, 1));
   const rangeEnd = new Date(Date.UTC(year, month + 1, 1));
-  const [posts, schedule] = await Promise.all([
-    listContentPostsInRange(session.organizationId, rangeStart, rangeEnd),
+  const [jobs, schedule] = await Promise.all([
+    listContentJobsInRange(session.organizationId, rangeStart, rangeEnd),
     getPublishingSchedule(session.organizationId),
   ]);
+
+  // One card per (job, platform), matching the pre-existing UX of one card
+  // per platform - a job spanning both platforms still shows two cards,
+  // just always sharing the same creative now.
+  const posts: CalendarPost[] = jobs.flatMap((job) =>
+    job.publications.map((publication) => ({
+      jobId: job.id,
+      platform: publication.platform,
+      status: displayStatus(job.status, publication.status),
+      caption: job.caption,
+      imageUrls: job.masterImageUrl ? [job.masterImageUrl] : [],
+      scheduledFor: (publication.publishedAt ?? job.scheduledFor).toISOString(),
+    })),
+  );
 
   // Grouped by the org's own local calendar day, not UTC - a post
   // scheduled late in the UTC day can already be "tomorrow" where the
   // org actually is, and needs to land in that day's cell.
-  const postsByDay = new Map<string, typeof posts>();
+  const postsByDay = new Map<string, CalendarPost[]>();
   for (const post of posts) {
-    const displayDate = post.publishedAt ?? post.scheduledFor;
-    if (!displayDate) continue;
-    const key = localDateKey(displayDate, schedule.timezone);
+    const key = localDateKey(new Date(post.scheduledFor), schedule.timezone);
     const existing = postsByDay.get(key) ?? [];
     existing.push(post);
     postsByDay.set(key, existing);
@@ -96,14 +118,6 @@ export default async function CalendarPage({
           </Button>
         </div>
       </div>
-
-      {failedPlatforms.length > 0 && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" />
-          Couldn&apos;t create a {failedPlatforms.map((p) => p.charAt(0) + p.slice(1).toLowerCase()).join(" or ")}{" "}
-          post for that time - please try again.
-        </div>
-      )}
 
       {posts.length === 0 && (
         <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -149,20 +163,10 @@ export default async function CalendarPage({
                 <div className="flex flex-col gap-1">
                   {dayPosts.map((post) => (
                     <PostHoverCard
-                      key={post.id}
-                      post={{
-                        id: post.id,
-                        platform: post.platform,
-                        status: post.status,
-                        caption: post.caption,
-                        imageUrls: post.imageUrls,
-                        // Every post reaching this list has at least one of
-                        // these set - that's the filter used to place it on
-                        // the calendar in the first place.
-                        scheduledFor: (post.scheduledFor ?? post.publishedAt)!.toISOString(),
-                      }}
-                      editAction={editContentPostAction}
-                      deleteAction={deleteContentPostAction}
+                      key={`${post.jobId}-${post.platform}`}
+                      post={post}
+                      editAction={editContentJobAction}
+                      deleteAction={deleteContentJobPlatformAction}
                     >
                       <button
                         type="button"
@@ -178,7 +182,7 @@ export default async function CalendarPage({
                             helpful, so just show the platform icon and
                             rely on the hover card for detail. */}
                         <span className="hidden min-w-0 truncate sm:inline">
-                          {post.caption ?? post.type}
+                          {post.caption || post.status}
                         </span>
                       </button>
                     </PostHoverCard>

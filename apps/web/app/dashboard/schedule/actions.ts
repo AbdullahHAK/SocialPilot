@@ -4,18 +4,16 @@ import {
   addScheduleSlot,
   deleteScheduleSlot,
   ensurePublishingScheduleTimezone,
-  getPublishingSchedule,
+  getBrandCreativeProfile,
+  getBrandProfile,
+  materializeContentJob,
   updateScheduleSlot,
+  zonedTimeToUtc,
   type Platform,
 } from "@socialpilot/db";
+import { isBrandSetupComplete } from "@socialpilot/content-engine";
 import { revalidatePath } from "next/cache";
-import { generateAndScheduleContent } from "@/lib/generate-content";
-import {
-  computeUpcomingSlotOccurrences,
-  type ScheduleSlotLike,
-} from "@/lib/schedule-dates";
 import { getSession } from "@/lib/session";
-import { zonedTimeToUtc } from "@/lib/timezone";
 import { oneTimePostSchema, scheduleSlotSchema, timezoneSchema } from "@/lib/validation";
 
 /** A submitted timezone always comes from the browser's own
@@ -26,31 +24,6 @@ import { oneTimePostSchema, scheduleSlotSchema, timezoneSchema } from "@/lib/val
 function parseTimezone(value: FormDataEntryValue | null): string {
   const parsed = timezoneSchema.safeParse(value);
   return parsed.success ? parsed.data : "UTC";
-}
-
-/** Generates content for just one slot's immediate next occurrence -
- * whether that's 5 minutes away or a week away - so a newly added (or
- * re-enabled) slot doesn't have to wait for the once-daily batch job to
- * have something actually ready to publish. Silently does nothing if the
- * brand isn't ready yet (no approved style/logo) or generation fails; the
- * daily job will pick it up once it is. */
-async function generateForImmediateOccurrence(
-  organizationId: string,
-  slot: ScheduleSlotLike,
-  timezone: string,
-) {
-  const [occurrence] = computeUpcomingSlotOccurrences([slot], { days: 8, timezone });
-  if (!occurrence) return;
-
-  try {
-    await generateAndScheduleContent({
-      organizationId,
-      platform: occurrence.platform,
-      scheduledFor: occurrence.date,
-    });
-  } catch (error) {
-    console.error("Immediate content generation for a new slot failed", error);
-  }
 }
 
 export async function addScheduleSlotAction(formData: FormData) {
@@ -77,9 +50,13 @@ export async function addScheduleSlotAction(formData: FormData) {
         organizationId: session.organizationId,
         ...parsed.data,
       });
-      await generateForImmediateOccurrence(session.organizationId, parsed.data, timezone);
     }
   }
+  // No eager generation here anymore - the worker's materialize cycle picks
+  // up this slot's occurrences within a few minutes on its own, and actual
+  // AI generation only starts ~5 minutes before each occurrence's time (the
+  // client's explicit requirement: never generate content days or hours
+  // ahead of when it's actually needed).
   revalidatePath("/dashboard/schedule");
 }
 
@@ -91,37 +68,26 @@ export async function toggleScheduleSlotAction(formData: FormData) {
   const currentlyEnabled = formData.get("enabled") === "true";
   if (typeof slotId !== "string") return;
 
-  const updated = await updateScheduleSlot(session.organizationId, slotId, {
+  await updateScheduleSlot(session.organizationId, slotId, {
     enabled: !currentlyEnabled,
   });
-  // Re-enabling a slot is just as likely to need content ready soon as
-  // adding a brand new one.
-  if (updated && !currentlyEnabled) {
-    const schedule = await getPublishingSchedule(session.organizationId);
-    await generateForImmediateOccurrence(
-      session.organizationId,
-      { dayOfWeek: updated.dayOfWeek, time: updated.time, platform: updated.platform },
-      schedule.timezone,
-    );
-  }
   revalidatePath("/dashboard/schedule");
 }
 
 export interface OneTimePostResult {
   ok: boolean;
   reason?: "not_ready" | "invalid";
-  // Platforms that were selected but didn't get a post - e.g. one of two
-  // selected platforms fails while the other succeeds. Without this, that
-  // looked exactly like a full success (ok: true, dialog closes, nothing
-  // on screen suggests half of it silently didn't happen).
-  failedPlatforms?: Platform[];
 }
 
 /** Schedules a post for one specific calendar date on one or both
  * platforms at once, bypassing the recurring weekly slots entirely - for
- * "just this one day" instead of "every Monday". Generates immediately,
- * same as a new weekly slot does, so it shows up on the Content Calendar
- * right away rather than waiting for the once-daily lookahead job. */
+ * "just this one day" instead of "every Monday". Creates ONE ContentJob
+ * covering every selected platform (never one per platform - that's what
+ * used to let Instagram and Facebook end up with different AI images for
+ * the same scheduled time) so it shows up on the Content Calendar right
+ * away as "scheduled" - but does not generate anything itself; the actual
+ * creative is produced by the worker's generation cycle ~5 minutes before
+ * scheduledFor, same as every other job. */
 export async function addOneTimePostAction(
   formData: FormData,
 ): Promise<OneTimePostResult> {
@@ -130,51 +96,47 @@ export async function addOneTimePostAction(
 
   const date = formData.get("date");
   const time = formData.get("time");
-  const platforms = formData.getAll("platform");
-  if (platforms.length === 0) return { ok: false, reason: "invalid" };
+  const platformValues = formData.getAll("platform");
+  if (platformValues.length === 0) return { ok: false, reason: "invalid" };
+
+  const [creativeProfile, brandProfile] = await Promise.all([
+    getBrandCreativeProfile(session.organizationId),
+    getBrandProfile(session.organizationId),
+  ]);
+  if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
+    return { ok: false, reason: "not_ready" };
+  }
 
   const timezone = parseTimezone(formData.get("timezone"));
   await ensurePublishingScheduleTimezone(session.organizationId, timezone);
 
-  let anySucceeded = false;
-  let lastReason: OneTimePostResult["reason"];
-  const failedPlatforms: Platform[] = [];
-
-  for (const platform of platforms) {
+  const platforms: Platform[] = [];
+  let parsedDate: string | undefined;
+  let parsedTime: string | undefined;
+  for (const platform of platformValues) {
     const parsed = oneTimePostSchema.safeParse({ date, time, platform });
-    if (!parsed.success) {
-      lastReason = "invalid";
-      continue;
-    }
-
-    const [year, month, day] = parsed.data.date.split("-").map(Number);
-    const [hour, minute] = parsed.data.time.split(":").map(Number);
-    const scheduledFor = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
-
-    try {
-      const result = await generateAndScheduleContent({
-        organizationId: session.organizationId,
-        platform: parsed.data.platform,
-        scheduledFor,
-      });
-      if (result.success) {
-        anySucceeded = true;
-      } else {
-        lastReason = result.skipped;
-        failedPlatforms.push(parsed.data.platform);
-      }
-    } catch (error) {
-      console.error("One-time content generation failed", error);
-      failedPlatforms.push(parsed.data.platform);
-    }
+    if (!parsed.success) continue;
+    platforms.push(parsed.data.platform);
+    parsedDate = parsed.data.date;
+    parsedTime = parsed.data.time;
+  }
+  if (platforms.length === 0 || !parsedDate || !parsedTime) {
+    return { ok: false, reason: "invalid" };
   }
 
+  const [year, month, day] = parsedDate.split("-").map(Number);
+  const [hour, minute] = parsedTime.split(":").map(Number);
+  const scheduledFor = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
+
+  await materializeContentJob({
+    organizationId: session.organizationId,
+    scheduledFor,
+    platforms,
+    origin: "ONE_TIME",
+  });
+
   revalidatePath("/dashboard/calendar");
-  if (!anySucceeded) return { ok: false, reason: lastReason };
-  return {
-    ok: true,
-    failedPlatforms: failedPlatforms.length > 0 ? failedPlatforms : undefined,
-  };
+  return { ok: true };
 }
 
 export async function removeScheduleSlotAction(formData: FormData) {

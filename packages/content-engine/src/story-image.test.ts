@@ -55,9 +55,9 @@ describe("createStoryImage", () => {
     const result = await createStoryImage(source);
     const { data, info } = await sharp(result).raw().toBuffer({ resolveWithObject: true });
 
-    function pixelAt(x: number, y: number) {
+    function pixelAt(x: number, y: number): [number, number, number] {
       const i = (y * info.width + x) * info.channels;
-      return [data[i], data[i + 1], data[i + 2]];
+      return [data[i]!, data[i + 1]!, data[i + 2]!];
     }
 
     // Mirrors createStoryImage's own math for where the letterboxed

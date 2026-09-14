@@ -6,14 +6,18 @@ import {
   getBrandProfile,
   getCreativeConcept,
 } from "@socialpilot/db";
+import {
+  analyzeBrandStyle,
+  asStringArray,
+  buildImagePrompt,
+  fetchImageBuffer,
+  generateImage,
+  uploadGeneratedImage,
+  type BrandContext,
+} from "@socialpilot/content-engine";
 import { redirect } from "next/navigation";
-import { asStringArray } from "@/lib/brand-fields";
-import { buildImagePrompt, type BrandContext } from "@/lib/brand-prompt";
-import { fetchImageBuffer } from "@/lib/fetch-image";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
-import { analyzeBrandStyle, generateImage } from "@/lib/openai";
-import { uploadGeneratedImage } from "@/lib/storage";
 import {
   REFERENCE_IMAGE_ALLOWED_TYPES,
   REFERENCE_IMAGE_MAX_BYTES,

@@ -1,4 +1,8 @@
-import { getZonedDateParts } from "./timezone";
+// This file is imported from client components too - the "./timezone"
+// subpath is a pure, dependency-free module (no crypto/bcrypt), unlike the
+// main @socialpilot/db barrel which would pull server-only Node built-ins
+// into the client bundle.
+import { getZonedDateParts } from "@socialpilot/db/timezone";
 
 export interface CalendarCell {
   date: Date;

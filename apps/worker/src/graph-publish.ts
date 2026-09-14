@@ -122,6 +122,33 @@ export async function publishToFacebook(
   return post_id ?? id;
 }
 
+/** Confirms a previously-returned Graph API object id actually resolves to
+ * something real, rather than just trusting that the earlier publish call
+ * didn't throw. Used two ways: right after a fresh publish (closing the
+ * gap where the Graph API call itself could have "succeeded" against a
+ * flaky response that doesn't actually correspond to a live post), and
+ * before ever retrying a platform that already has a stored externalPostId
+ * from a prior attempt that may have crashed after publishing but before
+ * bookkeeping finished - Meta's publish endpoints have no idempotency key,
+ * so re-publishing blindly on retry could create a genuine duplicate live
+ * post. Treats any non-200 or missing-id response as "not verified" -
+ * conservative on purpose, since a false negative just costs one retry
+ * while a false positive risks silently losing a real published post. */
+export async function verifyGraphObjectExists(
+  objectId: string,
+  accessToken: string,
+): Promise<boolean> {
+  const params = new URLSearchParams({ fields: "id", access_token: accessToken });
+  try {
+    const res = await fetch(`${GRAPH_API_BASE}/${objectId}?${params}`);
+    if (!res.ok) return false;
+    const body = (await res.json()) as { id?: string };
+    return typeof body.id === "string" && body.id.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export interface PublishStoryInput {
   pageAccessToken: string;
   /** The IG Business account id for Instagram, the Page id for Facebook. */

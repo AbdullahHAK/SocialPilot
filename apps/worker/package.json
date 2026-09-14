@@ -11,9 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@socialpilot/db": "workspace:*",
-    "bullmq": "^5.34.0",
-    "ioredis": "^5.4.2"
+    "@socialpilot/content-engine": "workspace:*",
+    "@socialpilot/db": "workspace:*"
   },
   "devDependencies": {
     "@socialpilot/config": "workspace:*",

@@ -1,17 +1,17 @@
 import {
   getBrandCreativeProfile,
   getBrandProfile,
-  getLastPublishedPost,
-  getNextScheduledPost,
+  getLastPublishedContentJob,
+  getNextScheduledContentJob,
   getPublishingSchedule,
   listSocialAccounts,
 } from "@socialpilot/db";
+import { isBrandSetupComplete } from "@socialpilot/content-engine";
 import { CalendarClock, Palette, Share2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PublishingStatusCard } from "@/components/publishing-status-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isBrandSetupComplete } from "@/lib/brand-setup";
 import { getSession } from "@/lib/session";
 
 export default async function DashboardPage() {
@@ -26,8 +26,8 @@ export default async function DashboardPage() {
       getBrandCreativeProfile(session.organizationId),
       listSocialAccounts(session.organizationId),
       getPublishingSchedule(session.organizationId),
-      getLastPublishedPost(session.organizationId),
-      getNextScheduledPost(session.organizationId),
+      getLastPublishedContentJob(session.organizationId),
+      getNextScheduledContentJob(session.organizationId),
     ]);
 
   // The one-time brand setup (logo + an approved visual style) has to

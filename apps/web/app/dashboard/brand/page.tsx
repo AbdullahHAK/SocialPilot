@@ -1,4 +1,5 @@
 import { getBrandCreativeProfile, getBrandProfile } from "@socialpilot/db";
+import { asStringArray } from "@socialpilot/content-engine";
 import { CheckCircle2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -8,7 +9,6 @@ import {
 } from "@/components/brand-settings-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { asStringArray } from "@/lib/brand-fields";
 import { getSession } from "@/lib/session";
 import { updateBrandProfileAction } from "./actions";
 
