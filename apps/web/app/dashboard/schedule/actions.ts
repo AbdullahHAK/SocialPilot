@@ -3,8 +3,8 @@
 import {
   addScheduleSlot,
   deleteScheduleSlot,
+  ensurePublishingScheduleTimezone,
   getPublishingSchedule,
-  setPublishingScheduleTimezone,
   updateScheduleSlot,
   type Platform,
 } from "@socialpilot/db";
@@ -58,7 +58,7 @@ export async function addScheduleSlotAction(formData: FormData) {
   if (!session) return;
 
   const timezone = parseTimezone(formData.get("timezone"));
-  await setPublishingScheduleTimezone(session.organizationId, timezone);
+  await ensurePublishingScheduleTimezone(session.organizationId, timezone);
 
   // One time can be applied to several days and/or both platforms at once
   // (the "repeat on these days" pattern from alarm apps, extended to
@@ -134,7 +134,7 @@ export async function addOneTimePostAction(
   if (platforms.length === 0) return { ok: false, reason: "invalid" };
 
   const timezone = parseTimezone(formData.get("timezone"));
-  await setPublishingScheduleTimezone(session.organizationId, timezone);
+  await ensurePublishingScheduleTimezone(session.organizationId, timezone);
 
   let anySucceeded = false;
   let lastReason: OneTimePostResult["reason"];

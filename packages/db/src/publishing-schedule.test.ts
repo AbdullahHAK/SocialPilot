@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   addScheduleSlot,
   deleteScheduleSlot,
+  ensurePublishingScheduleTimezone,
   getPublishingSchedule,
   setPublishingScheduleTimezone,
   updateScheduleSlot,
@@ -113,6 +114,30 @@ describe("setPublishingScheduleTimezone", () => {
     await setPublishingScheduleTimezone(org.id, "Asia/Karachi");
 
     expect((await getPublishingSchedule(org.id)).timezone).toBe("Asia/Karachi");
+  });
+});
+
+describe("ensurePublishingScheduleTimezone", () => {
+  it("sets the timezone the first time, when it's still the default", async () => {
+    const org = await createOrgWithSchedule("Acme");
+    expect((await getPublishingSchedule(org.id)).timezone).toBe("UTC");
+
+    await ensurePublishingScheduleTimezone(org.id, "Africa/Casablanca");
+
+    expect((await getPublishingSchedule(org.id)).timezone).toBe("Africa/Casablanca");
+  });
+
+  it("does not overwrite an already-established timezone", async () => {
+    // Production bug: an org used from more than one browser (the agency
+    // testing alongside the client) had its timezone silently clobbered
+    // by whichever one submitted next, shifting which calendar day a
+    // same-day image check landed on and breaking image reuse.
+    const org = await createOrgWithSchedule("Acme");
+    await ensurePublishingScheduleTimezone(org.id, "Africa/Casablanca");
+
+    await ensurePublishingScheduleTimezone(org.id, "Asia/Karachi");
+
+    expect((await getPublishingSchedule(org.id)).timezone).toBe("Africa/Casablanca");
   });
 });
 

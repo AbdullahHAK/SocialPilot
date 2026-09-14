@@ -47,10 +47,39 @@ export async function updateScheduleSlot(
   return prisma.scheduleSlot.update({ where: { id: slotId }, data });
 }
 
-/** Keeps the org's stored timezone in sync with what their browser
- * reports, so recurring slots and one-time posts publish at the time the
- * person actually meant, not literally that clock reading in UTC. */
+/** Deliberately sets the org's timezone - for an explicit "change my
+ * timezone" action, not to be called automatically from every schedule
+ * action (see ensurePublishingScheduleTimezone below for why). */
 export function setPublishingScheduleTimezone(organizationId: string, timezone: string) {
+  return prisma.publishingSchedule.update({
+    where: { organizationId },
+    data: { timezone },
+  });
+}
+
+/**
+ * Auto-detects the org's timezone from the browser exactly once, the
+ * first time anyone adds a slot or one-time post, and never touches it
+ * again after that. Originally this ran unconditionally on every submit
+ * (so recurring slots and one-time posts would publish at the time the
+ * person actually meant, not literally that clock reading in UTC) - but
+ * an organization can legitimately be used from more than one browser
+ * (the agency testing alongside the client), and each one reports its
+ * own OS timezone. Since the stored timezone drives which calendar day a
+ * post's "already generated an image today?" check lands on, one
+ * submitter's browser silently overwriting it mid-testing caused a
+ * same-day image to stop being found and reused - confirmed in
+ * production. Only auto-setting away from the schema default (UTC, true
+ * only for a schedule nobody has ever touched) keeps the nice
+ * auto-detect-on-first-use behavior while making the stored value stable
+ * afterward, no matter who submits next.
+ */
+export async function ensurePublishingScheduleTimezone(organizationId: string, timezone: string) {
+  const schedule = await prisma.publishingSchedule.findUniqueOrThrow({
+    where: { organizationId },
+    select: { timezone: true },
+  });
+  if (schedule.timezone !== "UTC") return schedule;
   return prisma.publishingSchedule.update({
     where: { organizationId },
     data: { timezone },

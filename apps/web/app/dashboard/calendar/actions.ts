@@ -3,9 +3,9 @@
 import {
   decryptToken,
   deleteContentPost,
+  ensurePublishingScheduleTimezone,
   getContentPost,
   listSocialAccounts,
-  setPublishingScheduleTimezone,
   updateContentPost,
 } from "@socialpilot/db";
 import { revalidatePath } from "next/cache";
@@ -86,7 +86,7 @@ export async function editContentPostAction(
   if (!parsed.success) return { ok: false };
 
   const timezone = parseTimezone(formData.get("timezone"));
-  await setPublishingScheduleTimezone(session.organizationId, timezone);
+  await ensurePublishingScheduleTimezone(session.organizationId, timezone);
 
   const [year, month, day] = parsed.data.date.split("-").map(Number);
   const [hour, minute] = parsed.data.time.split(":").map(Number);
