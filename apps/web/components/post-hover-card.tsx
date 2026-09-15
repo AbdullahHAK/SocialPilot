@@ -1,14 +1,90 @@
 "use client";
 
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Download, Loader2, Pencil, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { EditPostDialog } from "@/components/edit-post-dialog";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { cn } from "@/lib/utils";
 import type { EditContentJobResult } from "@/app/dashboard/calendar/actions";
+
+/**
+ * Hovering the thumbnail reveals the same image full-size, centered over
+ * everything, with a download button. This needs real hover-tracking
+ * state (not pure CSS :hover/group-hover) because the enlarged preview is
+ * centered on the whole screen, detached from the small thumbnail - the
+ * cursor has to cross page content that's neither element to get from one
+ * to the other, which would otherwise close it before ever reaching the
+ * download button. A short grace period on close (cancelled if the cursor
+ * lands back on either the thumbnail or the enlarged image) bridges that
+ * gap, same pattern used by most hover-triggered flyout menus.
+ */
+function ImageZoomPreview({ imageUrl }: { imageUrl: string }) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function cancelClose() {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  function openNow() {
+    cancelClose();
+    setOpen(true);
+  }
+
+  function closeSoon() {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 300);
+  }
+
+  return (
+    <div className="shrink-0" onMouseEnter={openNow} onMouseLeave={closeSoon}>
+      {/* Remote generated image, same pattern used elsewhere in the dashboard. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl}
+        alt=""
+        className="size-16 shrink-0 cursor-zoom-in rounded-md object-cover"
+      />
+
+      {/* Purely decorative dimmed backdrop - always pointer-events-none so
+          it can never block/steal hover from whatever's underneath, even
+          while "open" (the real hover target is the inner box below). */}
+      <div
+        className={cn(
+          "pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-black/70 opacity-0 transition-opacity duration-150",
+          open && "opacity-100",
+        )}
+      >
+        <div
+          className={cn("pointer-events-none relative", open && "pointer-events-auto")}
+          onMouseEnter={openNow}
+          onMouseLeave={closeSoon}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt=""
+            className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain shadow-2xl"
+          />
+          <a
+            href={`/api/download-image?url=${encodeURIComponent(imageUrl)}`}
+            className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg backdrop-blur-sm transition-colors hover:bg-white"
+          >
+            <Download className="size-4" />
+            Download
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // A card's status is derived (in calendar/page.tsx) from its ContentJob and
 // ContentPublication together, not read off a single field - GENERATING
@@ -75,28 +151,7 @@ export function PostHoverCard({
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardContent>
         <div className="flex gap-3">
-          {post.imageUrls[0] && (
-            // Hovering the thumbnail reveals the same image full-size,
-            // centered over everything - pure CSS (group-hover), so it
-            // opens and closes exactly with the cursor, no click needed.
-            <div className="group relative inline-block shrink-0">
-              {/* Remote generated image, same pattern used elsewhere in the dashboard. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={post.imageUrls[0]}
-                alt=""
-                className="size-16 shrink-0 cursor-zoom-in rounded-md object-cover"
-              />
-              <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-black/70 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={post.imageUrls[0]}
-                  alt=""
-                  className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain shadow-2xl"
-                />
-              </div>
-            </div>
-          )}
+          {post.imageUrls[0] && <ImageZoomPreview imageUrl={post.imageUrls[0]} />}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               {post.platform === "INSTAGRAM" ? (
