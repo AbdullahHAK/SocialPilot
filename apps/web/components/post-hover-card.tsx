@@ -76,13 +76,26 @@ export function PostHoverCard({
       <HoverCardContent>
         <div className="flex gap-3">
           {post.imageUrls[0] && (
-            // Remote generated image, same pattern used elsewhere in the dashboard.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={post.imageUrls[0]}
-              alt=""
-              className="size-16 shrink-0 rounded-md object-cover"
-            />
+            // Hovering the thumbnail reveals the same image full-size,
+            // centered over everything - pure CSS (group-hover), so it
+            // opens and closes exactly with the cursor, no click needed.
+            <div className="group relative inline-block shrink-0">
+              {/* Remote generated image, same pattern used elsewhere in the dashboard. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={post.imageUrls[0]}
+                alt=""
+                className="size-16 shrink-0 cursor-zoom-in rounded-md object-cover"
+              />
+              <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-black/70 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={post.imageUrls[0]}
+                  alt=""
+                  className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain shadow-2xl"
+                />
+              </div>
+            </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
