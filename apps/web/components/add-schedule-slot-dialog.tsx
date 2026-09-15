@@ -162,7 +162,7 @@ export function AddScheduleSlotDialog({
           <DialogTitle>Add a posting time</DialogTitle>
           <DialogDescription>
             {mode === "weekly"
-              ? "Pick a time, choose which days it repeats on, and SocialPilot handles the rest."
+              ? "Pick a time, choose which days it repeats on, and YOPAPI handles the rest."
               : "Pick a time and a specific date for a one-time post — it'll show up on your Content Calendar."}
           </DialogDescription>
         </DialogHeader>

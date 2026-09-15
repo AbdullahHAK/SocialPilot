@@ -81,7 +81,7 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
             />
             <p className="text-xs text-muted-foreground">
               Write naturally — leave category or tone blank above and
-              SocialPilot&apos;s AI will fill them in from this description.
+              YOPAPI&apos;s AI will fill them in from this description.
             </p>
           </div>
         </div>

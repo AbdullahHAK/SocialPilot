@@ -12,7 +12,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.17 0.014 264);
 
-  --primary: oklch(0.53 0.211 264);
+  --primary: oklch(0.5 0.19 258);
   --primary-foreground: oklch(0.98 0.006 264);
 
   --secondary: oklch(0.96 0.008 264);
@@ -30,9 +30,18 @@
   --success: oklch(0.6 0.15 155);
   --success-foreground: oklch(0.98 0.01 155);
 
+  /* YOPAPI brand accents (logo: deep navy + white + gold) - additive to
+     the semantic tokens above, used for marketing-site emphasis (gold
+     accents/dividers, dark navy hero/footer sections) without touching
+     what every ordinary button/card/input already relies on. */
+  --gold: oklch(0.77 0.14 85);
+  --gold-foreground: oklch(0.22 0.03 85);
+  --navy: oklch(0.16 0.05 258);
+  --navy-foreground: oklch(0.97 0.006 264);
+
   --border: oklch(0.91 0.006 264);
   --input: oklch(0.91 0.006 264);
-  --ring: oklch(0.53 0.211 264);
+  --ring: oklch(0.5 0.19 258);
 
   --sidebar: oklch(0.985 0.003 264);
   --sidebar-foreground: oklch(0.17 0.014 264);
@@ -53,7 +62,7 @@
   --popover: oklch(0.19 0.014 264);
   --popover-foreground: oklch(0.96 0.006 264);
 
-  --primary: oklch(0.68 0.18 264);
+  --primary: oklch(0.68 0.16 258);
   --primary-foreground: oklch(0.15 0.02 264);
 
   --secondary: oklch(0.26 0.014 264);
@@ -71,9 +80,14 @@
   --success: oklch(0.65 0.15 155);
   --success-foreground: oklch(0.15 0.02 155);
 
+  --gold: oklch(0.78 0.13 85);
+  --gold-foreground: oklch(0.2 0.03 85);
+  --navy: oklch(0.12 0.04 258);
+  --navy-foreground: oklch(0.97 0.006 264);
+
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.16 264);
+  --ring: oklch(0.6 0.15 258);
 
   --sidebar: oklch(0.18 0.014 264);
   --sidebar-foreground: oklch(0.92 0.006 264);
@@ -107,6 +121,10 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-navy: var(--navy);
+  --color-navy-foreground: var(--navy-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -131,5 +149,8 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  .font-arabic {
+    font-family: var(--font-cairo), var(--font-geist-sans), sans-serif;
   }
 }

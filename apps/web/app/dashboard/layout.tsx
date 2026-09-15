@@ -21,7 +21,7 @@ export default async function DashboardLayout({
     where: { id: session.organizationId },
   });
 
-  const orgName = organization?.name ?? "SocialPilot";
+  const orgName = organization?.name ?? "YOPAPI";
   const initial = orgName.trim().charAt(0).toUpperCase() || "S";
 
   return (

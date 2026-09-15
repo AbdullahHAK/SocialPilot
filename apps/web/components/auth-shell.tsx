@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 
 export function AuthShell({
@@ -21,6 +22,10 @@ export function AuthShell({
         className="pointer-events-none absolute inset-x-0 -top-40 -z-10 flex justify-center blur-3xl"
       >
         <div className="aspect-1155/678 w-[60rem] bg-gradient-to-tr from-primary/25 via-primary/10 to-transparent opacity-40" />
+      </div>
+
+      <div className="absolute end-4 top-4">
+        <LanguageSwitcher />
       </div>
 
       <Link href="/" className="mb-8">

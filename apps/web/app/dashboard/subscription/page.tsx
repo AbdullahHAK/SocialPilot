@@ -56,7 +56,7 @@ export default async function SubscriptionPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Subscription</h1>
         <p className="mt-1 text-muted-foreground">
-          Manage your SocialPilot plan and billing details.
+          Manage your YOPAPI plan and billing details.
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export default async function SubscriptionPage({
         <div className="flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="size-4 shrink-0" />
           Your last payment failed. Update your payment method to keep
-          SocialPilot running.
+          YOPAPI running.
         </div>
       )}
 

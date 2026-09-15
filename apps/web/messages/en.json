@@ -1,0 +1,114 @@
+{
+  "common": {
+    "languageLabel": "Language",
+    "login": "Log in",
+    "getStarted": "Get started"
+  },
+  "landing": {
+    "nav": {
+      "login": "Log in",
+      "cta": "Start With YOPAPI"
+    },
+    "hero": {
+      "badge": "AI-Powered Social Media Management",
+      "headline": "Your Online Presence, Powered by AI.",
+      "subhead": "Two AI Image Designers + One AI Publishing Manager — for less than $0.50 a day.",
+      "supporting": "Instead of hiring people to create your content and manage your publishing, YOPAPI gives you an AI team that does it for you.",
+      "cta": "Start With YOPAPI",
+      "secondaryCta": "Log in",
+      "ctaSub": "Create once. Schedule everything. Stay visible all year."
+    },
+    "aiTeam": {
+      "eyebrow": "Meet your team",
+      "title": "Your AI Social Media Team",
+      "subtitle": "Three specialists. Zero salaries. One simple subscription.",
+      "roles": [
+        {
+          "title": "AI Image Designer #1",
+          "description": "Creates professional visual content for your brand — on-brand, on-theme, ready to post."
+        },
+        {
+          "title": "AI Image Designer #2",
+          "description": "Creates fresh, different creative concepts while always respecting your brand identity."
+        },
+        {
+          "title": "AI Publishing Manager",
+          "description": "Schedules and publishes your content automatically, every week, without you lifting a finger."
+        }
+      ],
+      "closing": "Three AI roles. One simple subscription. Less than $0.50/day."
+    },
+    "threeMinutes": {
+      "eyebrow": "3 MINUTES",
+      "title": "3 minutes is all it takes to set up your social media presence for an entire year.",
+      "steps": [
+        {
+          "title": "Tell YOPAPI about your business",
+          "description": "A few details about what you do and who you serve — that's all it needs to get started."
+        },
+        {
+          "title": "Choose your visual style",
+          "description": "Approve the look and feel that matches your brand. YOPAPI keeps every post consistent with it."
+        },
+        {
+          "title": "Connect your social accounts",
+          "description": "Securely link Instagram and Facebook in a couple of clicks — no passwords ever shared."
+        },
+        {
+          "title": "Set your publishing schedule",
+          "description": "Pick the days and times you want to post. YOPAPI publishes on that schedule, every week."
+        }
+      ],
+      "closing": "That's it. YOPAPI takes care of the rest."
+    },
+    "showcase": {
+      "eyebrow": "See it in action",
+      "title": "One AI team. Every kind of business.",
+      "subtitle": "YOPAPI isn't built for one industry — it's built to understand yours.",
+      "items": [
+        { "category": "Restaurant", "caption": "Food promotion" },
+        { "category": "Pizzeria", "caption": "Fresh from the oven" },
+        { "category": "Fast-casual", "caption": "Crispy, golden, ready to order" },
+        { "category": "Coffee shop", "caption": "Coffee content" },
+        { "category": "Bakery", "caption": "Dessert of the day" },
+        { "category": "Clothing store", "caption": "Fashion content" },
+        { "category": "Beauty business", "caption": "Product content" }
+      ]
+    },
+    "stayVisible": {
+      "eyebrow": "Let's be honest",
+      "title": "Social media won't sell every product instantly.",
+      "body": "But staying visible matters. Your customers may not buy today. They may buy next week. They may remember your brand next month. But if your business disappears from their social feed, they may simply forget you.",
+      "highlight": "YOPAPI keeps your brand present — even when you're busy running your business.",
+      "emotionalLine1": "You focus on your business.",
+      "emotionalLine2": "YOPAPI makes sure your business stays visible."
+    },
+    "pricing": {
+      "eyebrow": "Simple, honest pricing",
+      "title": "One plan. Everything included.",
+      "subtitle": "No hidden fees. No per-post charges. Cancel anytime.",
+      "monthly": { "name": "Monthly", "price": "$15", "cadence": "/month", "description": "Full access, billed every month." },
+      "yearly": { "name": "Yearly", "price": "$150", "cadence": "/year", "description": "Full access, billed annually — 2 months free." },
+      "bestValue": "Best value",
+      "features": [
+        "2 AI image designers + 1 AI publishing manager",
+        "Automatic publishing to Instagram & Facebook",
+        "Unlimited weekly publishing slots",
+        "Full content calendar & history"
+      ],
+      "cta": "Start With YOPAPI"
+    },
+    "finalCta": {
+      "title": "Start With YOPAPI",
+      "subtitle": "Your business deserves to be seen. Let YOPAPI handle the rest.",
+      "cta": "Start Managing My Social Media"
+    },
+    "footer": {
+      "tagline": "Your Online Presence, Powered by AI.",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "dataDeletion": "Data deletion",
+      "rights": "All rights reserved."
+    }
+  }
+}

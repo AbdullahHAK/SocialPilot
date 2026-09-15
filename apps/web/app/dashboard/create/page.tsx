@@ -54,7 +54,7 @@ export default async function CreateContentPage({
               First, let&apos;s set up your logo
             </h1>
             <p className="mt-1 text-muted-foreground">
-              SocialPilot needs your logo to keep every image on-brand.
+              YOPAPI needs your logo to keep every image on-brand.
               Describe the logo you want below.
             </p>
           </div>

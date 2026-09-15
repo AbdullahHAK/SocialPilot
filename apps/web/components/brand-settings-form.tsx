@@ -76,7 +76,7 @@ export function BrandSettingsForm({
         <CardHeader>
           <CardTitle>Business basics</CardTitle>
           <CardDescription>
-            The core details SocialPilot uses to keep content on-brand.
+            The core details YOPAPI uses to keep content on-brand.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
@@ -107,7 +107,7 @@ export function BrandSettingsForm({
               placeholder="e.g. I own a crispy chicken restaurant. I want daily content that highlights the quality and deliciousness of our food, professional and appetizing visuals, and a bold, memorable tone that makes customers think of us first."
             />
             <p className="text-xs text-muted-foreground">
-              Write naturally — SocialPilot&apos;s AI reads this to understand
+              Write naturally — YOPAPI&apos;s AI reads this to understand
               your category, tone, and products, and fills those in below
               automatically if you leave them blank.
             </p>

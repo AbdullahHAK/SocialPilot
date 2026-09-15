@@ -86,7 +86,7 @@ export function CreateContentForm({
           What do you want to create?
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Describe your post in plain English. SocialPilot&apos;s AI will
+          Describe your post in plain English. YOPAPI&apos;s AI will
           generate one on-brand image concept for you to review.
         </p>
       </div>

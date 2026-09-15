@@ -4,6 +4,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +25,7 @@ export function DashboardShell({
     <div className="flex min-h-screen bg-muted/30">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 -translate-x-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-in-out lg:static lg:translate-x-0",
+          "fixed inset-y-0 start-0 z-50 flex w-64 shrink-0 -translate-x-full rtl:translate-x-full flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-in-out lg:static lg:translate-x-0",
           open && "translate-x-0",
         )}
       >
@@ -42,11 +43,14 @@ export function DashboardShell({
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 px-4 py-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-            {initial}
-          </span>
-          <p className="truncate text-sm font-medium">{orgName}</p>
+        <div className="flex items-center justify-between gap-3 px-4 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+              {initial}
+            </span>
+            <p className="truncate text-sm font-medium">{orgName}</p>
+          </div>
+          <LanguageSwitcher className="shrink-0 text-sidebar-foreground" />
         </div>
 
         <div

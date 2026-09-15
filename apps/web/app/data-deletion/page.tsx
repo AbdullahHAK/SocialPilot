@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
 
-export const metadata: Metadata = { title: "Data Deletion Instructions — SocialPilot" };
+export const metadata: Metadata = { title: "Data Deletion Instructions — YOPAPI" };
 
 const CONTACT_EMAIL = "support@socialpilot.app";
 
@@ -9,9 +9,9 @@ export default function DataDeletionPage() {
   return (
     <LegalPage title="Data Deletion Instructions" updatedDate="September 13, 2026">
       <p>
-        You&apos;re always in control of the data SocialPilot has for you.
+        You&apos;re always in control of the data YOPAPI has for you.
         Here&apos;s how to remove it, whether you want to disconnect a social
-        account or delete your whole SocialPilot account.
+        account or delete your whole YOPAPI account.
       </p>
 
       <section>
@@ -25,7 +25,7 @@ export default function DataDeletionPage() {
       </section>
 
       <section>
-        <h2>Delete your SocialPilot account entirely</h2>
+        <h2>Delete your YOPAPI account entirely</h2>
         <p>
           Email{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary underline-offset-4 hover:underline">
@@ -52,9 +52,9 @@ export default function DataDeletionPage() {
       <section>
         <h2>Removed the app from Facebook instead?</h2>
         <p>
-          If you removed SocialPilot from your Facebook or Instagram settings
+          If you removed YOPAPI from your Facebook or Instagram settings
           directly, we no longer have permission to access that account, but
-          your SocialPilot account itself isn&apos;t automatically deleted -
+          your YOPAPI account itself isn&apos;t automatically deleted -
           email us at the address above if you&apos;d like that removed too.
         </p>
       </section>

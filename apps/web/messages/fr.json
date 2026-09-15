@@ -1,0 +1,114 @@
+{
+  "common": {
+    "languageLabel": "Langue",
+    "login": "Se connecter",
+    "getStarted": "Commencer"
+  },
+  "landing": {
+    "nav": {
+      "login": "Se connecter",
+      "cta": "Commencer avec YOPAPI"
+    },
+    "hero": {
+      "badge": "Gestion des réseaux sociaux propulsée par l'IA",
+      "headline": "Votre présence en ligne, propulsée par l'IA.",
+      "subhead": "Deux designers IA + un gestionnaire de publication IA — pour moins de 0,50 $ par jour.",
+      "supporting": "Plutôt que d'embaucher du personnel pour créer votre contenu et gérer vos publications, YOPAPI vous offre une équipe IA qui s'en charge pour vous.",
+      "cta": "Commencer avec YOPAPI",
+      "secondaryCta": "Se connecter",
+      "ctaSub": "Créez une fois. Programmez tout. Restez visible toute l'année."
+    },
+    "aiTeam": {
+      "eyebrow": "Découvrez votre équipe",
+      "title": "Votre équipe IA dédiée aux réseaux sociaux",
+      "subtitle": "Trois spécialistes. Aucun salaire. Un seul abonnement simple.",
+      "roles": [
+        {
+          "title": "Designer IA n°1",
+          "description": "Crée du contenu visuel professionnel pour votre marque — cohérent, sur le thème, prêt à publier."
+        },
+        {
+          "title": "Designer IA n°2",
+          "description": "Crée des concepts créatifs nouveaux et variés, tout en respectant toujours l'identité de votre marque."
+        },
+        {
+          "title": "Gestionnaire de publication IA",
+          "description": "Programme et publie votre contenu automatiquement, chaque semaine, sans que vous leviez le petit doigt."
+        }
+      ],
+      "closing": "Trois rôles IA. Un seul abonnement simple. Moins de 0,50 $/jour."
+    },
+    "threeMinutes": {
+      "eyebrow": "3 MINUTES",
+      "title": "3 minutes suffisent pour organiser votre présence sur les réseaux sociaux pour toute une année.",
+      "steps": [
+        {
+          "title": "Parlez de votre entreprise à YOPAPI",
+          "description": "Quelques détails sur votre activité et votre clientèle — c'est tout ce qu'il faut pour démarrer."
+        },
+        {
+          "title": "Choisissez votre style visuel",
+          "description": "Validez l'esthétique qui correspond à votre marque. YOPAPI garde chaque publication cohérente avec elle."
+        },
+        {
+          "title": "Connectez vos comptes sociaux",
+          "description": "Reliez Instagram et Facebook en toute sécurité en quelques clics — aucun mot de passe n'est jamais partagé."
+        },
+        {
+          "title": "Définissez votre calendrier de publication",
+          "description": "Choisissez les jours et heures de publication. YOPAPI publie selon ce calendrier, chaque semaine."
+        }
+      ],
+      "closing": "C'est tout. YOPAPI s'occupe du reste."
+    },
+    "showcase": {
+      "eyebrow": "Voyez-le en action",
+      "title": "Une équipe IA. Tous les types d'entreprises.",
+      "subtitle": "YOPAPI n'est pas conçu pour un seul secteur — il est conçu pour comprendre le vôtre.",
+      "items": [
+        { "category": "Restaurant", "caption": "Promotion culinaire" },
+        { "category": "Pizzeria", "caption": "Fraîchement sorti du four" },
+        { "category": "Restauration rapide", "caption": "Croustillant, doré, prêt à commander" },
+        { "category": "Café", "caption": "Contenu café" },
+        { "category": "Boulangerie", "caption": "Dessert du jour" },
+        { "category": "Boutique de vêtements", "caption": "Contenu mode" },
+        { "category": "Entreprise de beauté", "caption": "Contenu produit" }
+      ]
+    },
+    "stayVisible": {
+      "eyebrow": "Soyons honnêtes",
+      "title": "Les réseaux sociaux ne vendront pas chaque produit instantanément.",
+      "body": "Mais rester visible compte. Vos clients n'achèteront peut-être pas aujourd'hui. Ils achèteront peut-être la semaine prochaine. Ils se souviendront peut-être de votre marque le mois prochain. Mais si votre entreprise disparaît de leur fil d'actualité, ils risquent tout simplement de vous oublier.",
+      "highlight": "YOPAPI garde votre marque présente — même quand vous êtes occupé à faire tourner votre entreprise.",
+      "emotionalLine1": "Vous vous concentrez sur votre entreprise.",
+      "emotionalLine2": "YOPAPI veille à ce qu'elle reste visible."
+    },
+    "pricing": {
+      "eyebrow": "Des tarifs simples et honnêtes",
+      "title": "Une seule offre. Tout est inclus.",
+      "subtitle": "Aucun frais caché. Aucun coût par publication. Annulez à tout moment.",
+      "monthly": { "name": "Mensuel", "price": "15 $", "cadence": "/mois", "description": "Accès complet, facturé chaque mois." },
+      "yearly": { "name": "Annuel", "price": "150 $", "cadence": "/an", "description": "Accès complet, facturé annuellement — 2 mois offerts." },
+      "bestValue": "Meilleure offre",
+      "features": [
+        "2 designers IA + 1 gestionnaire de publication IA",
+        "Publication automatique sur Instagram et Facebook",
+        "Créneaux de publication hebdomadaires illimités",
+        "Calendrier de contenu complet et historique"
+      ],
+      "cta": "Commencer avec YOPAPI"
+    },
+    "finalCta": {
+      "title": "Commencer avec YOPAPI",
+      "subtitle": "Votre entreprise mérite d'être vue. Laissez YOPAPI s'occuper du reste.",
+      "cta": "Gérer mes réseaux sociaux"
+    },
+    "footer": {
+      "tagline": "Votre présence en ligne, propulsée par l'IA.",
+      "privacy": "Confidentialité",
+      "terms": "Conditions",
+      "dataDeletion": "Suppression des données",
+      "rights": "Tous droits réservés."
+    }
+  }
+}

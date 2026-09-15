@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
 
-export const metadata: Metadata = { title: "Terms of Service — SocialPilot" };
+export const metadata: Metadata = { title: "Terms of Service — YOPAPI" };
 
 const CONTACT_EMAIL = "support@socialpilot.app";
 
@@ -10,14 +10,14 @@ export default function TermsOfServicePage() {
     <LegalPage title="Terms of Service" updatedDate="September 13, 2026">
       <p>
         These Terms of Service (&quot;Terms&quot;) govern your use of
-        SocialPilot (the &quot;Service&quot;). By creating an account, you
+        YOPAPI (the &quot;Service&quot;). By creating an account, you
         agree to these Terms.
       </p>
 
       <section>
         <h2>1. The Service</h2>
         <p>
-          SocialPilot generates AI-based social media content on your behalf
+          YOPAPI generates AI-based social media content on your behalf
           and publishes it to the Instagram and/or Facebook accounts you
           connect, on a schedule you configure, for the duration of your
           subscription.
@@ -36,10 +36,10 @@ export default function TermsOfServicePage() {
       <section>
         <h2>3. Connected social accounts</h2>
         <p>
-          You authorize SocialPilot to publish content to any Instagram or
+          You authorize YOPAPI to publish content to any Instagram or
           Facebook account you connect through Meta&apos;s official login. You
           can revoke this authorization at any time by disconnecting the
-          account from your dashboard or by removing SocialPilot&apos;s access
+          account from your dashboard or by removing YOPAPI&apos;s access
           in your Meta account settings.
         </p>
       </section>
@@ -70,7 +70,7 @@ export default function TermsOfServicePage() {
         <h2>6. Intellectual property</h2>
         <p>
           You retain ownership of your business information, logo, and the
-          content generated for your account. SocialPilot retains ownership
+          content generated for your account. YOPAPI retains ownership
           of the Service itself, including its software and design.
         </p>
       </section>
@@ -79,7 +79,7 @@ export default function TermsOfServicePage() {
         <h2>7. Disclaimer and limitation of liability</h2>
         <p>
           The Service is provided &quot;as is&quot;, without warranties of any
-          kind. SocialPilot is not liable for indirect, incidental, or
+          kind. YOPAPI is not liable for indirect, incidental, or
           consequential damages arising from your use of the Service,
           including any impact from content published on your behalf.
         </p>

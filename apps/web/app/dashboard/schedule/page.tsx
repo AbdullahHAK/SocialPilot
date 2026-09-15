@@ -67,7 +67,7 @@ export default async function SchedulePage() {
             Publishing Schedule
           </h1>
           <p className="mt-1 max-w-2xl text-muted-foreground">
-            Pick a time and the days it repeats on — SocialPilot generates
+            Pick a time and the days it repeats on — YOPAPI generates
             and publishes the content automatically.
           </p>
         </div>
@@ -78,7 +78,7 @@ export default async function SchedulePage() {
             </span>
             <p className="font-medium">Finish setting up your brand first</p>
             <p className="max-w-sm text-sm text-muted-foreground">
-              SocialPilot needs a logo and an approved visual style before it
+              YOPAPI needs a logo and an approved visual style before it
               can generate content for your schedule — it&apos;s a one-time
               step.
             </p>
@@ -106,7 +106,7 @@ export default async function SchedulePage() {
             Publishing Schedule
           </h1>
           <p className="mt-1 max-w-2xl text-muted-foreground">
-            Pick a time and the days it repeats on — SocialPilot generates
+            Pick a time and the days it repeats on — YOPAPI generates
             and publishes the content automatically. Content for each slot
             is generated a day or two ahead of time, so adding a slot here
             doesn&apos;t create a post immediately.
@@ -126,7 +126,7 @@ export default async function SchedulePage() {
             <p className="font-medium">No posting times yet</p>
             <p className="max-w-sm text-sm text-muted-foreground">
               Click &quot;Add posting time&quot; above to pick a time and the
-              days you want SocialPilot to publish automatically.
+              days you want YOPAPI to publish automatically.
             </p>
           </CardContent>
         </Card>

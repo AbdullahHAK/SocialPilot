@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof SocialAccountAlreadyConnectedError) {
       return redirectWith({
         error:
-          "One of these accounts is already connected to a different SocialPilot organization.",
+          "One of these accounts is already connected to a different YOPAPI organization.",
       });
     }
     console.error("Meta OAuth callback failed", error);

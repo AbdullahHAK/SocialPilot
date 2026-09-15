@@ -72,7 +72,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
         <p className="mt-1 text-muted-foreground">
-          Here&apos;s the current state of your SocialPilot setup.
+          Here&apos;s the current state of your YOPAPI setup.
         </p>
       </div>
 

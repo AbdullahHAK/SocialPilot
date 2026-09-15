@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dateKey, formatMonthParam, MONTH_LABELS } from "@/lib/calendar";
 import { AddScheduleSlotDialog } from "./add-schedule-slot-dialog";

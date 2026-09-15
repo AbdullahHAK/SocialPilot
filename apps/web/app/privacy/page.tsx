@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
 
-export const metadata: Metadata = { title: "Privacy Policy — SocialPilot" };
+export const metadata: Metadata = { title: "Privacy Policy — YOPAPI" };
 
 const CONTACT_EMAIL = "support@socialpilot.app";
 
@@ -9,7 +9,7 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPage title="Privacy Policy" updatedDate="September 13, 2026">
       <p>
-        This Privacy Policy explains what information SocialPilot (&quot;we&quot;,
+        This Privacy Policy explains what information YOPAPI (&quot;we&quot;,
         &quot;us&quot;) collects when you use our website and dashboard (the
         &quot;Service&quot;), how we use it, and the choices you have.
       </p>
@@ -35,7 +35,7 @@ export default function PrivacyPolicyPage() {
           </li>
           <li>
             <strong>Generated content:</strong> the images, captions, and
-            hashtags SocialPilot generates for you, and the publishing
+            hashtags YOPAPI generates for you, and the publishing
             schedule you configure.
           </li>
           <li>

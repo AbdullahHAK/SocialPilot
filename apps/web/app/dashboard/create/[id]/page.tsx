@@ -43,7 +43,7 @@ export default async function ConceptReviewPage({
         </h1>
         <p className="mt-1 text-muted-foreground">
           Pick the concept that feels most &ldquo;you&rdquo; — this sets the
-          visual style SocialPilot uses for future content.
+          visual style YOPAPI uses for future content.
         </p>
       </div>
 

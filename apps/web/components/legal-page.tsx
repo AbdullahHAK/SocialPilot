@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 
 export function LegalPage({
@@ -18,6 +19,7 @@ export function LegalPage({
           <Link href="/">
             <Logo />
           </Link>
+          <LanguageSwitcher />
         </div>
       </header>
 
@@ -33,7 +35,7 @@ export function LegalPage({
 
       <footer className="border-t border-border/60">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-6 text-xs text-muted-foreground sm:px-6">
-          <span>© {new Date().getFullYear()} SocialPilot. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} YOPAPI. All rights reserved.</span>
           <nav className="flex gap-4">
             <Link href="/privacy" className="hover:text-foreground hover:underline">
               Privacy

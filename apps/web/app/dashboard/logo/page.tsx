@@ -28,8 +28,8 @@ export default async function LogoPage({
         </h1>
         <p className="mt-1 text-muted-foreground">
           {brand?.logoUrl
-            ? "This is what SocialPilot uses consistently across your content."
-            : "Describe the logo you want and SocialPilot's AI will generate one concept to review."}
+            ? "This is what YOPAPI uses consistently across your content."
+            : "Describe the logo you want and YOPAPI's AI will generate one concept to review."}
         </p>
       </div>
 

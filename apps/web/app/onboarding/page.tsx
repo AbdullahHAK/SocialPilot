@@ -36,7 +36,7 @@ export default async function OnboardingPage() {
             Tell us about your business
           </h1>
           <p className="text-sm text-muted-foreground">
-            This is what SocialPilot will use to keep your content on-brand.
+            This is what YOPAPI will use to keep your content on-brand.
           </p>
         </CardHeader>
         <CardContent>

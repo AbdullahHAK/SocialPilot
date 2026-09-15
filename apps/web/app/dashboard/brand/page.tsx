@@ -85,7 +85,7 @@ export default async function BrandSettingsPage({
           Brand Settings
         </h1>
         <p className="mt-1 text-muted-foreground">
-          This is what SocialPilot uses to keep your content on-brand.
+          This is what YOPAPI uses to keep your content on-brand.
         </p>
       </div>
 
@@ -110,7 +110,7 @@ export default async function BrandSettingsPage({
         <CardHeader>
           <CardTitle>Visual style</CardTitle>
           <CardDescription>
-            The approved look SocialPilot uses to generate every image.
+            The approved look YOPAPI uses to generate every image.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-4">
@@ -132,7 +132,7 @@ export default async function BrandSettingsPage({
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                No visual style set yet — SocialPilot needs one before it can
+                No visual style set yet — YOPAPI needs one before it can
                 generate content.
               </p>
               <Button asChild className="ml-auto shrink-0 gap-2">
