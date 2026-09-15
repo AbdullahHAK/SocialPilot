@@ -7,6 +7,7 @@ import {
   getContentJob,
   getLastPublishedContentJob,
   getNextScheduledContentJob,
+  hasGeneratedContentToday,
   listContentJobsInRange,
   listGenerationCandidates,
   listPublishCandidates,
@@ -299,38 +300,81 @@ describe("findMasterImageForDay", () => {
     expect(await findMasterImageForDay(org.id, dayStart, dayEnd)).toBeNull();
   });
 
-  it("skips a job created at or before the cutoff and finds a later valid one (production incident: a stale row must not permanently block reuse)", async () => {
+  it("returns the day's oldest generated image unconditionally, even after something else changes in between (deliberate - see the function's own doc comment)", async () => {
+    // Explicitly no longer "stale-row-aware" - once an image exists for
+    // the day, later jobs must always find and reuse THIS one, full stop.
+    // Making the day-reuse decision depend on any other timestamp (e.g. a
+    // Brand Settings edit) turned out to be an exploitable
+    // free-regeneration loophole in production.
     const org = await prisma.organization.create({ data: { name: "Acme" } });
-    const staleJob = await materializeContentJob({
+    const firstJob = await materializeContentJob({
       organizationId: org.id,
       scheduledFor: new Date("2026-09-13T09:00:00.000Z"),
       platforms: ["INSTAGRAM"],
       origin: "ONE_TIME",
     });
-    await markContentJobGenerated(staleJob.id, {
-      masterImageUrl: "https://example.com/stale.png",
+    await markContentJobGenerated(firstJob.id, {
+      masterImageUrl: "https://example.com/first.png",
       caption: "Hi",
       hashtags: [],
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    const cutoff = new Date();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    const validJob = await materializeContentJob({
+    await materializeContentJob({
       organizationId: org.id,
       scheduledFor: new Date("2026-09-13T10:00:00.000Z"),
       platforms: ["FACEBOOK"],
       origin: "ONE_TIME",
     });
-    await markContentJobGenerated(validJob.id, {
-      masterImageUrl: "https://example.com/valid.png",
+
+    const result = await findMasterImageForDay(org.id, dayStart, dayEnd);
+    expect(result?.masterImageUrl).toBe("https://example.com/first.png");
+  });
+});
+
+describe("hasGeneratedContentToday", () => {
+  it("returns false when nothing has generated yet today", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    expect(await hasGeneratedContentToday(org.id, "UTC")).toBe(false);
+  });
+
+  it("returns true once a job has generated an image for today", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const job = await materializeContentJob({
+      organizationId: org.id,
+      scheduledFor: new Date(),
+      platforms: ["INSTAGRAM"],
+      origin: "ONE_TIME",
+    });
+    await markContentJobGenerated(job.id, {
+      masterImageUrl: "https://example.com/a.png",
       caption: "Hi",
       hashtags: [],
     });
 
-    const result = await findMasterImageForDay(org.id, dayStart, dayEnd, undefined, cutoff);
-    expect(result?.masterImageUrl).toBe("https://example.com/valid.png");
+    expect(await hasGeneratedContentToday(org.id, "UTC")).toBe(true);
+  });
+
+  it("respects the organization's own timezone", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    // 23:30 UTC on the 13th is already the 14th in Asia/Karachi (UTC+5).
+    const lateUtc = new Date("2026-09-13T23:30:00.000Z");
+    const job = await materializeContentJob({
+      organizationId: org.id,
+      scheduledFor: lateUtc,
+      platforms: ["INSTAGRAM"],
+      origin: "ONE_TIME",
+    });
+    await markContentJobGenerated(job.id, {
+      masterImageUrl: "https://example.com/a.png",
+      caption: "Hi",
+      hashtags: [],
+    });
+
+    const stillThe13thInKarachi = new Date("2026-09-13T12:00:00.000Z");
+    expect(await hasGeneratedContentToday(org.id, "Asia/Karachi", stillThe13thInKarachi)).toBe(
+      false,
+    );
+    expect(await hasGeneratedContentToday(org.id, "Asia/Karachi", lateUtc)).toBe(true);
   });
 });
 

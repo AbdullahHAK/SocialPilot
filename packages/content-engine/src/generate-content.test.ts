@@ -294,7 +294,14 @@ describe("generateContentForJob", () => {
       expect(generateImageMock).toHaveBeenCalledTimes(2);
     });
 
-    it("does not reuse the day's image if the brand profile was corrected after it was generated", async () => {
+    it("still reuses the day's image after the brand profile is edited mid-day (deliberate: a correction takes effect the next day, not retroactively - see findMasterImageForDay)", async () => {
+      // A real production incident: editing Brand Settings between two
+      // scheduled posts' generation windows used to force a fresh
+      // generation every time, which was exploitable as a free
+      // same-day-cap-bypassing loophole (schedule many posts, edit brand
+      // settings before each one generates). The fix is that once an
+      // image exists for the day, nothing overrides it that same day -
+      // the edit is still saved, just takes effect starting tomorrow.
       const org = await setUpReadyOrg();
       const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"));
       await generateContentForJob(jobA);
@@ -309,39 +316,45 @@ describe("generateContentForJob", () => {
 
       await generateContentForJob(jobB);
 
-      expect(generateImageMock).toHaveBeenCalledTimes(2);
+      expect(generateImageMock).toHaveBeenCalledTimes(1);
       const [a, b] = await Promise.all([
         prisma.contentJob.findUniqueOrThrow({ where: { id: jobA.id } }),
         prisma.contentJob.findUniqueOrThrow({ where: { id: jobB.id } }),
       ]);
-      expect(a.masterImageUrl).not.toBe(b.masterImageUrl);
+      expect(a.masterImageUrl).toBe(b.masterImageUrl);
     });
 
-    it("reuses a later, valid image instead of regenerating forever once one stale job exists earlier that day (production incident)", async () => {
+    it("keeps reusing the day's first image no matter how many brand edits happen in between", async () => {
       const org = await setUpReadyOrg();
       const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"));
       await generateContentForJob(jobA);
 
       await upsertBrandProfile({
         organizationId: org.id,
-        businessName: "The Real Business",
+        businessName: "Edit one",
         language: "en",
         logoUrl: "https://example.com/logo.png",
       });
       const jobB = await makeJob(org.id, new Date("2026-09-15T13:00:00Z"));
       await generateContentForJob(jobB);
 
+      await upsertBrandProfile({
+        organizationId: org.id,
+        businessName: "Edit two",
+        language: "en",
+        logoUrl: "https://example.com/logo.png",
+      });
       const jobC = await makeJob(org.id, new Date("2026-09-15T18:00:00Z"));
       await generateContentForJob(jobC);
 
-      expect(generateImageMock).toHaveBeenCalledTimes(2);
+      expect(generateImageMock).toHaveBeenCalledTimes(1);
       const [a, b, c] = await Promise.all([
         prisma.contentJob.findUniqueOrThrow({ where: { id: jobA.id } }),
         prisma.contentJob.findUniqueOrThrow({ where: { id: jobB.id } }),
         prisma.contentJob.findUniqueOrThrow({ where: { id: jobC.id } }),
       ]);
-      expect(a.masterImageUrl).not.toBe(b.masterImageUrl);
-      expect(c.masterImageUrl).toBe(b.masterImageUrl);
+      expect(a.masterImageUrl).toBe(b.masterImageUrl);
+      expect(b.masterImageUrl).toBe(c.masterImageUrl);
     });
   });
 

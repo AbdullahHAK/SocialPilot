@@ -1,6 +1,6 @@
 "use server";
 
-import { upsertBrandProfile } from "@socialpilot/db";
+import { getPublishingSchedule, hasGeneratedContentToday, upsertBrandProfile } from "@socialpilot/db";
 import { analyzeBrandDescription, uploadLogo } from "@socialpilot/content-engine";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
@@ -13,6 +13,10 @@ import {
 export interface BrandSettingsFormState {
   error?: string;
   success?: boolean;
+  /** Set when today's content image already generated - this edit is
+   * still saved, but (per the deliberate one-image-per-day rule - see
+   * findMasterImageForDay) won't affect anything until tomorrow. */
+  note?: string;
 }
 
 function stringValues(formData: FormData, key: string): string[] {
@@ -98,5 +102,18 @@ export async function updateBrandProfileAction(
   });
 
   revalidatePath("/dashboard/brand");
+
+  const schedule = await getPublishingSchedule(session.organizationId);
+  const alreadyGeneratedToday = await hasGeneratedContentToday(
+    session.organizationId,
+    schedule.timezone,
+  );
+  if (alreadyGeneratedToday) {
+    return {
+      success: true,
+      note: "Saved. Today's content image was already generated, so this change takes effect starting tomorrow.",
+    };
+  }
+
   return { success: true };
 }

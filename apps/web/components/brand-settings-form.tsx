@@ -288,8 +288,11 @@ export function BrandSettingsForm({
         <Button type="submit" disabled={isPending}>
           Save changes
         </Button>
-        {state.success && (
+        {state.success && !state.note && (
           <p className="text-sm font-medium text-success">Saved.</p>
+        )}
+        {state.note && (
+          <p className="text-sm font-medium text-muted-foreground">{state.note}</p>
         )}
         {state.error && (
           <p role="alert" className="text-sm font-medium text-destructive">

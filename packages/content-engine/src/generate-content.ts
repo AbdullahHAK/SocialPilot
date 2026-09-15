@@ -181,27 +181,18 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
 
   const { start, end } = getLocalDayBoundsUtc(job.scheduledFor, schedule.timezone);
 
-  // A cached day-image only counts if it was generated *after* the
-  // brand/creative profile's last edit - otherwise a business corrected
-  // mid-setup (placeholder test info replaced with the real brand) would
-  // keep having its old, now-wrong-brand image reused for the rest of
-  // that calendar day.
-  const validAfter =
-    brandProfile.updatedAt > creativeProfile!.updatedAt ? brandProfile.updatedAt : creativeProfile!.updatedAt;
-
   // The whole "does today already have an image? if not, make one" check
   // is serialized per org+day behind a database lock - two different
   // jobs on the same calendar day (not two platforms on the *same* job,
   // which can no longer race each other by construction) could otherwise
-  // both see "nothing yet" and both pay for a fresh AI generation.
+  // both see "nothing yet" and both pay for a fresh AI generation. Once an
+  // image exists for the day, it's reused unconditionally for the rest of
+  // that day - even a Brand Settings edit in between doesn't force a new
+  // one (see findMasterImageForDay for why: that used to be exploitable
+  // as a free-regeneration loophole). The edit still takes effect - just
+  // starting the next calendar day, not retroactively.
   await withDayImageLock(job.organizationId, start.toISOString(), async (db) => {
-    const existingDayImage = await findMasterImageForDay(
-      job.organizationId,
-      start,
-      end,
-      db,
-      validAfter,
-    );
+    const existingDayImage = await findMasterImageForDay(job.organizationId, start, end, db);
     if (existingDayImage) {
       // Written inside the same locked transaction that read it, so this
       // reuse decision and the write it's based on stay consistent even

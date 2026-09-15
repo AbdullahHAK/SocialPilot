@@ -7,6 +7,7 @@ import {
   type Platform,
 } from "@prisma/client";
 import { prisma } from "./index";
+import { getLocalDayBoundsUtc } from "./timezone";
 
 // Either the module-level client or a transaction client (from
 // withDayImageLock) - lets findMasterImageForDay run either standalone or
@@ -292,32 +293,53 @@ export async function listPublishCandidates(
 }
 
 /** [dayStart, dayEnd) should be one calendar day's bounds in the org's own
- * timezone, converted to UTC. Same "oldest *valid* row, filtered directly
- * in the query" shape as content-post.ts's findImageForDay (a previous
- * production bug there: fetching only the oldest row and rejecting it
- * client-side with no fallback let one stale row permanently shadow every
- * later valid image for the rest of the day) - re-pointed at ContentJob so
- * the same one-image-per-org-per-day cost rule holds per job instead of
- * per platform call. */
+ * timezone, converted to UTC. Finds the oldest job that already generated
+ * a master image that day and returns it unconditionally - once an image
+ * exists for a calendar day, it is reused for every remaining post that
+ * day, full stop, regardless of anything else that changes in between
+ * (e.g. a Brand Settings edit). This is a deliberate cost-control choice:
+ * an earlier version of this function also rejected an image as "stale"
+ * if the brand/creative profile had been edited after it was generated,
+ * so a correction would force a fresh generation the same day - but that
+ * made the brand-edit timestamp exploitable as a free-regeneration
+ * loophole (edit Brand Settings between each scheduled post's generation
+ * window to force a new image every time, still under the monthly cap
+ * but defeating the "one image per day" pacing it's meant to guarantee).
+ * A same-day edit is still fully respected - it just takes effect
+ * starting the *next* calendar day rather than retroactively invalidating
+ * today's already-generated image. See hasGeneratedContentToday, used by
+ * the Brand Settings action to tell the user exactly that. */
 export async function findMasterImageForDay(
   organizationId: string,
   dayStart: Date,
   dayEnd: Date,
   db: Db = prisma,
-  createdAfter?: Date,
 ): Promise<{ masterImageUrl: string; storyImageUrl: string | null } | null> {
   const existing = await db.contentJob.findFirst({
     where: {
       organizationId,
       scheduledFor: { gte: dayStart, lt: dayEnd },
       masterImageUrl: { not: null },
-      ...(createdAfter ? { createdAt: { gt: createdAfter } } : {}),
     },
     orderBy: { createdAt: "asc" },
     select: { masterImageUrl: true, storyImageUrl: true },
   });
   if (!existing?.masterImageUrl) return null;
   return { masterImageUrl: existing.masterImageUrl, storyImageUrl: existing.storyImageUrl };
+}
+
+/** Whether this organization already has a generated master image for its
+ * *current* calendar day (in its own timezone) - used to tell a business
+ * editing Brand Settings whether their change will affect today's content
+ * or only take effect starting tomorrow, per findMasterImageForDay's
+ * unconditional same-day reuse. */
+export async function hasGeneratedContentToday(
+  organizationId: string,
+  timezone: string,
+  now: Date = new Date(),
+): Promise<boolean> {
+  const { start, end } = getLocalDayBoundsUtc(now, timezone);
+  return (await findMasterImageForDay(organizationId, start, end)) !== null;
 }
 
 /** How many jobs an org has ever had generated for - used as a stable,
