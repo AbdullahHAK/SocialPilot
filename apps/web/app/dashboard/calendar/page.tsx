@@ -130,7 +130,13 @@ export default async function CalendarPage({
         </div>
       )}
 
-      <Card className="overflow-hidden">
+      {/* A 7-column grid works on a desktop-width screen, but the same
+          cells become too narrow to hold real content (several post pills
+          per day) on a phone - confirmed live with a real scheduled month,
+          not just an empty calendar. Below `sm`, show a vertical
+          day-by-day agenda instead of squeezing the grid down; the grid
+          itself is unchanged for `sm` and up. */}
+      <Card className="hidden overflow-hidden sm:block">
         <div className="grid grid-cols-7 border-b border-border bg-muted/30">
           {weekdayLabels.map((label, index) => (
             <div
@@ -196,6 +202,65 @@ export default async function CalendarPage({
           })}
         </div>
       </Card>
+
+      <div className="flex flex-col gap-3 sm:hidden">
+        {grid
+          .filter((cell) => (postsByDay.get(dateKey(cell.date)) ?? []).length > 0)
+          .map((cell) => {
+            const key = dateKey(cell.date);
+            const dayPosts = postsByDay.get(key) ?? [];
+            const isToday = key === todayKey;
+
+            return (
+              <Card key={key} className="p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <span
+                    className={
+                      isToday
+                        ? "flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+                        : "flex size-6 shrink-0 items-center justify-center text-sm font-semibold"
+                    }
+                  >
+                    {cell.date.getUTCDate()}
+                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {weekdayLabels[cell.date.getUTCDay()]}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {dayPosts.map((post) => (
+                    <PostHoverCard
+                      key={`${post.jobId}-${post.platform}`}
+                      post={post}
+                      editAction={editContentJobAction}
+                      deleteAction={deleteContentJobPlatformAction}
+                    >
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 rounded-md bg-accent/60 px-3 py-2 text-start text-sm font-medium transition-colors hover:bg-accent"
+                      >
+                        {post.platform === "INSTAGRAM" ? (
+                          <InstagramIcon className="size-4 shrink-0" />
+                        ) : (
+                          <FacebookIcon className="size-4 shrink-0" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">
+                          {post.caption || tStatus(post.status)}
+                        </span>
+                        <Badge
+                          variant={STATUS_BADGE_VARIANT[post.status]}
+                          className="shrink-0"
+                        >
+                          {tStatus(post.status)}
+                        </Badge>
+                      </button>
+                    </PostHoverCard>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+      </div>
 
       {posts.length > 0 && (
         <div className="flex flex-wrap gap-2">
