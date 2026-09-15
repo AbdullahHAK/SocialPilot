@@ -14,9 +14,11 @@ export type GenerateLogoAction = (
 export function GenerateLogoForm({
   action,
   returnTo,
+  remainingLogoRevisions,
 }: {
   action: GenerateLogoAction;
   returnTo?: string;
+  remainingLogoRevisions: number;
 }) {
   const [state, formAction, isPending] = useActionState<
     GenerateLogoFormState,
@@ -27,6 +29,11 @@ export function GenerateLogoForm({
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
+      <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+        You have {remainingLogoRevisions} of 10 logo revisions left this
+        month. Craft your prompt carefully and describe exactly what you
+        want for the best result.
+      </p>
       <Textarea
         name="prompt"
         value={prompt}
@@ -45,11 +52,11 @@ export function GenerateLogoForm({
       <Button
         type="submit"
         size="lg"
-        disabled={isPending || !prompt.trim()}
+        disabled={isPending || !prompt.trim() || remainingLogoRevisions <= 0}
         className="w-fit gap-2"
       >
         {isPending && <Loader2 className="size-4 animate-spin" />}
-        {isPending ? "Generating logo concepts…" : "Generate 3 logo concepts"}
+        {isPending ? "Generating logo concept…" : "Generate logo concept"}
       </Button>
     </form>
   );

@@ -1,17 +1,41 @@
+import type { ConceptKind } from "@prisma/client";
 import { prisma } from "./index";
+
+// A never-approved concept past this age gets its image deleted and the
+// row removed by apps/worker's concept-cleanup cycle - an approved one is
+// never touched regardless of age (see createCreativeConcept/expiresAt).
+const CONCEPT_EXPIRY_MS = 10 * 60 * 60 * 1000;
 
 export interface CreateCreativeConceptInput {
   organizationId: string;
   brief: string;
   imageUrls: string[];
+  kind?: ConceptKind;
 }
 
 export function createCreativeConcept(input: CreateCreativeConceptInput) {
-  return prisma.creativeConcept.create({ data: input });
+  return prisma.creativeConcept.create({
+    data: {
+      ...input,
+      expiresAt: new Date(Date.now() + CONCEPT_EXPIRY_MS),
+    },
+  });
 }
 
 export function getCreativeConcept(organizationId: string, id: string) {
   return prisma.creativeConcept.findFirst({ where: { id, organizationId } });
+}
+
+/** The organization's latest not-yet-expired, not-yet-approved concept of
+ * a given kind - for surfacing "your most recent generation" on a settings
+ * page even after the user navigated away from the review page without
+ * approving or rejecting it. Returns null once it's been approved (no
+ * longer a "candidate") or has expired (already cleaned up). */
+export function getMostRecentPendingConcept(organizationId: string, kind: ConceptKind) {
+  return prisma.creativeConcept.findFirst({
+    where: { organizationId, kind, status: "PENDING", expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export function listCreativeConcepts(organizationId: string) {

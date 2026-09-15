@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -71,4 +71,19 @@ export async function uploadGeneratedImage(
   );
 
   return `${publicUrl.replace(/\/$/, "")}/${key}`;
+}
+
+/** Deletes a previously-uploaded generated image - used by the concept
+ * cleanup cycle to actually free storage for an expired, never-approved
+ * Brand Style/logo candidate. A no-op (not an error) for any URL that
+ * doesn't live under our own STORAGE_PUBLIC_URL, so a bad or unrelated URL
+ * can never cause this to delete something outside our own bucket. */
+export async function deleteGeneratedImage(url: string): Promise<void> {
+  const publicUrl = requireEnv("STORAGE_PUBLIC_URL").replace(/\/$/, "");
+  if (!url.startsWith(`${publicUrl}/`)) return;
+
+  const key = url.slice(publicUrl.length + 1);
+  await getClient().send(
+    new DeleteObjectCommand({ Bucket: requireEnv("STORAGE_BUCKET"), Key: key }),
+  );
 }

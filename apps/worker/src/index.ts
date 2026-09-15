@@ -1,3 +1,4 @@
+import { runConceptCleanupCycle } from "./concept-cleanup";
 import { runGenerationCycle } from "./generator";
 import { runMaterializeCycle } from "./materializer";
 import { runPublishCycle } from "./publisher";
@@ -9,6 +10,8 @@ export function getStartupMessage(): string {
 const MATERIALIZE_POLL_INTERVAL_MS = 5 * 60_000;
 const GENERATE_POLL_INTERVAL_MS = 60_000;
 const PUBLISH_POLL_INTERVAL_MS = 60_000;
+// A 10-hour expiry doesn't need anything close to minute-level precision.
+const CONCEPT_CLEANUP_POLL_INTERVAL_MS = 30 * 60_000;
 
 /** Recursive setTimeout (await, then schedule the next tick) rather than
  * setInterval - setInterval doesn't wait for the previous call to finish,
@@ -37,6 +40,7 @@ function main() {
   loop("materialize", MATERIALIZE_POLL_INTERVAL_MS, () => runMaterializeCycle());
   loop("generate", GENERATE_POLL_INTERVAL_MS, () => runGenerationCycle());
   loop("publish", PUBLISH_POLL_INTERVAL_MS, () => runPublishCycle());
+  loop("concept-cleanup", CONCEPT_CLEANUP_POLL_INTERVAL_MS, () => runConceptCleanupCycle());
 }
 
 if (process.env.VITEST === undefined) {

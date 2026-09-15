@@ -4,9 +4,11 @@ import {
   getBrandCreativeProfile,
   getBrandProfile,
   getLocalDayBoundsUtc,
+  getMonthlyImageUsage,
   getPublishingSchedule,
   getRecentJobCreativeMetadata,
   markContentJobGenerated,
+  MONTHLY_TOTAL_IMAGE_CAP,
   withDayImageLock,
   type ContentJob,
 } from "@socialpilot/db";
@@ -110,6 +112,20 @@ export function resolveVariation(index: number): CreativeVariation {
   };
 }
 
+/** Thrown when a fresh generation would exceed the org's monthly image
+ * cap - deliberately distinct from a generic generation failure so the
+ * caller (apps/worker/src/generator.ts) can cancel rather than retry: the
+ * cap won't lift again until next month, so retrying on the usual 60s
+ * cadence would just waste attempts. Checked only once we already know a
+ * fresh generation is actually needed (after the same-day-reuse check),
+ * so a zero-cost reuse is never wrongly blocked by this cap. */
+export class MonthlyImageCapReachedError extends Error {
+  constructor() {
+    super(`Monthly image generation limit reached (${MONTHLY_TOTAL_IMAGE_CAP})`);
+    this.name = "MonthlyImageCapReachedError";
+  }
+}
+
 export function parseStyleProfile(value: unknown): BrandStyleProfile | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Partial<BrandStyleProfile>;
@@ -201,6 +217,14 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
         db,
       );
       return;
+    }
+
+    // Only checked once we know this call would actually spend a fresh
+    // generation - a same-day reuse (handled above) costs nothing and
+    // must never be blocked by this cap.
+    const usage = await getMonthlyImageUsage(job.organizationId);
+    if (usage.total >= MONTHLY_TOTAL_IMAGE_CAP) {
+      throw new MonthlyImageCapReachedError();
     }
 
     const brandContext = {

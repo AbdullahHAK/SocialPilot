@@ -48,9 +48,11 @@ export type CreateContentAction = (
 export function CreateContentForm({
   action,
   returnTo,
+  remainingBrandStyleRevisions,
 }: {
   action: CreateContentAction;
   returnTo?: string;
+  remainingBrandStyleRevisions: number;
 }) {
   const [state, formAction, isPending] = useActionState<
     CreateContentFormState,
@@ -85,9 +87,15 @@ export function CreateContentForm({
         </h1>
         <p className="mt-1 text-muted-foreground">
           Describe your post in plain English. SocialPilot&apos;s AI will
-          generate three on-brand image concepts for you to review.
+          generate one on-brand image concept for you to review.
         </p>
       </div>
+
+      <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+        You have {remainingBrandStyleRevisions} of 10 Brand Style revisions
+        left this month. Craft your prompt carefully and describe exactly
+        what you want for the best result.
+      </p>
 
       <div className="flex flex-wrap gap-2">
         {TEMPLATES.map((template) => (
@@ -173,11 +181,11 @@ export function CreateContentForm({
       <Button
         type="submit"
         size="lg"
-        disabled={isPending || !prompt.trim()}
+        disabled={isPending || !prompt.trim() || remainingBrandStyleRevisions <= 0}
         className="w-fit gap-2"
       >
         {isPending && <Loader2 className="size-4 animate-spin" />}
-        {isPending ? "Generating concepts…" : "Generate 3 concepts"}
+        {isPending ? "Generating concept…" : "Generate concept"}
       </Button>
     </form>
   );

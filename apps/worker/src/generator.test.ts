@@ -1,4 +1,5 @@
 import { prisma, upsertBrandProfile } from "@socialpilot/db";
+import { MonthlyImageCapReachedError } from "@socialpilot/content-engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GENERATION_LEAD_MINUTES, MAX_GENERATION_ATTEMPTS, runGenerationCycle } from "./generator";
 
@@ -150,6 +151,22 @@ describe("runGenerationCycle", () => {
     expect(updated.status).toBe("FAILED");
     expect(updated.attempts).toBe(MAX_GENERATION_ATTEMPTS);
     expect(generateContentForJobMock).toHaveBeenCalledTimes(MAX_GENERATION_ATTEMPTS);
+  });
+
+  it("cancels (does not retry) when generation reports the monthly image cap is reached", async () => {
+    const org = await setUpReadyOrg();
+    const now = new Date("2026-09-15T12:00:00Z");
+    const job = await createJob(org.id, new Date(now.getTime() + 60_000));
+    generateContentForJobMock.mockRejectedValue(new MonthlyImageCapReachedError());
+
+    await runGenerationCycle(now);
+
+    expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+    const updated = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
+    expect(updated.status).toBe("CANCELLED");
+    expect(updated.errorMessage).toMatch(/monthly image/i);
+    // Not treated as a retryable failure - attempts must stay untouched.
+    expect(updated.attempts).toBe(0);
   });
 
   it("cancels a job whose scheduled time passed long before it was ever generated (extended downtime)", async () => {

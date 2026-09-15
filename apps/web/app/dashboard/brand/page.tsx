@@ -1,6 +1,10 @@
-import { getBrandCreativeProfile, getBrandProfile } from "@socialpilot/db";
+import {
+  getBrandCreativeProfile,
+  getBrandProfile,
+  getMostRecentPendingConcept,
+} from "@socialpilot/db";
 import { asStringArray } from "@socialpilot/content-engine";
-import { CheckCircle2, Wand2 } from "lucide-react";
+import { CheckCircle2, Download, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -12,6 +16,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getSession } from "@/lib/session";
 import { updateBrandProfileAction } from "./actions";
 
+function hoursAndMinutesUntil(date: Date): string {
+  const ms = Math.max(0, date.getTime() - Date.now());
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+  return `${hours}h ${minutes}m`;
+}
+
 export default async function BrandSettingsPage({
   searchParams,
 }: PageProps<"/dashboard/brand">) {
@@ -22,9 +33,10 @@ export default async function BrandSettingsPage({
 
   const { logoApproved } = await searchParams;
 
-  const [profile, creativeProfile] = await Promise.all([
+  const [profile, creativeProfile, recentConcept] = await Promise.all([
     getBrandProfile(session.organizationId),
     getBrandCreativeProfile(session.organizationId),
+    getMostRecentPendingConcept(session.organizationId, "BRAND_STYLE"),
   ]);
 
   if (!profile) {
@@ -113,7 +125,7 @@ export default async function BrandSettingsPage({
               <Button asChild variant="outline" className="gap-2">
                 <Link href={`/dashboard/create?returnTo=${encodeURIComponent("/dashboard/brand")}`}>
                   <Wand2 className="size-4" />
-                  Choose a different style
+                  Revise your Brand Style
                 </Link>
               </Button>
             </>
@@ -133,6 +145,39 @@ export default async function BrandSettingsPage({
           )}
         </CardContent>
       </Card>
+
+      {recentConcept && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent generation</CardTitle>
+            <CardDescription>
+              Not approved yet — expires in {hoursAndMinutesUntil(recentConcept.expiresAt!)}{" "}
+              unless you approve it as your Brand Style before then.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={recentConcept.imageUrls[0]}
+              alt="Recently generated concept"
+              className="size-20 shrink-0 rounded-lg border border-border object-cover"
+            />
+            <Button asChild variant="outline" className="gap-2">
+              <a href={`/api/download-image?url=${encodeURIComponent(recentConcept.imageUrls[0]!)}`}>
+                <Download className="size-4" />
+                Download full quality
+              </a>
+            </Button>
+            <Button asChild className="gap-2">
+              <Link
+                href={`/dashboard/create/${recentConcept.id}?returnTo=${encodeURIComponent("/dashboard/brand")}`}
+              >
+                Review it
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <BrandSettingsForm action={updateBrandProfileAction} defaults={defaults} />
     </div>

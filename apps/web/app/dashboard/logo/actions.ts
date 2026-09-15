@@ -3,6 +3,9 @@
 import {
   createCreativeConcept,
   getBrandProfile,
+  getMonthlyImageUsage,
+  MONTHLY_LOGO_CAP,
+  MONTHLY_TOTAL_IMAGE_CAP,
   setBrandLogo,
 } from "@socialpilot/db";
 import { buildLogoPrompt, generateImage, uploadGeneratedImage } from "@socialpilot/content-engine";
@@ -14,7 +17,10 @@ export interface GenerateLogoFormState {
   error?: string;
 }
 
-const LOGO_CONCEPT_COUNT = 3;
+// The client's explicit cost-control request: one image per generation
+// request, not several to choose from - same treatment as Brand Style,
+// since this flow had the identical unlimited-regeneration loophole.
+const LOGO_CONCEPT_COUNT = 1;
 
 export async function generateLogoConceptsAction(
   _prevState: GenerateLogoFormState,
@@ -32,6 +38,15 @@ export async function generateLogoConceptsAction(
   if (prompt.length > 500) {
     return { error: "Keep the description under 500 characters." };
   }
+
+  const usage = await getMonthlyImageUsage(session.organizationId);
+  if (usage.total >= MONTHLY_TOTAL_IMAGE_CAP) {
+    return { error: `You've reached this month's image limit (${MONTHLY_TOTAL_IMAGE_CAP}). It resets next month.` };
+  }
+  if (usage.logo >= MONTHLY_LOGO_CAP) {
+    return { error: `You've used all ${MONTHLY_LOGO_CAP} logo revisions this month. This resets next month.` };
+  }
+
   const returnTo = safeReturnTo(formData.get("returnTo"), "/dashboard/brand");
 
   const brand = await getBrandProfile(session.organizationId);
@@ -56,6 +71,7 @@ export async function generateLogoConceptsAction(
     organizationId: session.organizationId,
     brief: `[logo] ${prompt}`,
     imageUrls,
+    kind: "LOGO",
   });
 
   redirect(

@@ -34,29 +34,25 @@ export default async function LogoReviewPage({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {concept.imageUrls.map((url) => (
-          <Card key={url} className="overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={url}
-              alt="Generated logo concept"
-              className="aspect-square w-full bg-white object-contain p-4"
-            />
-            <CardContent className="p-3">
-              <form action={approveLogoAction}>
-                <input type="hidden" name="imageUrl" value={url} />
-                {typeof returnTo === "string" && (
-                  <input type="hidden" name="returnTo" value={returnTo} />
-                )}
-                <Button type="submit" className="w-full">
-                  Use this logo
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card className="w-full max-w-sm overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={concept.imageUrls[0]}
+          alt="Generated logo concept"
+          className="aspect-square w-full bg-white object-contain p-4"
+        />
+        <CardContent className="p-3">
+          <form action={approveLogoAction}>
+            <input type="hidden" name="imageUrl" value={concept.imageUrls[0]} />
+            {typeof returnTo === "string" && (
+              <input type="hidden" name="returnTo" value={returnTo} />
+            )}
+            <Button type="submit" className="w-full">
+              Use this logo
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       <Button asChild variant="outline" className="w-fit">
         <Link

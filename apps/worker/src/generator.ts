@@ -10,7 +10,11 @@ import {
   type ContentJob,
   type SubscriptionStatus,
 } from "@socialpilot/db";
-import { generateContentForJob, isBrandSetupComplete } from "@socialpilot/content-engine";
+import {
+  generateContentForJob,
+  isBrandSetupComplete,
+  MonthlyImageCapReachedError,
+} from "@socialpilot/content-engine";
 
 // The client's explicit requirement: generate the creative ~5 minutes
 // before the scheduled publish time, never days or hours ahead - late
@@ -95,6 +99,13 @@ export async function runGenerationCycle(now: Date = new Date()): Promise<void> 
       await generateContentForJob(claimed);
       console.log(`Generated content job ${claimed.id} for org ${claimed.organizationId}`);
     } catch (error) {
+      if (error instanceof MonthlyImageCapReachedError) {
+        // Won't lift again until next month - retrying on the usual 60s
+        // cadence would just waste attempts, so cancel outright instead
+        // of the normal retry path.
+        await markContentJobCancelled(claimed.id, error.message);
+        continue;
+      }
       const message = error instanceof Error ? error.message : String(error);
       console.error(`Generating content job ${claimed.id} failed: ${message}`);
       await markContentJobGenerationFailed(claimed.id, message, MAX_GENERATION_ATTEMPTS);

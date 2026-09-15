@@ -47,30 +47,26 @@ export default async function ConceptReviewPage({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {concept.imageUrls.map((url) => (
-          <Card key={url} className="overflow-hidden">
-            {/* Freshly-generated images hosted on R2 - not worth wiring up
-                next/image's remote-pattern config for a preview grid. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={url}
-              alt="Generated content concept"
-              className="aspect-square w-full object-cover"
-            />
-            <CardContent className="p-3">
-              <form action={approveConceptAction}>
-                <input type="hidden" name="conceptId" value={concept.id} />
-                <input type="hidden" name="imageUrl" value={url} />
-                <input type="hidden" name="returnTo" value={returnTo} />
-                <Button type="submit" className="w-full">
-                  Approve this style
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card className="w-full max-w-sm overflow-hidden">
+        {/* Freshly-generated image hosted on R2 - not worth wiring up
+            next/image's remote-pattern config for a single preview. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={concept.imageUrls[0]}
+          alt="Generated content concept"
+          className="aspect-square w-full object-cover"
+        />
+        <CardContent className="p-3">
+          <form action={approveConceptAction}>
+            <input type="hidden" name="conceptId" value={concept.id} />
+            <input type="hidden" name="imageUrl" value={concept.imageUrls[0]} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <Button type="submit" className="w-full">
+              Approve this style
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       <RegenerateConceptForm
         action={regenerateConceptAction}

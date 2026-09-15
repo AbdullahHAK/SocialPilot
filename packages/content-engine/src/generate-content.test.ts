@@ -10,6 +10,7 @@ import {
   CONTENT_THEMES,
   ENVIRONMENTS,
   generateContentForJob,
+  MonthlyImageCapReachedError,
   SUBJECTS,
 } from "./generate-content";
 
@@ -341,6 +342,45 @@ describe("generateContentForJob", () => {
       ]);
       expect(a.masterImageUrl).not.toBe(b.masterImageUrl);
       expect(c.masterImageUrl).toBe(b.masterImageUrl);
+    });
+  });
+
+  describe("monthly image cap (shared across content, brand style, and logo generation)", () => {
+    it("throws MonthlyImageCapReachedError instead of generating once the org's monthly usage is at the cap", async () => {
+      const org = await setUpReadyOrg();
+      // 40 prior Brand Style generations this month - already at the cap.
+      await prisma.creativeConcept.createMany({
+        data: Array.from({ length: 40 }, (_, i) => ({
+          organizationId: org.id,
+          brief: `prior ${i}`,
+          imageUrls: [`https://example.com/prior-${i}.png`],
+          kind: "BRAND_STYLE" as const,
+        })),
+      });
+      const job = await makeJob(org.id, new Date());
+
+      await expect(generateContentForJob(job)).rejects.toThrow(MonthlyImageCapReachedError);
+      expect(generateImageMock).not.toHaveBeenCalled();
+    });
+
+    it("does not throw for a same-day reuse even when the org is at the monthly cap (reuse costs nothing)", async () => {
+      const org = await setUpReadyOrg();
+      const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"));
+      await generateContentForJob(jobA); // the one generation this test allows
+
+      // Now push usage up to the cap via Brand Style concepts alone.
+      await prisma.creativeConcept.createMany({
+        data: Array.from({ length: 40 }, (_, i) => ({
+          organizationId: org.id,
+          brief: `prior ${i}`,
+          imageUrls: [`https://example.com/prior-${i}.png`],
+          kind: "BRAND_STYLE" as const,
+        })),
+      });
+      const jobB = await makeJob(org.id, new Date("2026-09-15T18:00:00Z"));
+
+      await generateContentForJob(jobB); // must not throw despite being at the cap
+      expect(generateImageMock).toHaveBeenCalledTimes(1);
     });
   });
 });

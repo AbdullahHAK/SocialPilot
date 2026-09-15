@@ -1,4 +1,4 @@
-import { getBrandProfile } from "@socialpilot/db";
+import { getBrandProfile, getMonthlyImageUsage, MONTHLY_LOGO_CAP } from "@socialpilot/db";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GenerateLogoForm } from "@/components/generate-logo-form";
@@ -15,7 +15,10 @@ export default async function LogoPage({
   }
 
   const { returnTo } = await searchParams;
-  const brand = await getBrandProfile(session.organizationId);
+  const [brand, usage] = await Promise.all([
+    getBrandProfile(session.organizationId),
+    getMonthlyImageUsage(session.organizationId),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,7 +29,7 @@ export default async function LogoPage({
         <p className="mt-1 text-muted-foreground">
           {brand?.logoUrl
             ? "This is what SocialPilot uses consistently across your content."
-            : "Describe the logo you want and SocialPilot's AI will generate three concepts to choose from."}
+            : "Describe the logo you want and SocialPilot's AI will generate one concept to review."}
         </p>
       </div>
 
@@ -56,6 +59,7 @@ export default async function LogoPage({
       <GenerateLogoForm
         action={generateLogoConceptsAction}
         returnTo={typeof returnTo === "string" ? returnTo : undefined}
+        remainingLogoRevisions={Math.max(0, MONTHLY_LOGO_CAP - usage.logo)}
       />
     </div>
   );

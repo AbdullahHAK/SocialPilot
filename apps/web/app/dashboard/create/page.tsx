@@ -1,4 +1,9 @@
-import { getBrandProfile } from "@socialpilot/db";
+import {
+  getBrandProfile,
+  getMonthlyImageUsage,
+  MONTHLY_BRAND_STYLE_CAP,
+  MONTHLY_LOGO_CAP,
+} from "@socialpilot/db";
 import { ImagePlus } from "lucide-react";
 import { redirect } from "next/navigation";
 import { CreateContentForm } from "@/components/create-content-form";
@@ -22,7 +27,10 @@ export default async function CreateContentPage({
       ? safeReturnTo(returnToParam, "/dashboard/schedule")
       : undefined;
 
-  const brand = await getBrandProfile(session.organizationId);
+  const [brand, usage] = await Promise.all([
+    getBrandProfile(session.organizationId),
+    getMonthlyImageUsage(session.organizationId),
+  ]);
 
   // A logo is required before any content generation - there's no
   // consistent brand identity to keep every image on without one, so this
@@ -51,10 +59,20 @@ export default async function CreateContentPage({
             </p>
           </div>
         </div>
-        <GenerateLogoForm action={generateLogoConceptsAction} returnTo={logoReturnTo} />
+        <GenerateLogoForm
+          action={generateLogoConceptsAction}
+          returnTo={logoReturnTo}
+          remainingLogoRevisions={Math.max(0, MONTHLY_LOGO_CAP - usage.logo)}
+        />
       </div>
     );
   }
 
-  return <CreateContentForm action={generateConceptsAction} returnTo={returnTo} />;
+  return (
+    <CreateContentForm
+      action={generateConceptsAction}
+      returnTo={returnTo}
+      remainingBrandStyleRevisions={Math.max(0, MONTHLY_BRAND_STYLE_CAP - usage.brandStyle)}
+    />
+  );
 }

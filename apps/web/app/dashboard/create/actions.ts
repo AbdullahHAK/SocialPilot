@@ -5,6 +5,9 @@ import {
   createCreativeConcept,
   getBrandProfile,
   getCreativeConcept,
+  getMonthlyImageUsage,
+  MONTHLY_BRAND_STYLE_CAP,
+  MONTHLY_TOTAL_IMAGE_CAP,
 } from "@socialpilot/db";
 import {
   analyzeBrandStyle,
@@ -33,7 +36,25 @@ export interface CreateContentFormState {
   error?: string;
 }
 
-const CONCEPT_COUNT = 3;
+// The client's explicit cost-control request: one image per generation
+// request, not several to choose from.
+const CONCEPT_COUNT = 1;
+
+/** Checked before every Brand Style generation/regeneration - the client's
+ * explicit monthly caps (10 Brand Style revisions, contributing to a 40
+ * images/month total per org shared with scheduled content and logo
+ * generation). Returns a user-facing error string, or null if still
+ * allowed. */
+async function checkBrandStyleQuota(organizationId: string): Promise<string | null> {
+  const usage = await getMonthlyImageUsage(organizationId);
+  if (usage.total >= MONTHLY_TOTAL_IMAGE_CAP) {
+    return `You've reached this month's image limit (${MONTHLY_TOTAL_IMAGE_CAP}). It resets next month.`;
+  }
+  if (usage.brandStyle >= MONTHLY_BRAND_STYLE_CAP) {
+    return `You've used all ${MONTHLY_BRAND_STYLE_CAP} Brand Style revisions this month. This resets next month.`;
+  }
+  return null;
+}
 
 function toBrandContext(
   brand: Awaited<ReturnType<typeof getBrandProfile>>,
@@ -71,6 +92,11 @@ export async function generateConceptsAction(
   }
   if (prompt.length > 1000) {
     return { error: "Keep the description under 1000 characters." };
+  }
+
+  const quotaError = await checkBrandStyleQuota(session.organizationId);
+  if (quotaError) {
+    return { error: quotaError };
   }
 
   const files = formData
@@ -120,6 +146,7 @@ export async function generateConceptsAction(
     organizationId: session.organizationId,
     brief: prompt,
     imageUrls,
+    kind: "BRAND_STYLE",
   });
 
   const returnTo = safeReturnTo(formData.get("returnTo"), DEFAULT_RETURN_TO);
@@ -191,6 +218,11 @@ export async function regenerateConceptAction(
     redirect("/dashboard/create");
   }
 
+  const quotaError = await checkBrandStyleQuota(session.organizationId);
+  if (quotaError) {
+    return { error: quotaError };
+  }
+
   const brand = await getBrandProfile(session.organizationId);
   let referenceImages: Buffer[];
   try {
@@ -227,6 +259,7 @@ export async function regenerateConceptAction(
     organizationId: session.organizationId,
     brief: `${concept.brief} — ${feedback}`,
     imageUrls,
+    kind: concept.kind,
   });
 
   const returnTo = safeReturnTo(formData.get("returnTo"), DEFAULT_RETURN_TO);

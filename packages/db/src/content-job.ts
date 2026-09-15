@@ -380,6 +380,10 @@ export function markContentJobGenerated(
       caption: input.caption,
       hashtags: input.hashtags,
       creativeMetadata: input.creativeMetadata,
+      // Only set when a fresh image was actually generated (creativeMetadata
+      // present) - a same-day reuse costs nothing, so it must not look like
+      // a new generation to monthly usage accounting (packages/db/src/usage.ts).
+      generatedAt: input.creativeMetadata ? new Date() : undefined,
       errorMessage: null,
     },
   });

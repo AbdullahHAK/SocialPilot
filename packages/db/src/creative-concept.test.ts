@@ -3,6 +3,7 @@ import {
   approveCreativeConcept,
   createCreativeConcept,
   getCreativeConcept,
+  getMostRecentPendingConcept,
   listCreativeConcepts,
 } from "./creative-concept";
 import { getBrandCreativeProfile } from "./brand-creative-profile";
@@ -42,6 +43,95 @@ describe("createCreativeConcept / getCreativeConcept / listCreativeConcepts", ()
     });
 
     expect(await getCreativeConcept(orgB.id, concept.id)).toBeNull();
+  });
+
+  it("defaults to kind BRAND_STYLE and sets a 10-hour expiry", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const before = Date.now();
+
+    const concept = await createCreativeConcept({
+      organizationId: org.id,
+      brief: "Brief",
+      imageUrls: ["https://example.com/1.png"],
+    });
+
+    expect(concept.kind).toBe("BRAND_STYLE");
+    const hoursUntilExpiry = (concept.expiresAt!.getTime() - before) / (60 * 60 * 1000);
+    expect(hoursUntilExpiry).toBeGreaterThan(9.9);
+    expect(hoursUntilExpiry).toBeLessThan(10.1);
+  });
+
+  it("stores an explicit kind", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+
+    const concept = await createCreativeConcept({
+      organizationId: org.id,
+      brief: "[logo] Brief",
+      imageUrls: ["https://example.com/1.png"],
+      kind: "LOGO",
+    });
+
+    expect(concept.kind).toBe("LOGO");
+  });
+});
+
+describe("getMostRecentPendingConcept", () => {
+  it("returns the latest not-yet-expired, not-yet-approved concept of the given kind", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createCreativeConcept({
+      organizationId: org.id,
+      brief: "Older",
+      imageUrls: ["https://example.com/1.png"],
+      kind: "BRAND_STYLE",
+    });
+    const newer = await createCreativeConcept({
+      organizationId: org.id,
+      brief: "Newer",
+      imageUrls: ["https://example.com/2.png"],
+      kind: "BRAND_STYLE",
+    });
+
+    const result = await getMostRecentPendingConcept(org.id, "BRAND_STYLE");
+    expect(result?.id).toBe(newer.id);
+  });
+
+  it("ignores a different kind", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await createCreativeConcept({
+      organizationId: org.id,
+      brief: "[logo]",
+      imageUrls: ["https://example.com/1.png"],
+      kind: "LOGO",
+    });
+
+    expect(await getMostRecentPendingConcept(org.id, "BRAND_STYLE")).toBeNull();
+  });
+
+  it("ignores an already-approved concept", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const concept = await createCreativeConcept({
+      organizationId: org.id,
+      brief: "Brief",
+      imageUrls: ["https://example.com/1.png"],
+    });
+    await approveCreativeConcept(org.id, concept.id, "https://example.com/1.png");
+
+    expect(await getMostRecentPendingConcept(org.id, "BRAND_STYLE")).toBeNull();
+  });
+
+  it("ignores an expired concept", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const concept = await createCreativeConcept({
+      organizationId: org.id,
+      brief: "Brief",
+      imageUrls: ["https://example.com/1.png"],
+    });
+    await prisma.creativeConcept.update({
+      where: { id: concept.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    expect(await getMostRecentPendingConcept(org.id, "BRAND_STYLE")).toBeNull();
   });
 });
 

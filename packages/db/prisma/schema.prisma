@@ -50,6 +50,14 @@ enum CreativeConceptStatus {
   REJECTED
 }
 
+// Distinguishes a Brand Style concept from a logo concept - both flows
+// generate through the same CreativeConcept table, but count toward
+// separate monthly caps (see packages/db/src/usage.ts).
+enum ConceptKind {
+  BRAND_STYLE
+  LOGO
+}
+
 enum Platform {
   INSTAGRAM
   FACEBOOK
@@ -217,6 +225,12 @@ model CreativeConcept {
   brief          String
   imageUrls      String[]
   status         CreativeConceptStatus @default(PENDING)
+  kind           ConceptKind           @default(BRAND_STYLE)
+  // Set at creation to createdAt + 10h - a PENDING (never approved) concept
+  // past this time gets its image deleted and the row removed by
+  // apps/worker's cleanup cycle. Never acted on once APPROVED, so an
+  // approved Brand Style/logo is never at risk of expiring.
+  expiresAt      DateTime?
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
@@ -330,6 +344,13 @@ model ContentJob {
   // steering future generations away from repeating it (see
   // getRecentCreativeMetadata-equivalent in content-job.ts).
   creativeMetadata Json?
+  // When the creative was actually generated - distinct from createdAt,
+  // which for a slot-materialized job can be up to a week earlier than
+  // generation actually happens. Monthly image-usage accounting
+  // (packages/db/src/usage.ts) needs the real generation instant, not the
+  // row's creation time, to attribute cost to the right calendar month.
+  // Left null on a same-day-reused job (no fresh generation happened).
+  generatedAt    DateTime?
   // Generation attempts only (not publish attempts - those live on
   // ContentPublication, independently per platform).
   attempts       Int              @default(0)
