@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dateKey, formatMonthParam, MONTH_LABELS } from "@/lib/calendar";
+import { dateKey, formatMonthParam, getMonthLabels } from "@/lib/calendar";
 import { AddScheduleSlotDialog } from "./add-schedule-slot-dialog";
+
+const MONTH_LABELS = getMonthLabels("en");
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({

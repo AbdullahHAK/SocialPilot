@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import type { GenerateLogoFormState } from "@/app/dashboard/logo/actions";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export function GenerateLogoForm({
   returnTo?: string;
   remainingLogoRevisions: number;
 }) {
+  const t = useTranslations("dashboard.logoForm");
   const [state, formAction, isPending] = useActionState<
     GenerateLogoFormState,
     FormData
@@ -30,16 +32,14 @@ export function GenerateLogoForm({
     <form action={formAction} className="flex flex-col gap-4">
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-        You have {remainingLogoRevisions} of 10 logo revisions left this
-        month. Craft your prompt carefully and describe exactly what you
-        want for the best result.
+        {t("revisionsWarning", { count: remainingLogoRevisions })}
       </p>
       <Textarea
         name="prompt"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         rows={4}
-        placeholder="e.g. Create a modern logo for a premium crispy chicken restaurant called DC Chicken. Bold, memorable, suitable for a fast-food brand."
+        placeholder={t("promptPlaceholder")}
         className="resize-none text-base"
       />
 
@@ -56,7 +56,7 @@ export function GenerateLogoForm({
         className="w-fit gap-2"
       >
         {isPending && <Loader2 className="size-4 animate-spin" />}
-        {isPending ? "Generating logo concept…" : "Generate logo concept"}
+        {isPending ? t("generating") : t("generate")}
       </Button>
     </form>
   );

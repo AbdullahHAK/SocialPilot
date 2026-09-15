@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ mode, action }: AuthFormProps) {
+  const t = useTranslations("auth.form");
   const [state, formAction, isPending] = useActionState<
     AuthFormState,
     FormData
@@ -29,13 +31,13 @@ export function AuthForm({ mode, action }: AuthFormProps) {
     <form action={formAction} className="flex flex-col gap-5">
       {mode === "signup" && (
         <>
-          <Field label="Business name" name="organizationName" required />
-          <Field label="Your name" name="name" />
+          <Field label={t("businessName")} name="organizationName" required />
+          <Field label={t("yourName")} name="name" />
         </>
       )}
-      <Field label="Email" name="email" type="email" required />
+      <Field label={t("email")} name="email" type="email" required />
       <Field
-        label="Password"
+        label={t("password")}
         name="password"
         type="password"
         required
@@ -47,7 +49,7 @@ export function AuthForm({ mode, action }: AuthFormProps) {
         </p>
       )}
       <Button type="submit" disabled={isPending} className="w-full">
-        {mode === "signup" ? "Create account" : "Log in"}
+        {mode === "signup" ? t("createAccount") : t("login")}
       </Button>
     </form>
   );

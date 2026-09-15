@@ -5,6 +5,7 @@ import {
   MONTHLY_LOGO_CAP,
 } from "@socialpilot/db";
 import { ImagePlus } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { CreateContentForm } from "@/components/create-content-form";
 import { GenerateLogoForm } from "@/components/generate-logo-form";
@@ -27,9 +28,10 @@ export default async function CreateContentPage({
       ? safeReturnTo(returnToParam, "/dashboard/schedule")
       : undefined;
 
-  const [brand, usage] = await Promise.all([
+  const [brand, usage, t] = await Promise.all([
     getBrandProfile(session.organizationId),
     getMonthlyImageUsage(session.organizationId),
+    getTranslations("dashboard.create"),
   ]);
 
   // A logo is required before any content generation - there's no
@@ -50,13 +52,8 @@ export default async function CreateContentPage({
             <ImagePlus className="size-5" />
           </span>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              First, let&apos;s set up your logo
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              YOPAPI needs your logo to keep every image on-brand.
-              Describe the logo you want below.
-            </p>
+            <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+            <p className="mt-1 text-muted-foreground">{t("description")}</p>
           </div>
         </div>
         <GenerateLogoForm

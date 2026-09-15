@@ -4,19 +4,15 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface PlanCopy {
-  name: string;
-  price: string;
-  cadence: string;
-  description: string;
-}
+import { getPlanFeatures, getPlans } from "@/lib/plans";
 
 export async function PricingTeaser() {
-  const t = await getTranslations("landing.pricing");
-  const monthly = t.raw("monthly") as PlanCopy;
-  const yearly = t.raw("yearly") as PlanCopy;
-  const features = t.raw("features") as string[];
+  const [t, tPlans] = await Promise.all([
+    getTranslations("landing.pricing"),
+    getTranslations("plans"),
+  ]);
+  const plans = getPlans(tPlans);
+  const features = getPlanFeatures(tPlans);
 
   return (
     <section className="border-b border-border" id="pricing">
@@ -32,16 +28,16 @@ export async function PricingTeaser() {
         </div>
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2">
-          {[monthly, { ...yearly, featured: true }].map((plan) => (
+          {plans.map((plan) => (
             <Card
-              key={plan.name}
-              className={"featured" in plan && plan.featured ? "border-gold shadow-md" : undefined}
+              key={plan.id}
+              className={plan.featured ? "border-gold shadow-md" : undefined}
             >
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <CardTitle>{plan.name}</CardTitle>
-                  {"featured" in plan && plan.featured && (
-                    <Badge className="bg-gold text-gold-foreground">{t("bestValue")}</Badge>
+                  {plan.featured && (
+                    <Badge className="bg-gold text-gold-foreground">{tPlans("bestValue")}</Badge>
                   )}
                 </div>
                 <CardDescription>{plan.description}</CardDescription>
@@ -54,7 +50,7 @@ export async function PricingTeaser() {
                   </span>
                 </p>
                 <ul className="flex flex-col gap-2 text-sm">
-                  {features.map((feature) => (
+                  {features.map((feature: string) => (
                     <li key={feature} className="flex items-center gap-2">
                       <Check className="size-4 shrink-0 text-primary" />
                       {feature}

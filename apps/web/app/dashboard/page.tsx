@@ -8,6 +8,7 @@ import {
 } from "@socialpilot/db";
 import { isBrandSetupComplete } from "@socialpilot/content-engine";
 import { CalendarClock, Palette, Share2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PublishingStatusCard } from "@/components/publishing-status-card";
@@ -19,6 +20,7 @@ export default async function DashboardPage() {
   if (!session) {
     redirect("/login");
   }
+  const t = await getTranslations("dashboard.overview");
 
   const [brandProfile, creativeProfile, accounts, schedule, lastPublished, nextScheduled] =
     await Promise.all([
@@ -47,33 +49,31 @@ export default async function DashboardPage() {
     {
       href: "/dashboard/brand",
       icon: Palette,
-      label: "Brand profile",
+      label: t("brandProfile.label"),
       value: brandProfile!.businessName,
-      hint: "Business name, logo, and style",
+      hint: t("brandProfile.hint"),
     },
     {
       href: "/dashboard/accounts",
       icon: Share2,
-      label: "Connected accounts",
+      label: t("connectedAccounts.label"),
       value: String(accounts.length),
-      hint: accounts.length === 0 ? "Connect Instagram or Facebook" : "Ready to publish",
+      hint: accounts.length === 0 ? t("connectedAccounts.hintEmpty") : t("connectedAccounts.hint"),
     },
     {
       href: "/dashboard/schedule",
       icon: CalendarClock,
-      label: "Active publishing slots",
+      label: t("publishingSlots.label"),
       value: String(activeSlots),
-      hint: activeSlots === 0 ? "Add slots to start publishing" : "Per week",
+      hint: activeSlots === 0 ? t("publishingSlots.hintEmpty") : t("publishingSlots.hint"),
     },
   ] as const;
 
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <p className="mt-1 text-muted-foreground">
-          Here&apos;s the current state of your YOPAPI setup.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("description")}</p>
       </div>
 
       <PublishingStatusCard lastPublished={lastPublished} nextScheduled={nextScheduled} />

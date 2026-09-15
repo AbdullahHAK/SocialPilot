@@ -3,6 +3,7 @@ import {
   SocialAccountAlreadyConnectedError,
   upsertSocialAccount,
 } from "@socialpilot/db";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { META_OAUTH_STATE_COOKIE } from "@/app/api/meta/connect/route";
 import {
@@ -19,9 +20,10 @@ import {
 import { getSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
-  const [session, pending] = await Promise.all([
+  const [session, pending, t] = await Promise.all([
     getSession(),
     getPendingSignup(),
+    getTranslations("metaConnect"),
   ]);
   if (!session && !pending) {
     return NextResponse.redirect(new URL("/pricing", request.url));
@@ -46,7 +48,7 @@ export async function GET(request: NextRequest) {
 
   const oauthError = request.nextUrl.searchParams.get("error");
   if (oauthError) {
-    return redirectWith({ error: "Connection was cancelled." });
+    return redirectWith({ error: t("cancelled") });
   }
 
   const code = request.nextUrl.searchParams.get("code");
@@ -54,9 +56,7 @@ export async function GET(request: NextRequest) {
   const expectedState = request.cookies.get(META_OAUTH_STATE_COOKIE)?.value;
 
   if (!code || !state || !expectedState || state !== expectedState) {
-    return redirectWith({
-      error: "Invalid connection request. Please try connecting again.",
-    });
+    return redirectWith({ error: t("invalidRequest") });
   }
 
   try {
@@ -74,10 +74,7 @@ export async function GET(request: NextRequest) {
       : undefined;
 
     if (pages.length === 0) {
-      return redirectWith({
-        error:
-          "No Facebook Pages found. Make sure you selected a Page when connecting.",
-      });
+      return redirectWith({ error: t("noPagesFound") });
     }
 
     // Multiple Pages: ask which one, rather than guessing or (for the
@@ -161,14 +158,9 @@ export async function GET(request: NextRequest) {
     return redirectWith({});
   } catch (error) {
     if (error instanceof SocialAccountAlreadyConnectedError) {
-      return redirectWith({
-        error:
-          "One of these accounts is already connected to a different YOPAPI organization.",
-      });
+      return redirectWith({ error: t("alreadyConnected") });
     }
     console.error("Meta OAuth callback failed", error);
-    return redirectWith({
-      error: "Something went wrong connecting your accounts. Please try again.",
-    });
+    return redirectWith({ error: t("genericFailure") });
   }
 }

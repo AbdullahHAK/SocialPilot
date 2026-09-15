@@ -5,6 +5,7 @@ import {
 } from "@socialpilot/db";
 import { asStringArray } from "@socialpilot/content-engine";
 import { CheckCircle2, Download, Wand2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -32,6 +33,7 @@ export default async function BrandSettingsPage({
   }
 
   const { logoApproved } = await searchParams;
+  const t = await getTranslations("dashboard.brand");
 
   const [profile, creativeProfile, recentConcept] = await Promise.all([
     getBrandProfile(session.organizationId),
@@ -43,21 +45,16 @@ export default async function BrandSettingsPage({
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Brand Settings
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            You haven&apos;t completed onboarding yet.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("onboardingIncomplete")}</p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
             <p className="max-w-sm text-sm text-muted-foreground">
-              Complete onboarding to set up your brand profile before editing
-              it here.
+              {t("onboardingIncompleteHint")}
             </p>
             <Button asChild>
-              <Link href="/onboarding">Complete onboarding</Link>
+              <Link href="/onboarding">{t("completeOnboarding")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -81,37 +78,31 @@ export default async function BrandSettingsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Brand Settings
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          This is what YOPAPI uses to keep your content on-brand.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("description")}</p>
       </div>
 
       {logoApproved === "1" && (
         <div className="flex items-center gap-2.5 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           <CheckCircle2 className="size-4 shrink-0" />
-          Logo approved — it&apos;ll be used across future content.
+          {t("logoApproved")}
         </div>
       )}
 
       <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-        {defaults.logoUrl ? "Want a different logo?" : "Don't have a logo yet?"}{" "}
+        {defaults.logoUrl ? t("wantDifferentLogo") : t("noLogoYet")}{" "}
         <Link
           href={`/dashboard/logo?returnTo=${encodeURIComponent("/dashboard/brand")}`}
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
-          {defaults.logoUrl ? "Regenerate with AI" : "Generate one with AI"}
+          {defaults.logoUrl ? t("regenerateWithAi") : t("generateWithAi")}
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Visual style</CardTitle>
-          <CardDescription>
-            The approved look YOPAPI uses to generate every image.
-          </CardDescription>
+          <CardTitle>{t("visualStyle")}</CardTitle>
+          <CardDescription>{t("visualStyleDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-4">
           {referenceImage ? (
@@ -119,26 +110,23 @@ export default async function BrandSettingsPage({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={referenceImage}
-                alt="Approved brand style"
+                alt={t("approvedBrandStyleAlt")}
                 className="size-20 shrink-0 rounded-lg border border-border object-cover"
               />
               <Button asChild variant="outline" className="gap-2">
                 <Link href={`/dashboard/create?returnTo=${encodeURIComponent("/dashboard/brand")}`}>
                   <Wand2 className="size-4" />
-                  Revise your Brand Style
+                  {t("reviseBrandStyle")}
                 </Link>
               </Button>
             </>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                No visual style set yet — YOPAPI needs one before it can
-                generate content.
-              </p>
-              <Button asChild className="ml-auto shrink-0 gap-2">
+              <p className="text-sm text-muted-foreground">{t("noVisualStyleYet")}</p>
+              <Button asChild className="ms-auto shrink-0 gap-2">
                 <Link href={`/dashboard/create?returnTo=${encodeURIComponent("/dashboard/brand")}`}>
                   <Wand2 className="size-4" />
-                  Set up with AI
+                  {t("setUpWithAi")}
                 </Link>
               </Button>
             </>
@@ -149,30 +137,31 @@ export default async function BrandSettingsPage({
       {recentConcept && (
         <Card>
           <CardHeader>
-            <CardTitle>Recent generation</CardTitle>
+            <CardTitle>{t("recentGeneration")}</CardTitle>
             <CardDescription>
-              Not approved yet — expires in {hoursAndMinutesUntil(recentConcept.expiresAt!)}{" "}
-              unless you approve it as your Brand Style before then.
+              {t("recentGenerationExpires", {
+                time: hoursAndMinutesUntil(recentConcept.expiresAt!),
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={recentConcept.imageUrls[0]}
-              alt="Recently generated concept"
+              alt={t("recentConceptAlt")}
               className="size-20 shrink-0 rounded-lg border border-border object-cover"
             />
             <Button asChild variant="outline" className="gap-2">
               <a href={`/api/download-image?url=${encodeURIComponent(recentConcept.imageUrls[0]!)}`}>
                 <Download className="size-4" />
-                Download full quality
+                {t("downloadFullQuality")}
               </a>
             </Button>
             <Button asChild className="gap-2">
               <Link
                 href={`/dashboard/create/${recentConcept.id}?returnTo=${encodeURIComponent("/dashboard/brand")}`}
               >
-                Review it
+                {t("reviewIt")}
               </Link>
             </Button>
           </CardContent>

@@ -7,6 +7,7 @@ import {
 } from "@socialpilot/db";
 import { isBrandSetupComplete } from "@socialpilot/content-engine";
 import { Sparkles, Trash2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddScheduleSlotDialog } from "@/components/add-schedule-slot-dialog";
@@ -34,57 +35,40 @@ const DAY_ORDER = [
   "SUNDAY",
 ] as const;
 
-const DAY_LABELS: Record<(typeof DAY_ORDER)[number], string> = {
-  MONDAY: "Monday",
-  TUESDAY: "Tuesday",
-  WEDNESDAY: "Wednesday",
-  THURSDAY: "Thursday",
-  FRIDAY: "Friday",
-  SATURDAY: "Saturday",
-  SUNDAY: "Sunday",
-};
-
 export default async function SchedulePage() {
   const session = await getSession();
   if (!session) {
     redirect("/login");
   }
 
-  const [schedule, lastPublished, nextScheduled, brandProfile, creativeProfile] =
+  const [schedule, lastPublished, nextScheduled, brandProfile, creativeProfile, t, tDays] =
     await Promise.all([
       getPublishingSchedule(session.organizationId),
       getLastPublishedContentJob(session.organizationId),
       getNextScheduledContentJob(session.organizationId),
       getBrandProfile(session.organizationId),
       getBrandCreativeProfile(session.organizationId),
+      getTranslations("dashboard.schedule"),
+      getTranslations("days"),
     ]);
 
   if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Publishing Schedule
-          </h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">
-            Pick a time and the days it repeats on — YOPAPI generates
-            and publishes the content automatically.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 max-w-2xl text-muted-foreground">{t("descriptionShort")}</p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Sparkles className="size-6" />
             </span>
-            <p className="font-medium">Finish setting up your brand first</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              YOPAPI needs a logo and an approved visual style before it
-              can generate content for your schedule — it&apos;s a one-time
-              step.
-            </p>
+            <p className="font-medium">{t("finishBrandFirst")}</p>
+            <p className="max-w-sm text-sm text-muted-foreground">{t("finishBrandFirstHint")}</p>
             <Button asChild>
               <Link href="/dashboard/create?returnTo=/dashboard/schedule">
-                Finish setup
+                {t("finishSetup")}
               </Link>
             </Button>
           </CardContent>
@@ -102,15 +86,8 @@ export default async function SchedulePage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Publishing Schedule
-          </h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">
-            Pick a time and the days it repeats on — YOPAPI generates
-            and publishes the content automatically. Content for each slot
-            is generated a day or two ahead of time, so adding a slot here
-            doesn&apos;t create a post immediately.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 max-w-2xl text-muted-foreground">{t("description")}</p>
         </div>
         <AddScheduleSlotDialog
           action={addScheduleSlotAction}
@@ -123,11 +100,8 @@ export default async function SchedulePage() {
       {slotsByDay.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-1 py-12 text-center">
-            <p className="font-medium">No posting times yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Click &quot;Add posting time&quot; above to pick a time and the
-              days you want YOPAPI to publish automatically.
-            </p>
+            <p className="font-medium">{t("noPostingTimesYet")}</p>
+            <p className="max-w-sm text-sm text-muted-foreground">{t("noPostingTimesHint")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -135,7 +109,7 @@ export default async function SchedulePage() {
           {slotsByDay.map(({ day, slots }) => (
             <Card key={day}>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">{DAY_LABELS[day]}</CardTitle>
+                <CardTitle className="text-base">{tDays(day)}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="flex flex-col gap-2">
@@ -157,9 +131,7 @@ export default async function SchedulePage() {
                             {formatTime12Hour(slot.time)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {slot.platform === "INSTAGRAM"
-                              ? "Instagram"
-                              : "Facebook"}
+                            {slot.platform === "INSTAGRAM" ? t("instagram") : t("facebook")}
                           </p>
                         </div>
                       </div>
@@ -176,7 +148,7 @@ export default async function SchedulePage() {
                               variant={slot.enabled ? "success" : "secondary"}
                               className="cursor-pointer"
                             >
-                              {slot.enabled ? "Enabled" : "Disabled"}
+                              {slot.enabled ? t("enabled") : t("disabled")}
                             </Badge>
                           </button>
                         </form>
@@ -189,7 +161,7 @@ export default async function SchedulePage() {
                             className="size-8 text-muted-foreground hover:text-destructive"
                           >
                             <Trash2 className="size-4" />
-                            <span className="sr-only">Remove slot</span>
+                            <span className="sr-only">{t("removeSlot")}</span>
                           </Button>
                         </form>
                       </div>

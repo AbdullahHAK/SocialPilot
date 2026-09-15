@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import type { RegenerateConceptFormState } from "@/app/dashboard/create/actions";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ export function RegenerateConceptForm({
   conceptId: string;
   returnTo?: string;
 }) {
+  const t = useTranslations("dashboard.regenerateForm");
   const [state, formAction, isPending] = useActionState<
     RegenerateConceptFormState,
     FormData
@@ -33,12 +35,12 @@ export function RegenerateConceptForm({
     >
       <input type="hidden" name="conceptId" value={conceptId} />
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
-      <Label htmlFor="feedback">Not quite right? Describe what to change</Label>
+      <Label htmlFor="feedback">{t("label")}</Label>
       <Textarea
         id="feedback"
         name="feedback"
         rows={3}
-        placeholder="e.g. Make the background darker, make the chicken larger, use more of our brand colors."
+        placeholder={t("placeholder")}
         className="resize-none"
       />
       {state.error && (
@@ -53,7 +55,7 @@ export function RegenerateConceptForm({
         className="w-fit gap-2"
       >
         {isPending && <Loader2 className="size-4 animate-spin" />}
-        {isPending ? "Regenerating…" : "Regenerate with changes"}
+        {isPending ? t("regenerating") : t("regenerate")}
       </Button>
     </form>
   );

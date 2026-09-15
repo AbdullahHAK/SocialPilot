@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dateKey, MONTH_LABELS } from "@/lib/calendar";
+import { dateKey, getMonthLabels } from "@/lib/calendar";
 import { MiniDatePicker } from "./mini-date-picker";
+
+const MONTH_LABELS = getMonthLabels("en");
 
 // "Today" inside the component is always the real wall-clock date, so
 // these tests pin it with fake timers rather than relying on whatever

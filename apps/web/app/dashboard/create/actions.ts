@@ -18,6 +18,7 @@ import {
   uploadGeneratedImage,
   type BrandContext,
 } from "@socialpilot/content-engine";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
@@ -47,11 +48,12 @@ const CONCEPT_COUNT = 1;
  * allowed. */
 async function checkBrandStyleQuota(organizationId: string): Promise<string | null> {
   const usage = await getMonthlyImageUsage(organizationId);
+  const t = await getTranslations("dashboard.create.errors");
   if (usage.total >= MONTHLY_TOTAL_IMAGE_CAP) {
-    return `You've reached this month's image limit (${MONTHLY_TOTAL_IMAGE_CAP}). It resets next month.`;
+    return t("totalCapReached", { cap: MONTHLY_TOTAL_IMAGE_CAP });
   }
   if (usage.brandStyle >= MONTHLY_BRAND_STYLE_CAP) {
-    return `You've used all ${MONTHLY_BRAND_STYLE_CAP} Brand Style revisions this month. This resets next month.`;
+    return t("brandStyleCapReached", { cap: MONTHLY_BRAND_STYLE_CAP });
   }
   return null;
 }
@@ -86,12 +88,13 @@ export async function generateConceptsAction(
     redirect("/dashboard/create");
   }
 
+  const t = await getTranslations("dashboard.create.errors");
   const prompt = formData.get("prompt")?.toString().trim();
   if (!prompt) {
-    return { error: "Describe what you want to create." };
+    return { error: t("describeWhatToCreate") };
   }
   if (prompt.length > 1000) {
-    return { error: "Keep the description under 1000 characters." };
+    return { error: t("descriptionTooLong") };
   }
 
   const quotaError = await checkBrandStyleQuota(session.organizationId);
@@ -104,14 +107,14 @@ export async function generateConceptsAction(
     .filter((value): value is File => value instanceof File && value.size > 0);
 
   if (files.length > REFERENCE_IMAGE_MAX_COUNT) {
-    return { error: `Upload at most ${REFERENCE_IMAGE_MAX_COUNT} images.` };
+    return { error: t("tooManyImages", { max: REFERENCE_IMAGE_MAX_COUNT }) };
   }
   for (const file of files) {
     if (file.size > REFERENCE_IMAGE_MAX_BYTES) {
-      return { error: "Each image must be 8MB or smaller." };
+      return { error: t("imageTooLarge") };
     }
     if (!REFERENCE_IMAGE_ALLOWED_TYPES.includes(file.type)) {
-      return { error: "Images must be PNG, JPEG, or WebP." };
+      return { error: t("invalidImageType") };
     }
   }
 
@@ -139,7 +142,7 @@ export async function generateConceptsAction(
     );
   } catch (error) {
     console.error("Concept generation failed", error);
-    return { error: "Couldn't generate images right now. Please try again." };
+    return { error: t("generationFailed") };
   }
 
   const concept = await createCreativeConcept({
@@ -204,13 +207,14 @@ export async function regenerateConceptAction(
     redirect("/login");
   }
 
+  const t = await getTranslations("dashboard.create.errors");
   const conceptId = formData.get("conceptId")?.toString();
   const feedback = formData.get("feedback")?.toString().trim();
   if (!conceptId) {
     redirect("/dashboard/create");
   }
   if (!feedback) {
-    return { error: "Describe what you'd like to change." };
+    return { error: t("describeChange") };
   }
 
   const concept = await getCreativeConcept(session.organizationId, conceptId);
@@ -231,7 +235,7 @@ export async function regenerateConceptAction(
     );
   } catch (error) {
     console.error("Fetching prior concept images for regeneration failed", error);
-    return { error: "Couldn't load the previous concepts. Please try again." };
+    return { error: t("loadPreviousFailed") };
   }
 
   const fullPrompt = buildImagePrompt(
@@ -252,7 +256,7 @@ export async function regenerateConceptAction(
     );
   } catch (error) {
     console.error("Concept regeneration failed", error);
-    return { error: "Couldn't regenerate images right now. Please try again." };
+    return { error: t("regenerationFailed") };
   }
 
   const newConcept = await createCreativeConcept({

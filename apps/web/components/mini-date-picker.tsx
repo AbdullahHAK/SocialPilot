@@ -1,8 +1,9 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
-import { dateKey, getMonthGrid, MONTH_LABELS, WEEKDAY_LABELS } from "@/lib/calendar";
+import { dateKey, getMonthGrid, getMonthLabels, getWeekdayLabels } from "@/lib/calendar";
 import { cn } from "@/lib/utils";
 
 export function MiniDatePicker({
@@ -12,6 +13,10 @@ export function MiniDatePicker({
   selected: Date;
   onSelect: (date: Date) => void;
 }) {
+  const t = useTranslations("dashboard.miniDatePicker");
+  const locale = useLocale();
+  const monthLabels = getMonthLabels(locale);
+  const weekdayLabels = getWeekdayLabels(locale);
   const [viewYear, setViewYear] = useState(selected.getUTCFullYear());
   const [viewMonth, setViewMonth] = useState(selected.getUTCMonth());
 
@@ -45,25 +50,26 @@ export function MiniDatePicker({
           onClick={goPrevMonth}
           className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         >
-          <ChevronLeft className="size-4" />
-          <span className="sr-only">Previous month</span>
+          {/* Points toward "earlier" regardless of reading direction. */}
+          <ChevronLeft className="size-4 rtl:scale-x-[-1]" />
+          <span className="sr-only">{t("previousMonth")}</span>
         </button>
         <p className="text-sm font-medium">
-          {MONTH_LABELS[viewMonth]} {viewYear}
+          {monthLabels[viewMonth]} {viewYear}
         </p>
         <button
           type="button"
           onClick={goNextMonth}
           className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         >
-          <ChevronRight className="size-4" />
-          <span className="sr-only">Next month</span>
+          <ChevronRight className="size-4 rtl:scale-x-[-1]" />
+          <span className="sr-only">{t("nextMonth")}</span>
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
-        {WEEKDAY_LABELS.map((label) => (
-          <div key={label}>{label[0]}</div>
+        {weekdayLabels.map((label, index) => (
+          <div key={index}>{label[0]}</div>
         ))}
       </div>
 

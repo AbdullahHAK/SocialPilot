@@ -1,4 +1,5 @@
 import { AlertCircle, Check, Info } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,57 +10,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
+import { getPlanFeatures, getPlans } from "@/lib/plans";
 import { isStripeConfigured } from "@/lib/stripe";
 import { startPendingCheckoutAction } from "./actions";
-
-const PLANS = [
-  {
-    id: "MONTHLY" as const,
-    name: "Monthly",
-    price: "$49",
-    cadence: "/month",
-    description: "Full access, billed every month.",
-    featured: false,
-  },
-  {
-    id: "YEARLY" as const,
-    name: "Yearly",
-    price: "$470",
-    cadence: "/year",
-    description: "Full access, billed annually — about 20% cheaper.",
-    featured: true,
-  },
-];
-
-const PLAN_FEATURES = [
-  "AI-generated content, on-brand",
-  "Automatic publishing to Instagram & Facebook",
-  "Unlimited weekly publishing slots",
-  "Full content calendar & history",
-];
-
-const ERROR_MESSAGES: Record<string, string> = {
-  payment_incomplete: "Your payment didn't complete. Please try again.",
-  missing_session: "That checkout link has expired. Please choose a plan again.",
-  unknown_plan: "We couldn't match your purchase to a plan. Please try again.",
-  missing_customer: "Something went wrong confirming your payment. Please try again.",
-};
 
 export default async function PricingPage({
   searchParams,
 }: PageProps<"/pricing">) {
   const { checkout, error } = await searchParams;
   const billingLive = isStripeConfigured();
+  const [t, tPlans] = await Promise.all([
+    getTranslations("pricingPage"),
+    getTranslations("plans"),
+  ]);
+  const plans = getPlans(tPlans);
+  const features = getPlanFeatures(tPlans);
+  const errorMessage = typeof error === "string" ? t.has(`errors.${error}`) ? t(`errors.${error}`) : undefined : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border/60">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Logo />
-          <nav>
+          <nav className="flex items-center gap-1">
+            <LanguageSwitcher />
             <Button asChild variant="ghost">
-              <Link href="/login">Log in</Link>
+              <Link href="/login">{t("login")}</Link>
             </Button>
           </nav>
         </div>
@@ -69,37 +47,32 @@ export default async function PricingPage({
         <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-24">
           <div className="mx-auto max-w-2xl text-center">
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Choose your plan
+              {t("title")}
             </h1>
-            <p className="mt-4 text-muted-foreground">
-              Start with a plan, then connect your accounts and set up your
-              brand. Cancel anytime.
-            </p>
+            <p className="mt-4 text-muted-foreground">{t("subtitle")}</p>
           </div>
 
           {!billingLive && (
             <div className="mx-auto mt-8 flex max-w-xl items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
               <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-              Billing setup is still in progress — continue below at no
-              charge for now. You&apos;ll be able to add payment details
-              later from your account.
+              {t("billingInProgress")}
             </div>
           )}
 
           {checkout === "cancelled" && (
             <div className="mx-auto mt-8 flex max-w-xl items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              Checkout was cancelled — no charges were made.
+              {t("checkoutCancelled")}
             </div>
           )}
-          {typeof error === "string" && ERROR_MESSAGES[error] && (
+          {errorMessage && (
             <div className="mx-auto mt-8 flex max-w-xl items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
-              {ERROR_MESSAGES[error]}
+              {errorMessage}
             </div>
           )}
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2">
-            {PLANS.map((plan) => (
+            {plans.map((plan) => (
               <Card
                 key={plan.id}
                 className={plan.featured ? "border-primary shadow-md" : undefined}
@@ -107,7 +80,7 @@ export default async function PricingPage({
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <CardTitle>{plan.name}</CardTitle>
-                    {plan.featured && <Badge>Best value</Badge>}
+                    {plan.featured && <Badge>{tPlans("bestValue")}</Badge>}
                   </div>
                   <CardDescription>{plan.description}</CardDescription>
                 </CardHeader>
@@ -119,7 +92,7 @@ export default async function PricingPage({
                     </span>
                   </p>
                   <ul className="flex flex-col gap-2 text-sm">
-                    {PLAN_FEATURES.map((feature) => (
+                    {features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2">
                         <Check className="size-4 shrink-0 text-primary" />
                         {feature}
@@ -133,7 +106,7 @@ export default async function PricingPage({
                       className="w-full"
                       variant={plan.featured ? "default" : "outline"}
                     >
-                      Choose {plan.name}
+                      {t("choosePlan", { plan: plan.name })}
                     </Button>
                   </form>
                 </CardContent>

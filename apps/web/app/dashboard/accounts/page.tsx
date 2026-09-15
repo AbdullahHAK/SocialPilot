@@ -1,5 +1,6 @@
 import { listSocialAccounts } from "@socialpilot/db";
 import { AlertCircle, CheckCircle2, Share2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,21 +18,17 @@ export default async function AccountsPage({
 
   const { error, connected } = await searchParams;
   const accounts = await listSocialAccounts(session.organizationId);
+  const t = await getTranslations("dashboard.accounts");
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Connected Accounts
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Connect your Facebook Page and its linked Instagram Business
-            account to start publishing.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("description")}</p>
         </div>
         <Button asChild>
-          <a href="/api/meta/connect">Connect Instagram / Facebook</a>
+          <a href="/api/meta/connect">{t("connect")}</a>
         </Button>
       </div>
 
@@ -44,7 +41,7 @@ export default async function AccountsPage({
       {typeof connected === "string" && (
         <div className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-          Connected {connected} account{connected === "1" ? "" : "s"}.
+          {t("connectedCount", { count: Number(connected) })}
         </div>
       )}
 
@@ -54,11 +51,8 @@ export default async function AccountsPage({
             <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <Share2 className="size-6" />
             </span>
-            <p className="font-medium">No accounts connected yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Connect your Facebook Page and its linked Instagram Business
-              account to start publishing automatically.
-            </p>
+            <p className="font-medium">{t("noneYetTitle")}</p>
+            <p className="max-w-sm text-sm text-muted-foreground">{t("noneYetDescription")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -79,10 +73,8 @@ export default async function AccountsPage({
                       {account.displayName ?? account.externalId}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {account.provider === "INSTAGRAM"
-                        ? "Instagram"
-                        : "Facebook"}{" "}
-                      · {account.status === "ACTIVE" ? "Active" : account.status}
+                      {account.provider === "INSTAGRAM" ? t("instagram") : t("facebook")}{" "}
+                      · {account.status === "ACTIVE" ? t("active") : account.status}
                     </p>
                   </div>
                 </div>
@@ -94,7 +86,7 @@ export default async function AccountsPage({
                     size="sm"
                     className="text-muted-foreground hover:text-destructive"
                   >
-                    Disconnect
+                    {t("disconnect")}
                   </Button>
                 </form>
               </CardContent>

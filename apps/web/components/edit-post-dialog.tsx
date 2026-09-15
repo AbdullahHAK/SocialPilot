@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 import { MiniDatePicker } from "@/components/mini-date-picker";
@@ -16,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { dateKey, MONTH_LABELS } from "@/lib/calendar";
+import { dateKey, getMonthLabels } from "@/lib/calendar";
 import { from24Hour, to24Hour, type Meridiem } from "@/lib/time-of-day";
 // The "./timezone" subpath (not the main @socialpilot/db barrel) keeps
 // this client component's bundle free of server-only Node built-ins that
@@ -59,6 +60,9 @@ export function EditPostDialog({
   // rescheduled - only its caption is still meaningfully editable, mirrors
   // isLocked() in calendar/actions.ts.
   const isPublished = status === "PUBLISHING" || status === "PUBLISHED" || status === "CANCELLED";
+  const t = useTranslations("dashboard.editPostDialog");
+  const locale = useLocale();
+  const monthLabels = getMonthLabels(locale);
   const [open, setOpen] = useState(false);
   const [captionText, setCaptionText] = useState(caption);
   const [state, setState] = useState(() => initialStateFor(scheduledForIso));
@@ -91,7 +95,7 @@ export function EditPostDialog({
     startTransition(async () => {
       const result = await action(formData);
       if (!result.ok) {
-        setError("Couldn't save those changes. Please try again.");
+        setError(t("saveFailed"));
         return;
       }
       if (result.note) {
@@ -116,17 +120,15 @@ export function EditPostDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit post</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            {isPublished
-              ? "This post already went out - you can still update its caption."
-              : "Change the caption or move it to a different date and time."}
+            {isPublished ? t("descriptionPublished") : t("descriptionEditable")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-5">
           <div>
-            <p className="mb-2 text-sm font-medium">Caption</p>
+            <p className="mb-2 text-sm font-medium">{t("caption")}</p>
             <Textarea
               value={captionText}
               onChange={(e) => setCaptionText(e.target.value)}
@@ -137,22 +139,17 @@ export function EditPostDialog({
                 specifically (e.g. whether the live push actually
                 succeeded) - no need to show both. */}
             {!note && isPublished && platform === "INSTAGRAM" && (
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                Instagram doesn&apos;t support editing a caption after it&apos;s published -
-                saving here only updates your record, not the live post.
-              </p>
+              <p className="mt-1.5 text-xs text-muted-foreground">{t("instagramCaptionLocked")}</p>
             )}
             {!note && isPublished && platform === "FACEBOOK" && (
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                This will also update the caption on the live Facebook post.
-              </p>
+              <p className="mt-1.5 text-xs text-muted-foreground">{t("facebookWillUpdate")}</p>
             )}
           </div>
 
           {!isPublished && (
             <>
               <div>
-                <p className="mb-2 text-sm font-medium">Time</p>
+                <p className="mb-2 text-sm font-medium">{t("time")}</p>
                 <TimeOfDayPicker
                   hour12={state.hour12}
                   minute={state.minute}
@@ -165,9 +162,9 @@ export function EditPostDialog({
 
               <div>
                 <p className="mb-2 text-sm font-medium">
-                  Date —{" "}
+                  {t("date")} —{" "}
                   <span className="font-normal text-muted-foreground">
-                    {MONTH_LABELS[state.date.getUTCMonth()]} {state.date.getUTCDate()},{" "}
+                    {monthLabels[state.date.getUTCMonth()]} {state.date.getUTCDate()},{" "}
                     {state.date.getUTCFullYear()}
                   </span>
                 </p>
@@ -186,7 +183,7 @@ export function EditPostDialog({
         <DialogFooter>
           <Button type="button" onClick={handleSubmit} disabled={isPending} className="gap-2">
             {isPending && <Loader2 className="size-4 animate-spin" />}
-            {isPending ? "Saving…" : "Save changes"}
+            {isPending ? t("saving") : t("saveChanges")}
           </Button>
         </DialogFooter>
       </DialogContent>

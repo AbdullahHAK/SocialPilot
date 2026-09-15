@@ -1,44 +1,48 @@
 "use client";
 
 import { ImagePlus, Loader2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { CreateContentFormState } from "@/app/dashboard/create/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+// labelKey is UI copy (translated) - prompt is sent to the AI model as an
+// English instruction fragment and deliberately stays English in every
+// locale, same as the content-engine's own prompt-building code.
 const TEMPLATES = [
   {
     emoji: "🍔",
-    label: "Product Promotion",
+    labelKey: "productPromotion",
     prompt:
       "Create a promotional post for our crispy chicken burger with a special weekend offer.",
   },
   {
     emoji: "🔥",
-    label: "Special Offer",
+    labelKey: "specialOffer",
     prompt:
       "Create an eye-catching post announcing a limited-time 20% discount on all orders this week.",
   },
   {
     emoji: "🆕",
-    label: "New Product",
+    labelKey: "newProduct",
     prompt:
       "Create an exciting announcement post introducing our new spicy chicken wrap.",
   },
   {
     emoji: "🎉",
-    label: "Weekend Promotion",
+    labelKey: "weekendPromotion",
     prompt:
       "Create a fun, festive post promoting a buy-one-get-one-free weekend deal.",
   },
   {
     emoji: "📱",
-    label: "Instagram Story",
+    labelKey: "instagramStory",
     prompt:
       "Create a bold, vertical Instagram Story design announcing today's lunch special.",
   },
-];
+] as const;
 
 export type CreateContentAction = (
   state: CreateContentFormState,
@@ -54,6 +58,7 @@ export function CreateContentForm({
   returnTo?: string;
   remainingBrandStyleRevisions: number;
 }) {
+  const t = useTranslations("dashboard.createForm");
   const [state, formAction, isPending] = useActionState<
     CreateContentFormState,
     FormData
@@ -82,31 +87,24 @@ export function CreateContentForm({
     <form action={formAction} className="flex flex-col gap-6">
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          What do you want to create?
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Describe your post in plain English. YOPAPI&apos;s AI will
-          generate one on-brand image concept for you to review.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("description")}</p>
       </div>
 
       <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-        You have {remainingBrandStyleRevisions} of 10 Brand Style revisions
-        left this month. Craft your prompt carefully and describe exactly
-        what you want for the best result.
+        {t("revisionsWarning", { count: remainingBrandStyleRevisions })}
       </p>
 
       <div className="flex flex-wrap gap-2">
         {TEMPLATES.map((template) => (
           <button
-            key={template.label}
+            key={template.labelKey}
             type="button"
             onClick={() => setPrompt(template.prompt)}
             className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-sm font-medium transition-colors hover:border-primary/50 hover:bg-accent/40"
           >
             <span aria-hidden>{template.emoji}</span>
-            {template.label}
+            {t(`templates.${template.labelKey}`)}
           </button>
         ))}
       </div>
@@ -116,22 +114,19 @@ export function CreateContentForm({
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         rows={6}
-        placeholder="e.g. Create a promotional post for our crispy chicken burger with a special weekend offer."
+        placeholder={t("promptPlaceholder")}
         className="resize-none text-base"
       />
 
       <div className="flex flex-col gap-2">
-        <Label>Add images (optional)</Label>
-        <p className="text-sm text-muted-foreground">
-          Product photos, your logo, or anything you&apos;d like the AI to
-          use as inspiration.
-        </p>
+        <Label>{t("addImages")}</Label>
+        <p className="text-sm text-muted-foreground">{t("addImagesHint")}</p>
         <label
           htmlFor="referenceImages"
           className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-input px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent/30"
         >
           <ImagePlus className="size-5 shrink-0" />
-          Click to upload images
+          {t("clickToUpload")}
         </label>
         <input
           id="referenceImages"
@@ -151,7 +146,7 @@ export function CreateContentForm({
                 {file.name}
                 <button
                   type="button"
-                  aria-label={`Remove ${file.name}`}
+                  aria-label={t("removeFile", { name: file.name })}
                   onClick={() =>
                     setFiles((prev) => prev.filter((_, i) => i !== index))
                   }
@@ -185,7 +180,7 @@ export function CreateContentForm({
         className="w-fit gap-2"
       >
         {isPending && <Loader2 className="size-4 animate-spin" />}
-        {isPending ? "Generating concept…" : "Generate concept"}
+        {isPending ? t("generating") : t("generate")}
       </Button>
     </form>
   );

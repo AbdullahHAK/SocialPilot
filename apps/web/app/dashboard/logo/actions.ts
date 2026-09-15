@@ -9,6 +9,7 @@ import {
   setBrandLogo,
 } from "@socialpilot/db";
 import { buildLogoPrompt, generateImage, uploadGeneratedImage } from "@socialpilot/content-engine";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
@@ -31,20 +32,21 @@ export async function generateLogoConceptsAction(
     redirect("/login");
   }
 
+  const t = await getTranslations("dashboard.logo.errors");
   const prompt = formData.get("prompt")?.toString().trim();
   if (!prompt) {
-    return { error: "Describe the logo you want." };
+    return { error: t("describeLogo") };
   }
   if (prompt.length > 500) {
-    return { error: "Keep the description under 500 characters." };
+    return { error: t("descriptionTooLong") };
   }
 
   const usage = await getMonthlyImageUsage(session.organizationId);
   if (usage.total >= MONTHLY_TOTAL_IMAGE_CAP) {
-    return { error: `You've reached this month's image limit (${MONTHLY_TOTAL_IMAGE_CAP}). It resets next month.` };
+    return { error: t("totalCapReached", { cap: MONTHLY_TOTAL_IMAGE_CAP }) };
   }
   if (usage.logo >= MONTHLY_LOGO_CAP) {
-    return { error: `You've used all ${MONTHLY_LOGO_CAP} logo revisions this month. This resets next month.` };
+    return { error: t("logoCapReached", { cap: MONTHLY_LOGO_CAP }) };
   }
 
   const returnTo = safeReturnTo(formData.get("returnTo"), "/dashboard/brand");
@@ -64,7 +66,7 @@ export async function generateLogoConceptsAction(
     );
   } catch (error) {
     console.error("Logo concept generation failed", error);
-    return { error: "Couldn't generate logo concepts right now. Please try again." };
+    return { error: t("generationFailed") };
   }
 
   const concept = await createCreativeConcept({

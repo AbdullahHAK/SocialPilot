@@ -10,13 +10,18 @@ import {
   zonedTimeToUtc,
   type Platform,
 } from "@socialpilot/db";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { updateFacebookPostCaption } from "@/lib/meta";
 import { getSession } from "@/lib/session";
-import { editContentPostSchema, editPublishedPostSchema, timezoneSchema } from "@/lib/validation";
+import {
+  createEditContentPostSchema,
+  createEditPublishedPostSchema,
+  createTimezoneSchema,
+} from "@/lib/validation";
 
 function parseTimezone(value: FormDataEntryValue | null): string {
-  const parsed = timezoneSchema.safeParse(value);
+  const parsed = createTimezoneSchema((key) => key).safeParse(value);
   return parsed.success ? parsed.data : "UTC";
 }
 
@@ -51,8 +56,12 @@ export async function editContentJobAction(
   const existing = await getContentJob(session.organizationId, jobId);
   if (!existing) return { ok: false };
 
+  const tCalendar = await getTranslations("dashboard.calendar");
+
   if (isLocked(existing.status)) {
-    const parsed = editPublishedPostSchema.safeParse({ caption: formData.get("caption") });
+    const parsed = createEditPublishedPostSchema((key) => key).safeParse({
+      caption: formData.get("caption"),
+    });
     if (!parsed.success) return { ok: false };
 
     const updated = await rescheduleContentJob(session.organizationId, jobId, {
@@ -80,21 +89,20 @@ export async function editContentJobAction(
           );
         } catch (error) {
           console.error("Updating the live Facebook post caption failed", error);
-          note = "Saved here, but couldn't update the caption on the live Facebook post.";
+          note = tCalendar("facebookUpdateFailed");
         }
       } else {
-        note = "Saved here, but no connected Facebook account was found to update the live post.";
+        note = tCalendar("facebookAccountMissing");
       }
     } else if (instagramPublished) {
-      note =
-        "Instagram doesn't support editing a caption after it's published, so this only updates your record here.";
+      note = tCalendar("instagramCaptionLocked");
     }
 
     revalidatePath("/dashboard/calendar");
     return { ok: true, note };
   }
 
-  const parsed = editContentPostSchema.safeParse({
+  const parsed = createEditContentPostSchema((key) => key).safeParse({
     caption: formData.get("caption"),
     date: formData.get("date"),
     time: formData.get("time"),

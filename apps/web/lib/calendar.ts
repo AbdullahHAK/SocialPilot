@@ -69,19 +69,18 @@ export function formatMonthParam(year: number, month: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}`;
 }
 
-export const MONTH_LABELS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+// Locale-aware via the native Intl.DateTimeFormat rather than hand-translated
+// name lists - correct month/weekday names (and their correct grammatical
+// form) in any locale for free, same approach as lib/relative-time.ts.
+// Functions (not constants) because the locale isn't known until a request
+// or component actually asks for one.
+export function getMonthLabels(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" });
+  return Array.from({ length: 12 }, (_, month) => fmt.format(new Date(Date.UTC(2000, month, 1))));
+}
 
-export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export function getWeekdayLabels(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  // January 2, 2000 (UTC) was a Sunday - the array's index-0 anchor.
+  return Array.from({ length: 7 }, (_, day) => fmt.format(new Date(Date.UTC(2000, 0, 2 + day))));
+}

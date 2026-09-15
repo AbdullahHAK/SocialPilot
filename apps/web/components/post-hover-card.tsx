@@ -1,6 +1,7 @@
 "use client";
 
 import { Download, Loader2, Pencil, Trash2, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { PointerEvent, ReactNode } from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { EditPostDialog } from "@/components/edit-post-dialog";
@@ -28,6 +29,7 @@ import type { EditContentJobResult } from "@/app/dashboard/calendar/actions";
  * it on touch, an explicit close button is the only way to dismiss it.
  */
 function ImageZoomPreview({ imageUrl }: { imageUrl: string }) {
+  const t = useTranslations("dashboard.postHoverCard");
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -90,7 +92,7 @@ function ImageZoomPreview({ imageUrl }: { imageUrl: string }) {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            aria-label="Close preview"
+            aria-label={t("closePreview")}
             className="absolute right-3 top-3 inline-flex size-8 items-center justify-center rounded-full bg-white/95 text-neutral-900 shadow-lg backdrop-blur-sm transition-colors hover:bg-white"
           >
             <X className="size-4" />
@@ -100,7 +102,7 @@ function ImageZoomPreview({ imageUrl }: { imageUrl: string }) {
             className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-neutral-900 shadow-lg backdrop-blur-sm transition-colors hover:bg-white"
           >
             <Download className="size-4" />
-            Download
+            {t("download")}
           </a>
         </div>
       </div>
@@ -144,6 +146,9 @@ export function PostHoverCard({
   deleteAction: (formData: FormData) => void | Promise<void>;
   children: ReactNode;
 }) {
+  const t = useTranslations("dashboard.postHoverCard");
+  const tStatus = useTranslations("postStatus");
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -179,7 +184,7 @@ export function PostHoverCard({
     return () => document.removeEventListener("pointerdown", handlePointerDownCapture, true);
   }, []);
 
-  const formattedTime = new Intl.DateTimeFormat(undefined, {
+  const formattedTime = new Intl.DateTimeFormat(locale, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -231,7 +236,7 @@ export function PostHoverCard({
                 <FacebookIcon className="size-3.5 shrink-0 text-muted-foreground" />
               )}
               <Badge variant={STATUS_BADGE_VARIANT[post.status]} className="text-[10px]">
-                {post.status}
+                {tStatus(post.status)}
               </Badge>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">{formattedTime}</p>
@@ -239,7 +244,7 @@ export function PostHoverCard({
         </div>
 
         <p className="mt-3 max-h-24 overflow-y-auto text-sm whitespace-pre-wrap">
-          {post.caption || "(no caption)"}
+          {post.caption || t("noCaption")}
         </p>
 
         <div className="mt-3 flex justify-end gap-1.5 border-t border-border pt-3">
@@ -253,7 +258,7 @@ export function PostHoverCard({
             trigger={
               <Button variant="outline" size="sm" className="gap-1.5">
                 <Pencil className="size-3.5" />
-                Edit
+                {t("edit")}
               </Button>
             }
           />
@@ -270,7 +275,7 @@ export function PostHoverCard({
             ) : (
               <Trash2 className="size-3.5" />
             )}
-            {confirmingDelete ? "Confirm delete?" : "Delete"}
+            {confirmingDelete ? t("confirmDelete") : t("delete")}
           </Button>
         </div>
       </HoverCardContent>

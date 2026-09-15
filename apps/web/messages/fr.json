@@ -2,7 +2,451 @@
   "common": {
     "languageLabel": "Langue",
     "login": "Se connecter",
-    "getStarted": "Commencer"
+    "getStarted": "Commencer",
+    "close": "Fermer",
+    "errors": {
+      "invalidInput": "Entrée invalide",
+      "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+      "logoTooLarge": "Le logo doit faire 4 Mo maximum.",
+      "logoInvalidType": "Le logo doit être une image PNG, JPEG, WebP ou SVG.",
+      "logoUploadFailed": "Impossible de téléverser le logo. Veuillez réessayer."
+    }
+  },
+  "auth": {
+    "invalidInput": "Entrée invalide",
+    "invalidCredentials": "E-mail ou mot de passe invalide.",
+    "emailInUse": "Un compte avec cette adresse e-mail existe déjà.",
+    "login": {
+      "title": "Se connecter",
+      "description": "Content de vous revoir — reprenez là où vous en étiez.",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "signUp": "S'inscrire"
+    },
+    "createAccount": {
+      "title": "Créez votre compte",
+      "description": "Dernière étape — configurez votre connexion et nous vous guiderons vers la configuration initiale.",
+      "haveAccount": "Vous avez déjà un compte ?",
+      "logIn": "Se connecter",
+      "agreePrefix": "En créant un compte, vous acceptez nos",
+      "termsOfService": "Conditions d'utilisation",
+      "and": "et notre",
+      "privacyPolicy": "Politique de confidentialité"
+    },
+    "form": {
+      "businessName": "Nom de l'entreprise",
+      "yourName": "Votre nom",
+      "email": "E-mail",
+      "password": "Mot de passe",
+      "createAccount": "Créer un compte",
+      "login": "Se connecter"
+    }
+  },
+  "legal": {
+    "lastUpdated": "Dernière mise à jour",
+    "privacyTitle": "Politique de confidentialité",
+    "termsTitle": "Conditions d'utilisation",
+    "dataDeletionTitle": "Instructions de suppression des données"
+  },
+  "connect": {
+    "title": "Connectez vos comptes",
+    "description": "Reliez votre Page Facebook et son compte Instagram professionnel via la connexion officielle de Meta. Nous ne voyons ni ne demandons jamais votre mot de passe.",
+    "continue": "Continuer",
+    "choosePage": {
+      "title": "De quelle Page s'agit-il ?",
+      "description": "Vous gérez {count, plural, one {# Page Facebook} other {# Pages Facebook}}. Choisissez celle de cette entreprise — vous pourrez connecter les autres plus tard depuis Comptes connectés."
+    }
+  },
+  "metaConnect": {
+    "cancelled": "La connexion a été annulée.",
+    "invalidRequest": "Requête de connexion invalide. Veuillez réessayer de vous connecter.",
+    "noPagesFound": "Aucune Page Facebook trouvée. Assurez-vous d'avoir sélectionné une Page lors de la connexion.",
+    "alreadyConnected": "L'un de ces comptes est déjà connecté à une autre organisation YOPAPI.",
+    "genericFailure": "Une erreur s'est produite lors de la connexion de vos comptes. Veuillez réessayer."
+  },
+  "pricingPage": {
+    "login": "Se connecter",
+    "title": "Choisissez votre offre",
+    "subtitle": "Commencez par une offre, puis connectez vos comptes et configurez votre marque. Annulez à tout moment.",
+    "billingInProgress": "La configuration de la facturation est encore en cours — continuez ci-dessous sans frais pour l'instant. Vous pourrez ajouter vos informations de paiement plus tard depuis votre compte.",
+    "checkoutCancelled": "Le paiement a été annulé — aucun frais n'a été prélevé.",
+    "choosePlan": "Choisir {plan}",
+    "errors": {
+      "payment_incomplete": "Votre paiement n'a pas abouti. Veuillez réessayer.",
+      "missing_session": "Ce lien de paiement a expiré. Veuillez choisir une offre à nouveau.",
+      "unknown_plan": "Nous n'avons pas pu associer votre achat à une offre. Veuillez réessayer.",
+      "missing_customer": "Une erreur s'est produite lors de la confirmation de votre paiement. Veuillez réessayer."
+    }
+  },
+  "plans": {
+    "monthly": { "name": "Mensuel", "price": "15 $", "cadence": "/mois", "description": "Accès complet, facturé chaque mois." },
+    "yearly": { "name": "Annuel", "price": "150 $", "cadence": "/an", "description": "Accès complet, facturé annuellement — 2 mois offerts." },
+    "bestValue": "Meilleure offre",
+    "features": [
+      "2 designers IA + 1 gestionnaire de publication IA",
+      "Publication automatique sur Instagram et Facebook",
+      "Créneaux de publication hebdomadaires illimités",
+      "Calendrier de contenu complet et historique"
+    ]
+  },
+  "postStatus": {
+    "GENERATING": "GÉNÉRATION",
+    "SCHEDULED": "PROGRAMMÉ",
+    "PUBLISHING": "PUBLICATION",
+    "PUBLISHED": "PUBLIÉ",
+    "FAILED": "ÉCHEC",
+    "RETRYING": "NOUVEL ESSAI",
+    "CANCELLED": "ANNULÉ"
+  },
+  "days": {
+    "MONDAY": "Lundi",
+    "TUESDAY": "Mardi",
+    "WEDNESDAY": "Mercredi",
+    "THURSDAY": "Jeudi",
+    "FRIDAY": "Vendredi",
+    "SATURDAY": "Samedi",
+    "SUNDAY": "Dimanche"
+  },
+  "languages": {
+    "en": "Anglais",
+    "ur": "Ourdou",
+    "ar": "Arabe",
+    "es": "Espagnol",
+    "fr": "Français",
+    "hi": "Hindi",
+    "pt": "Portugais",
+    "de": "Allemand"
+  },
+  "onboarding": {
+    "title": "Parlez-nous de votre entreprise",
+    "description": "C'est ce que YOPAPI utilisera pour garder votre contenu fidèle à votre marque.",
+    "wizard": {
+      "steps": ["L'essentiel", "Logo et couleurs", "Produits et services", "Langue et ton", "Vérification"],
+      "step1": {
+        "businessName": "Nom de l'entreprise",
+        "businessNamePlaceholder": "Café Acme",
+        "category": "Catégorie",
+        "categoryPlaceholder": "ex. Café, Marque de vêtements, Studio de fitness",
+        "describeLabel": "Parlez-nous de votre entreprise",
+        "describePlaceholder": "ex. Je possède un restaurant de poulet croustillant. Je veux du contenu quotidien qui met en valeur la qualité et le côté délicieux de notre nourriture, des visuels professionnels et appétissants, et un ton audacieux et mémorable.",
+        "describeHint": "Écrivez naturellement — laissez la catégorie ou le ton vides ci-dessus et l'IA de YOPAPI les déduira de cette description."
+      },
+      "step2": {
+        "logo": "Logo",
+        "logoUploadPrompt": "Cliquez pour téléverser un logo (PNG, JPEG, WebP ou SVG)",
+        "logoHint": "Pas encore de logo ? Passez cette étape pour l'instant — l'étape suivante peut en générer un avec l'IA.",
+        "brandColors": "Couleurs de la marque",
+        "removeColor": "Supprimer la couleur {number}",
+        "addColor": "Ajouter une couleur"
+      },
+      "step3": {
+        "productsServices": "Produits / services",
+        "productPlaceholder": "ex. Espresso, Photographie de mariage, Cours de yoga",
+        "addAnother": "Ajouter un autre"
+      },
+      "step4": {
+        "preferredLanguage": "Langue préférée",
+        "toneLabel": "Style / ton du contenu",
+        "tonePlaceholder": "ex. Chaleureux et amical, Audacieux et ludique, Professionnel",
+        "languages": {
+          "en": "Anglais",
+          "ur": "Ourdou",
+          "ar": "Arabe",
+          "es": "Espagnol",
+          "fr": "Français",
+          "hi": "Hindi",
+          "pt": "Portugais",
+          "de": "Allemand"
+        }
+      },
+      "step5": {
+        "reviewText": "Vérifiez vos réponses avec Retour, puis Terminer pour accéder à votre tableau de bord. Vous pourrez les affiner plus tard dans les Paramètres de marque."
+      },
+      "back": "Retour",
+      "next": "Suivant",
+      "finish": "Terminer"
+    }
+  },
+  "dashboard": {
+    "nav": {
+      "overview": "Vue d'ensemble",
+      "schedule": "Calendrier de publication",
+      "calendar": "Calendrier de contenu",
+      "accounts": "Comptes connectés",
+      "brand": "Paramètres de marque",
+      "subscription": "Abonnement"
+    },
+    "shell": {
+      "closeMenu": "Fermer le menu",
+      "openMenu": "Ouvrir le menu",
+      "signOut": "Se déconnecter"
+    },
+    "accounts": {
+      "title": "Comptes connectés",
+      "description": "Connectez votre Page Facebook et son compte Instagram professionnel associé pour commencer à publier.",
+      "connect": "Connecter Instagram / Facebook",
+      "connectedCount": "{count, plural, one {# compte connecté} other {# comptes connectés}}.",
+      "noneYetTitle": "Aucun compte connecté pour l'instant",
+      "noneYetDescription": "Connectez votre Page Facebook et son compte Instagram professionnel associé pour commencer à publier automatiquement.",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "active": "Actif",
+      "disconnect": "Déconnecter"
+    },
+    "brandForm": {
+      "businessBasics": "L'essentiel de l'entreprise",
+      "businessBasicsDescription": "Les informations essentielles que YOPAPI utilise pour garder le contenu fidèle à votre marque.",
+      "businessName": "Nom de l'entreprise",
+      "category": "Catégorie",
+      "categoryPlaceholder": "ex. Café, Marque de vêtements, Studio de fitness",
+      "describeLabel": "Parlez-nous de votre entreprise",
+      "describePlaceholder": "ex. Je possède un restaurant de poulet croustillant. Je veux du contenu quotidien qui met en valeur la qualité et le côté délicieux de notre nourriture, des visuels professionnels et appétissants, et un ton audacieux et mémorable qui fait que les clients pensent à nous en premier.",
+      "describeHint": "Écrivez naturellement — l'IA de YOPAPI lit ceci pour comprendre votre catégorie, votre ton et vos produits, et les remplit automatiquement ci-dessous si vous les laissez vides.",
+      "logoAndColors": "Logo et couleurs",
+      "logoAndColorsDescription": "Utilisés pour garder les visuels générés cohérents avec votre marque.",
+      "logo": "Logo",
+      "currentLogoAlt": "Logo actuel",
+      "replaceLogo": "Remplacer le logo",
+      "uploadLogo": "Téléverser un logo",
+      "brandColors": "Couleurs de la marque",
+      "removeColor": "Supprimer la couleur {number}",
+      "addColor": "Ajouter une couleur",
+      "productsServices": "Produits et services",
+      "productPlaceholder": "ex. Espresso, Photographie de mariage, Cours de yoga",
+      "removeProduct": "Supprimer le produit",
+      "addAnother": "Ajouter un autre",
+      "languageAndTone": "Langue et ton",
+      "preferredLanguage": "Langue préférée",
+      "toneLabel": "Style / ton du contenu",
+      "tonePlaceholder": "ex. Chaleureux et amical, Audacieux et ludique, Professionnel",
+      "saveChanges": "Enregistrer les modifications",
+      "saved": "Enregistré."
+    },
+    "create": {
+      "title": "D'abord, configurons votre logo",
+      "description": "YOPAPI a besoin de votre logo pour garder chaque image fidèle à votre marque. Décrivez le logo que vous voulez ci-dessous.",
+      "errors": {
+        "totalCapReached": "Vous avez atteint votre limite d'images pour ce mois-ci ({cap}). Elle se réinitialise le mois prochain.",
+        "brandStyleCapReached": "Vous avez utilisé vos {cap} révisions de style de marque ce mois-ci. Cela se réinitialise le mois prochain.",
+        "describeWhatToCreate": "Décrivez ce que vous voulez créer.",
+        "descriptionTooLong": "Limitez la description à 1000 caractères.",
+        "tooManyImages": "Téléversez au maximum {max} images.",
+        "imageTooLarge": "Chaque image doit faire 8 Mo maximum.",
+        "invalidImageType": "Les images doivent être au format PNG, JPEG ou WebP.",
+        "generationFailed": "Impossible de générer les images pour le moment. Veuillez réessayer.",
+        "describeChange": "Décrivez ce que vous aimeriez changer.",
+        "loadPreviousFailed": "Impossible de charger les concepts précédents. Veuillez réessayer.",
+        "regenerationFailed": "Impossible de régénérer les images pour le moment. Veuillez réessayer."
+      }
+    },
+    "createForm": {
+      "title": "Que voulez-vous créer ?",
+      "description": "Décrivez votre publication en langage simple. L'IA de YOPAPI générera un concept d'image fidèle à votre marque pour que vous puissiez l'examiner.",
+      "revisionsWarning": "Il vous reste {count} révisions de style de marque sur 10 ce mois-ci. Rédigez votre description avec soin et précisez exactement ce que vous voulez pour un meilleur résultat.",
+      "templates": {
+        "productPromotion": "Promotion produit",
+        "specialOffer": "Offre spéciale",
+        "newProduct": "Nouveau produit",
+        "weekendPromotion": "Promotion du week-end",
+        "instagramStory": "Story Instagram"
+      },
+      "promptPlaceholder": "ex. Créer une publication promotionnelle pour notre burger de poulet croustillant avec une offre spéciale du week-end.",
+      "addImages": "Ajouter des images (facultatif)",
+      "addImagesHint": "Photos de produits, votre logo, ou tout ce que vous aimeriez que l'IA utilise comme inspiration.",
+      "clickToUpload": "Cliquez pour téléverser des images",
+      "removeFile": "Supprimer {name}",
+      "generating": "Génération du concept…",
+      "generate": "Générer le concept"
+    },
+    "logoForm": {
+      "revisionsWarning": "Il vous reste {count} révisions de logo sur 10 ce mois-ci. Rédigez votre description avec soin et précisez exactement ce que vous voulez pour un meilleur résultat.",
+      "promptPlaceholder": "ex. Créer un logo moderne pour un restaurant de poulet croustillant haut de gamme appelé DC Chicken. Audacieux, mémorable, adapté à une marque de restauration rapide.",
+      "generating": "Génération du logo…",
+      "generate": "Générer le concept de logo"
+    },
+    "regenerateForm": {
+      "label": "Ce n'est pas tout à fait ça ? Décrivez ce qu'il faut changer",
+      "placeholder": "ex. Assombrir l'arrière-plan, agrandir le poulet, utiliser davantage les couleurs de notre marque.",
+      "regenerating": "Régénération…",
+      "regenerate": "Régénérer avec les modifications"
+    },
+    "conceptReview": {
+      "title": "Choisissez votre style",
+      "description": "Choisissez le concept qui vous ressemble le plus — cela définit le style visuel que YOPAPI utilisera pour le contenu à venir.",
+      "imageAlt": "Concept de contenu généré",
+      "approveStyle": "Approuver ce style",
+      "tryDifferentPrompt": "Essayer une autre description"
+    },
+    "logo": {
+      "yourLogo": "Votre logo",
+      "generateLogo": "Générer un logo",
+      "consistentUse": "C'est ce que YOPAPI utilise de façon cohérente dans tout votre contenu.",
+      "describeAndGenerate": "Décrivez le logo que vous voulez et l'IA de YOPAPI générera un concept à examiner.",
+      "currentLogoAlt": "Logo actuel",
+      "haveDifferentLogo": "Vous avez déjà un autre fichier de logo ?",
+      "uploadInBrandSettings": "Téléversez-le dans les Paramètres de marque",
+      "orGenerateNew": ", ou générez de nouveaux concepts ci-dessous pour remplacer celui-ci.",
+      "errors": {
+        "describeLogo": "Décrivez le logo que vous voulez.",
+        "descriptionTooLong": "Limitez la description à 500 caractères.",
+        "totalCapReached": "Vous avez atteint votre limite d'images pour ce mois-ci ({cap}). Elle se réinitialise le mois prochain.",
+        "logoCapReached": "Vous avez utilisé vos {cap} révisions de logo ce mois-ci. Cela se réinitialise le mois prochain.",
+        "generationFailed": "Impossible de générer des concepts de logo pour le moment. Veuillez réessayer."
+      }
+    },
+    "logoReview": {
+      "title": "Choisissez votre logo",
+      "description": "Choisissez celui qui correspond à votre marque — il sera utilisé de façon cohérente dans le contenu à venir, jamais redessiné automatiquement.",
+      "imageAlt": "Concept de logo généré",
+      "useThisLogo": "Utiliser ce logo",
+      "tryDifferentDescription": "Essayer une autre description"
+    },
+    "schedule": {
+      "title": "Calendrier de publication",
+      "descriptionShort": "Choisissez une heure et les jours de répétition — YOPAPI génère et publie le contenu automatiquement.",
+      "description": "Choisissez une heure et les jours de répétition — YOPAPI génère et publie le contenu automatiquement. Le contenu de chaque créneau est généré un ou deux jours à l'avance, donc ajouter un créneau ici ne crée pas de publication immédiatement.",
+      "finishBrandFirst": "Terminez d'abord la configuration de votre marque",
+      "finishBrandFirstHint": "YOPAPI a besoin d'un logo et d'un style visuel approuvé avant de pouvoir générer du contenu pour votre calendrier — c'est une étape unique.",
+      "finishSetup": "Terminer la configuration",
+      "noPostingTimesYet": "Aucun horaire de publication pour l'instant",
+      "noPostingTimesHint": "Cliquez sur « Ajouter un horaire de publication » ci-dessus pour choisir une heure et les jours où vous voulez que YOPAPI publie automatiquement.",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "removeSlot": "Supprimer le créneau"
+    },
+    "addSlotDialog": {
+      "pickOneDay": "Choisissez au moins un jour.",
+      "pickOnePlatform": "Choisissez au moins une plateforme.",
+      "brandNotReady": "Configurez d'abord votre style de marque et votre logo (voir les pages Logo et Style de marque) avant de programmer une publication ponctuelle.",
+      "scheduleFailed": "Impossible de programmer cette publication. Veuillez réessayer.",
+      "addPostingTime": "Ajouter un horaire de publication",
+      "dialogTitle": "Ajouter un horaire de publication",
+      "weeklyDescription": "Choisissez une heure, les jours de répétition, et YOPAPI s'occupe du reste.",
+      "onceDescription": "Choisissez une heure et une date précise pour une publication ponctuelle — elle apparaîtra dans votre calendrier de contenu.",
+      "repeatsWeekly": "Répétition hebdomadaire",
+      "oneTimeDate": "Date ponctuelle",
+      "time": "Heure",
+      "repeatOn": "Répéter le",
+      "date": "Date",
+      "platform": "Plateforme",
+      "pickOneOrBoth": "(choisissez une ou les deux)",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "settingUp": "Configuration de votre publication…",
+      "save": "Enregistrer"
+    },
+    "editPostDialog": {
+      "saveFailed": "Impossible d'enregistrer ces modifications. Veuillez réessayer.",
+      "title": "Modifier la publication",
+      "descriptionPublished": "Cette publication a déjà été diffusée - vous pouvez toujours modifier sa légende.",
+      "descriptionEditable": "Modifiez la légende ou déplacez-la à une autre date et heure.",
+      "caption": "Légende",
+      "instagramCaptionLocked": "Instagram ne permet pas de modifier une légende après publication - l'enregistrement ici ne met à jour que votre enregistrement, pas la publication en ligne.",
+      "facebookWillUpdate": "Cela mettra également à jour la légende sur la publication Facebook en ligne.",
+      "time": "Heure",
+      "date": "Date",
+      "saving": "Enregistrement…",
+      "saveChanges": "Enregistrer les modifications"
+    },
+    "miniDatePicker": {
+      "previousMonth": "Mois précédent",
+      "nextMonth": "Mois suivant"
+    },
+    "calendarPage": {
+      "title": "Calendrier de contenu",
+      "description": "Publications programmées et publiées, en un coup d'œil.",
+      "previousMonth": "Mois précédent",
+      "nextMonth": "Mois suivant",
+      "emptyState": "Rien ici pour l'instant — cela se remplira automatiquement une fois que le pipeline de contenu IA commencera à générer et publier selon votre calendrier."
+    },
+    "postHoverCard": {
+      "closePreview": "Fermer l'aperçu",
+      "download": "Télécharger",
+      "noCaption": "(pas de légende)",
+      "edit": "Modifier",
+      "confirmDelete": "Confirmer la suppression ?",
+      "delete": "Supprimer"
+    },
+    "overview": {
+      "title": "Vue d'ensemble",
+      "description": "Voici l'état actuel de votre configuration YOPAPI.",
+      "brandProfile": { "label": "Profil de marque", "hint": "Nom, logo et style de l'entreprise" },
+      "connectedAccounts": {
+        "label": "Comptes connectés",
+        "hint": "Prêt à publier",
+        "hintEmpty": "Connectez Instagram ou Facebook"
+      },
+      "publishingSlots": {
+        "label": "Créneaux de publication actifs",
+        "hint": "Par semaine",
+        "hintEmpty": "Ajoutez des créneaux pour commencer à publier"
+      }
+    },
+    "publishingStatus": {
+      "title": "État de publication",
+      "lastPosted": "Dernière publication",
+      "nextPost": "Prochaine publication",
+      "nothingPublishedYet": "Rien n'a encore été publié",
+      "nothingScheduled": "Rien de programmé —",
+      "addPostingTime": "ajouter un horaire de publication",
+      "justNow": "à l'instant",
+      "inAMoment": "dans un instant"
+    },
+    "brand": {
+      "savedTakesEffectTomorrow": "Enregistré. L'image de contenu du jour a déjà été générée, ce changement prendra donc effet à partir de demain.",
+      "title": "Paramètres de marque",
+      "description": "C'est ce que YOPAPI utilise pour garder votre contenu fidèle à votre marque.",
+      "onboardingIncomplete": "Vous n'avez pas encore terminé la configuration initiale.",
+      "onboardingIncompleteHint": "Terminez la configuration initiale pour créer votre profil de marque avant de le modifier ici.",
+      "completeOnboarding": "Terminer la configuration",
+      "logoApproved": "Logo approuvé — il sera utilisé pour le contenu à venir.",
+      "wantDifferentLogo": "Vous voulez un autre logo ?",
+      "noLogoYet": "Pas encore de logo ?",
+      "regenerateWithAi": "Régénérer avec l'IA",
+      "generateWithAi": "En générer un avec l'IA",
+      "visualStyle": "Style visuel",
+      "visualStyleDescription": "L'apparence approuvée que YOPAPI utilise pour générer chaque image.",
+      "approvedBrandStyleAlt": "Style de marque approuvé",
+      "reviseBrandStyle": "Réviser votre style de marque",
+      "noVisualStyleYet": "Aucun style visuel défini pour l'instant — YOPAPI en a besoin d'un pour générer du contenu.",
+      "setUpWithAi": "Configurer avec l'IA",
+      "recentGeneration": "Génération récente",
+      "recentGenerationExpires": "Pas encore approuvé — expire dans {time} sauf si vous l'approuvez comme votre style de marque avant cette échéance.",
+      "recentConceptAlt": "Concept généré récemment",
+      "downloadFullQuality": "Télécharger en pleine qualité",
+      "reviewIt": "L'examiner"
+    },
+    "calendar": {
+      "facebookUpdateFailed": "Enregistré ici, mais impossible de mettre à jour la légende sur la publication Facebook en ligne.",
+      "facebookAccountMissing": "Enregistré ici, mais aucun compte Facebook connecté n'a été trouvé pour mettre à jour la publication en ligne.",
+      "instagramCaptionLocked": "Instagram ne permet pas de modifier une légende après publication, donc cela ne met à jour que votre enregistrement ici."
+    },
+    "subscription": {
+      "title": "Abonnement",
+      "description": "Gérez votre offre YOPAPI et vos informations de facturation.",
+      "confirmed": "Abonnement confirmé — merci !",
+      "checkoutCancelled": "Le paiement a été annulé — aucun frais n'a été prélevé.",
+      "paymentFailed": "Votre dernier paiement a échoué. Mettez à jour votre moyen de paiement pour continuer à utiliser YOPAPI.",
+      "plan": "",
+      "trialing": "Essai en cours",
+      "active": "Actif",
+      "renews": "Renouvellement le {date}",
+      "manageBilling": "Gérer la facturation",
+      "subscribe": "S'abonner"
+    }
+  },
+  "validation": {
+    "businessNameRequired": "Le nom de l'entreprise est requis",
+    "invalidEmail": "Saisissez une adresse e-mail valide",
+    "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordRequired": "Le mot de passe est requis",
+    "invalidHexColor": "Saisissez une couleur hexadécimale valide",
+    "chooseLanguage": "Choisissez une langue",
+    "invalidTime": "Saisissez une heure au format HH:MM",
+    "invalidDate": "Saisissez une date au format AAAA-MM-JJ",
+    "captionTooLong": "Limitez la légende à 2200 caractères",
+    "invalidTimezone": "Fuseau horaire invalide"
   },
   "landing": {
     "nav": {
@@ -87,15 +531,6 @@
       "eyebrow": "Des tarifs simples et honnêtes",
       "title": "Une seule offre. Tout est inclus.",
       "subtitle": "Aucun frais caché. Aucun coût par publication. Annulez à tout moment.",
-      "monthly": { "name": "Mensuel", "price": "15 $", "cadence": "/mois", "description": "Accès complet, facturé chaque mois." },
-      "yearly": { "name": "Annuel", "price": "150 $", "cadence": "/an", "description": "Accès complet, facturé annuellement — 2 mois offerts." },
-      "bestValue": "Meilleure offre",
-      "features": [
-        "2 designers IA + 1 gestionnaire de publication IA",
-        "Publication automatique sur Instagram et Facebook",
-        "Créneaux de publication hebdomadaires illimités",
-        "Calendrier de contenu complet et historique"
-      ],
       "cta": "Commencer avec YOPAPI"
     },
     "finalCta": {

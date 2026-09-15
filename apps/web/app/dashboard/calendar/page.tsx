@@ -1,5 +1,6 @@
 import { getPublishingSchedule, listContentJobsInRange } from "@socialpilot/db";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
@@ -16,10 +17,10 @@ import {
   dateKey,
   formatMonthParam,
   getMonthGrid,
+  getMonthLabels,
+  getWeekdayLabels,
   localDateKey,
-  MONTH_LABELS,
   parseMonthParam,
-  WEEKDAY_LABELS,
 } from "@/lib/calendar";
 import { getSession } from "@/lib/session";
 import { deleteContentJobPlatformAction, editContentJobAction } from "./actions";
@@ -88,32 +89,35 @@ export default async function CalendarPage({
   const prevMonth = month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 };
   const nextMonth = month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 };
   const todayKey = localDateKey(new Date(), schedule.timezone);
+  const [locale, t, tStatus] = await Promise.all([
+    getLocale(),
+    getTranslations("dashboard.calendarPage"),
+    getTranslations("postStatus"),
+  ]);
+  const monthLabels = getMonthLabels(locale);
+  const weekdayLabels = getWeekdayLabels(locale);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Content Calendar
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Scheduled and published posts, at a glance.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("description")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="icon">
             <Link href={`?month=${formatMonthParam(prevMonth.year, prevMonth.month)}`}>
-              <ChevronLeft className="size-4" />
-              <span className="sr-only">Previous month</span>
+              <ChevronLeft className="size-4 rtl:scale-x-[-1]" />
+              <span className="sr-only">{t("previousMonth")}</span>
             </Link>
           </Button>
           <p className="w-40 text-center text-sm font-medium">
-            {MONTH_LABELS[month]} {year}
+            {monthLabels[month]} {year}
           </p>
           <Button asChild variant="outline" size="icon">
             <Link href={`?month=${formatMonthParam(nextMonth.year, nextMonth.month)}`}>
-              <ChevronRight className="size-4" />
-              <span className="sr-only">Next month</span>
+              <ChevronRight className="size-4 rtl:scale-x-[-1]" />
+              <span className="sr-only">{t("nextMonth")}</span>
             </Link>
           </Button>
         </div>
@@ -122,16 +126,15 @@ export default async function CalendarPage({
       {posts.length === 0 && (
         <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
-          Nothing here yet — this fills in automatically once the AI content
-          pipeline starts generating and publishing on your schedule.
+          {t("emptyState")}
         </div>
       )}
 
       <Card className="overflow-hidden">
         <div className="grid grid-cols-7 border-b border-border bg-muted/30">
-          {WEEKDAY_LABELS.map((label) => (
+          {weekdayLabels.map((label, index) => (
             <div
-              key={label}
+              key={index}
               className="px-2 py-2 text-center text-xs font-medium text-muted-foreground"
             >
               {label}
@@ -147,7 +150,7 @@ export default async function CalendarPage({
             return (
               <div
                 key={key}
-                className="flex min-h-28 flex-col gap-1.5 border-b border-r border-border p-2 last:border-r-0 [&:nth-child(7n)]:border-r-0"
+                className="flex min-h-28 flex-col gap-1.5 border-b border-e border-border p-2 last:border-e-0 [&:nth-child(7n)]:border-e-0"
               >
                 <span
                   className={
@@ -182,7 +185,7 @@ export default async function CalendarPage({
                             helpful, so just show the platform icon and
                             rely on the hover card for detail. */}
                         <span className="hidden min-w-0 truncate sm:inline">
-                          {post.caption || post.status}
+                          {post.caption || tStatus(post.status)}
                         </span>
                       </button>
                     </PostHoverCard>
@@ -199,7 +202,7 @@ export default async function CalendarPage({
           {(Object.keys(STATUS_BADGE_VARIANT) as Array<keyof typeof STATUS_BADGE_VARIANT>).map(
             (status) => (
               <Badge key={status} variant={STATUS_BADGE_VARIANT[status]}>
-                {status}
+                {tStatus(status)}
               </Badge>
             ),
           )}

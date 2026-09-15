@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 
 export const metadata: Metadata = { title: "Data Deletion Instructions — YOPAPI" };
 
-const CONTACT_EMAIL = "support@socialpilot.app";
+const CONTACT_EMAIL = "support@yopapi.com";
 
-export default function DataDeletionPage() {
+export default async function DataDeletionPage() {
+  const t = await getTranslations("legal");
   return (
-    <LegalPage title="Data Deletion Instructions" updatedDate="September 13, 2026">
+    <LegalPage title={t("dataDeletionTitle")} updatedDate="September 13, 2026">
       <p>
         You&apos;re always in control of the data YOPAPI has for you.
         Here&apos;s how to remove it, whether you want to disconnect a social

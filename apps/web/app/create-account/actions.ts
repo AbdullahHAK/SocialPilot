@@ -8,12 +8,13 @@ import {
   syncSubscriptionFromStripe,
   upsertSocialAccount,
 } from "@socialpilot/db";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import type { AuthFormState } from "@/components/auth-form";
 import { clearPendingSignupCookie, getPendingSignup } from "@/lib/pending-signup";
 import { setSessionCookie } from "@/lib/session";
 import { getStripeClient, mapStripeStatusToSubscriptionStatus } from "@/lib/stripe";
-import { signupSchema } from "@/lib/validation";
+import { createSignupSchema } from "@/lib/validation";
 
 export async function createAccountAction(
   _prevState: AuthFormState,
@@ -24,7 +25,11 @@ export async function createAccountAction(
     redirect("/pricing");
   }
 
-  const parsed = signupSchema.safeParse({
+  const [tValidation, tAuth] = await Promise.all([
+    getTranslations("validation"),
+    getTranslations("auth"),
+  ]);
+  const parsed = createSignupSchema(tValidation).safeParse({
     organizationName: formData.get("organizationName"),
     name: formData.get("name"),
     email: formData.get("email"),
@@ -32,7 +37,7 @@ export async function createAccountAction(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return { error: parsed.error.issues[0]?.message ?? tAuth("invalidInput") };
   }
 
   let userId: string;
@@ -48,7 +53,7 @@ export async function createAccountAction(
     organizationId = result.organizationId;
   } catch (error) {
     if (error instanceof EmailAlreadyInUseError) {
-      return { error: "An account with that email already exists." };
+      return { error: tAuth("emailInUse") };
     }
     throw error;
   }

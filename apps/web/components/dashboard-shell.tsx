@@ -1,11 +1,13 @@
 "use client";
 
 import { LogOut, Menu, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
+import { isRtl, type Locale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 export function DashboardShell({
@@ -20,13 +22,22 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("dashboard.shell");
+  // Computed in JS rather than via a CSS `rtl:` variant class - that would
+  // leave two variant-scoped rules (rtl: and lg:) both targeting
+  // transform, and which one wins depends on Tailwind's internal variant
+  // ordering rather than anything explicit in this file (confirmed as a
+  // real bug live: the sidebar was fully invisible on desktop under RTL).
+  // A single plain class per state removes that ambiguity entirely.
+  const locale = useLocale() as Locale;
+  const closedTransform = isRtl(locale) ? "translate-x-full" : "-translate-x-full";
 
   return (
     <div className="flex min-h-screen bg-muted/30">
       <aside
         className={cn(
-          "fixed inset-y-0 start-0 z-50 flex w-64 shrink-0 -translate-x-full rtl:translate-x-full flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-in-out lg:static lg:translate-x-0",
-          open && "translate-x-0",
+          "fixed inset-y-0 start-0 z-50 flex w-64 shrink-0 flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-in-out lg:static lg:translate-x-0",
+          open ? "translate-x-0" : closedTransform,
         )}
       >
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
@@ -37,7 +48,7 @@ export function DashboardShell({
             size="icon"
             className="text-sidebar-foreground/70 hover:text-sidebar-accent-foreground lg:hidden"
             onClick={() => setOpen(false)}
-            aria-label="Close menu"
+            aria-label={t("closeMenu")}
           >
             <X className="size-5" />
           </Button>
@@ -70,7 +81,7 @@ export function DashboardShell({
             className="w-full justify-start gap-2.5 text-sidebar-foreground/70 hover:text-sidebar-accent-foreground"
           >
             <LogOut className="size-4" />
-            Sign out
+            {t("signOut")}
           </Button>
         </form>
       </aside>
@@ -78,7 +89,7 @@ export function DashboardShell({
       {open && (
         <button
           type="button"
-          aria-label="Close menu"
+          aria-label={t("closeMenu")}
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setOpen(false)}
         />
@@ -92,7 +103,7 @@ export function DashboardShell({
             variant="ghost"
             size="icon"
             onClick={() => setOpen(true)}
-            aria-label="Open menu"
+            aria-label={t("openMenu")}
           >
             <Menu className="size-5" />
           </Button>

@@ -2,10 +2,11 @@
 
 import { getPublishingSchedule, hasGeneratedContentToday, upsertBrandProfile } from "@socialpilot/db";
 import { analyzeBrandDescription, uploadLogo } from "@socialpilot/content-engine";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import {
-  brandProfileSchema,
+  createBrandProfileSchema,
   LOGO_ALLOWED_TYPES,
   LOGO_MAX_BYTES,
 } from "@/lib/validation";
@@ -31,12 +32,14 @@ export async function updateBrandProfileAction(
   _prevState: BrandSettingsFormState,
   formData: FormData,
 ): Promise<BrandSettingsFormState> {
+  const tErrors = await getTranslations("common.errors");
   const session = await getSession();
   if (!session) {
-    return { error: "Your session expired. Please log in again." };
+    return { error: tErrors("sessionExpired") };
   }
 
-  const parsed = brandProfileSchema.safeParse({
+  const tValidation = await getTranslations("validation");
+  const parsed = createBrandProfileSchema(tValidation).safeParse({
     businessName: formData.get("businessName"),
     category: formData.get("category"),
     description: formData.get("description"),
@@ -47,23 +50,23 @@ export async function updateBrandProfileAction(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
   }
 
   let logoUrl: string | undefined;
   const logoFile = formData.get("logo");
   if (logoFile instanceof File && logoFile.size > 0) {
     if (logoFile.size > LOGO_MAX_BYTES) {
-      return { error: "Logo must be 4MB or smaller." };
+      return { error: tErrors("logoTooLarge") };
     }
     if (!LOGO_ALLOWED_TYPES.includes(logoFile.type)) {
-      return { error: "Logo must be a PNG, JPEG, WebP, or SVG image." };
+      return { error: tErrors("logoInvalidType") };
     }
     try {
       logoUrl = await uploadLogo(session.organizationId, logoFile);
     } catch (error) {
       console.error("Logo upload failed", error);
-      return { error: "Couldn't upload the logo. Please try again." };
+      return { error: tErrors("logoUploadFailed") };
     }
   }
 
@@ -109,9 +112,10 @@ export async function updateBrandProfileAction(
     schedule.timezone,
   );
   if (alreadyGeneratedToday) {
+    const tBrand = await getTranslations("dashboard.brand");
     return {
       success: true,
-      note: "Saved. Today's content image was already generated, so this change takes effect starting tomorrow.",
+      note: tBrand("savedTakesEffectTomorrow"),
     };
   }
 

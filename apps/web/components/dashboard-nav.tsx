@@ -8,6 +8,7 @@ import {
   Palette,
   Share2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -19,16 +20,17 @@ import { cn } from "@/lib/utils";
 // Brand Settings, or automatically via the setup gate on Overview/
 // Schedule) - just not permanent fixtures in the sidebar.
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/schedule", label: "Publishing Schedule", icon: CalendarClock },
-  { href: "/dashboard/calendar", label: "Content Calendar", icon: CalendarDays },
-  { href: "/dashboard/accounts", label: "Connected Accounts", icon: Share2 },
-  { href: "/dashboard/brand", label: "Brand Settings", icon: Palette },
-  { href: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
+  { href: "/dashboard", labelKey: "overview", icon: LayoutDashboard },
+  { href: "/dashboard/schedule", labelKey: "schedule", icon: CalendarClock },
+  { href: "/dashboard/calendar", labelKey: "calendar", icon: CalendarDays },
+  { href: "/dashboard/accounts", labelKey: "accounts", icon: Share2 },
+  { href: "/dashboard/brand", labelKey: "brand", icon: Palette },
+  { href: "/dashboard/subscription", labelKey: "subscription", icon: CreditCard },
 ] as const;
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const t = useTranslations("dashboard.nav");
 
   return (
     <nav className="flex flex-col gap-1">
@@ -50,7 +52,7 @@ export function DashboardNav() {
             )}
           >
             <item.icon className="size-4 shrink-0" />
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         );
       })}

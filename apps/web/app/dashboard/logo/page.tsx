@@ -1,4 +1,5 @@
 import { getBrandProfile, getMonthlyImageUsage, MONTHLY_LOGO_CAP } from "@socialpilot/db";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GenerateLogoForm } from "@/components/generate-logo-form";
@@ -15,21 +16,20 @@ export default async function LogoPage({
   }
 
   const { returnTo } = await searchParams;
-  const [brand, usage] = await Promise.all([
+  const [brand, usage, t] = await Promise.all([
     getBrandProfile(session.organizationId),
     getMonthlyImageUsage(session.organizationId),
+    getTranslations("dashboard.logo"),
   ]);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {brand?.logoUrl ? "Your logo" : "Generate a logo"}
+          {brand?.logoUrl ? t("yourLogo") : t("generateLogo")}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          {brand?.logoUrl
-            ? "This is what YOPAPI uses consistently across your content."
-            : "Describe the logo you want and YOPAPI's AI will generate one concept to review."}
+          {brand?.logoUrl ? t("consistentUse") : t("describeAndGenerate")}
         </p>
       </div>
 
@@ -39,18 +39,18 @@ export default async function LogoPage({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={brand.logoUrl}
-              alt="Current logo"
+              alt={t("currentLogoAlt")}
               className="size-14 shrink-0 rounded-lg border border-border object-contain p-1"
             />
             <p className="text-sm text-muted-foreground">
-              Already have a different logo file?{" "}
+              {t("haveDifferentLogo")}{" "}
               <Link
                 href="/dashboard/brand"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Upload it in Brand Settings
+                {t("uploadInBrandSettings")}
               </Link>
-              , or generate new concepts below to replace this one.
+              {t("orGenerateNew")}
             </p>
           </CardContent>
         </Card>

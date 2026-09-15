@@ -2,6 +2,7 @@
 
 import type { DayOfWeek, Platform } from "@socialpilot/db";
 import { Loader2, Plus } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
@@ -17,19 +18,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { dateKey, formatMonthParam, MONTH_LABELS } from "@/lib/calendar";
+import { dateKey, formatMonthParam, getMonthLabels } from "@/lib/calendar";
 import { to24Hour, type Meridiem } from "@/lib/time-of-day";
 import { cn } from "@/lib/utils";
 import type { OneTimePostResult } from "@/app/dashboard/schedule/actions";
 
-const DAY_OPTIONS: { value: DayOfWeek; label: string }[] = [
-  { value: "SUNDAY", label: "S" },
-  { value: "MONDAY", label: "M" },
-  { value: "TUESDAY", label: "T" },
-  { value: "WEDNESDAY", label: "W" },
-  { value: "THURSDAY", label: "T" },
-  { value: "FRIDAY", label: "F" },
-  { value: "SATURDAY", label: "S" },
+const DAY_VALUES: DayOfWeek[] = [
+  "SUNDAY",
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
 ];
 
 type Mode = "weekly" | "once";
@@ -46,6 +47,10 @@ export function AddScheduleSlotDialog({
   action: (formData: FormData) => void | Promise<void>;
   onceAction: (formData: FormData) => Promise<OneTimePostResult>;
 }) {
+  const t = useTranslations("dashboard.addSlotDialog");
+  const tDays = useTranslations("days");
+  const locale = useLocale();
+  const monthLabels = getMonthLabels(locale);
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("weekly");
@@ -89,11 +94,11 @@ export function AddScheduleSlotDialog({
 
   function handleSubmit() {
     if (mode === "weekly" && days.size === 0) {
-      setError("Pick at least one day.");
+      setError(t("pickOneDay"));
       return;
     }
     if (platforms.size === 0) {
-      setError("Pick at least one platform.");
+      setError(t("pickOnePlatform"));
       return;
     }
     setError(null);
@@ -129,9 +134,7 @@ export function AddScheduleSlotDialog({
       const result = await onceAction(formData);
       if (!result.ok) {
         setError(
-          result.reason === "not_ready"
-            ? "Set up your brand style and logo first (see the Logo and Brand Style pages) before scheduling a one-time post."
-            : "Couldn't schedule that post. Please try again.",
+          result.reason === "not_ready" ? t("brandNotReady") : t("scheduleFailed"),
         );
         return;
       }
@@ -154,16 +157,14 @@ export function AddScheduleSlotDialog({
       <DialogTrigger asChild>
         <Button size="lg" className="gap-2">
           <Plus className="size-4" />
-          Add posting time
+          {t("addPostingTime")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a posting time</DialogTitle>
+          <DialogTitle>{t("dialogTitle")}</DialogTitle>
           <DialogDescription>
-            {mode === "weekly"
-              ? "Pick a time, choose which days it repeats on, and YOPAPI handles the rest."
-              : "Pick a time and a specific date for a one-time post — it'll show up on your Content Calendar."}
+            {mode === "weekly" ? t("weeklyDescription") : t("onceDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -171,8 +172,8 @@ export function AddScheduleSlotDialog({
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
             {(
               [
-                { value: "weekly", label: "Repeats weekly" },
-                { value: "once", label: "One-time date" },
+                { value: "weekly", labelKey: "repeatsWeekly" },
+                { value: "once", labelKey: "oneTimeDate" },
               ] as const
             ).map((option) => (
               <button
@@ -187,13 +188,13 @@ export function AddScheduleSlotDialog({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium">Time</p>
+            <p className="mb-2 text-sm font-medium">{t("time")}</p>
             <TimeOfDayPicker
               hour12={hour12}
               minute={minute}
@@ -206,17 +207,18 @@ export function AddScheduleSlotDialog({
 
           {mode === "weekly" ? (
             <div>
-              <p className="mb-2 text-sm font-medium">Repeat on</p>
+              <p className="mb-2 text-sm font-medium">{t("repeatOn")}</p>
               <div className="flex justify-between gap-1.5">
-                {DAY_OPTIONS.map(({ value, label }) => {
+                {DAY_VALUES.map((value) => {
                   const selected = days.has(value);
+                  const dayName = tDays(value);
                   return (
                     <button
                       key={value}
                       type="button"
                       onClick={() => toggleDay(value)}
                       aria-pressed={selected}
-                      title={value.charAt(0) + value.slice(1).toLowerCase()}
+                      title={dayName}
                       className={cn(
                         "flex size-10 items-center justify-center rounded-full text-sm font-semibold transition-colors",
                         selected
@@ -224,7 +226,7 @@ export function AddScheduleSlotDialog({
                           : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                       )}
                     >
-                      {label}
+                      {dayName.charAt(0)}
                     </button>
                   );
                 })}
@@ -233,9 +235,9 @@ export function AddScheduleSlotDialog({
           ) : (
             <div>
               <p className="mb-2 text-sm font-medium">
-                Date —{" "}
+                {t("date")} —{" "}
                 <span className="font-normal text-muted-foreground">
-                  {MONTH_LABELS[date.getUTCMonth()]} {date.getUTCDate()}, {date.getUTCFullYear()}
+                  {monthLabels[date.getUTCMonth()]} {date.getUTCDate()}, {date.getUTCFullYear()}
                 </span>
               </p>
               <MiniDatePicker selected={date} onSelect={setDate} />
@@ -244,9 +246,9 @@ export function AddScheduleSlotDialog({
 
           <div>
             <p className="mb-2 text-sm font-medium">
-              Platform{" "}
+              {t("platform")}{" "}
               <span className="font-normal text-muted-foreground">
-                (pick one or both)
+                {t("pickOneOrBoth")}
               </span>
             </p>
             <div className="flex gap-2">
@@ -262,7 +264,7 @@ export function AddScheduleSlotDialog({
                 )}
               >
                 <InstagramIcon className="size-4" />
-                Instagram
+                {t("instagram")}
               </button>
               <button
                 type="button"
@@ -276,7 +278,7 @@ export function AddScheduleSlotDialog({
                 )}
               >
                 <FacebookIcon className="size-4" />
-                Facebook
+                {t("facebook")}
               </button>
             </div>
           </div>
@@ -292,7 +294,7 @@ export function AddScheduleSlotDialog({
             className="gap-2"
           >
             {isPending && <Loader2 className="size-4 animate-spin" />}
-            {isPending ? "Setting up your post…" : "Save"}
+            {isPending ? t("settingUp") : t("save")}
           </Button>
         </DialogFooter>
       </DialogContent>

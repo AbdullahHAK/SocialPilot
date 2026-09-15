@@ -56,7 +56,7 @@ export function TimeOfDayPicker({
         </SelectContent>
       </Select>
 
-      <div className="ml-2 flex flex-col gap-1">
+      <div className="ms-2 flex flex-col gap-1">
         {(["AM", "PM"] as const).map((option) => (
           <button
             key={option}

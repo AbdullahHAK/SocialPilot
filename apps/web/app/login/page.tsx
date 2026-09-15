@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth-form";
@@ -10,16 +11,17 @@ export default async function LoginPage() {
   if (session) {
     redirect("/dashboard");
   }
+  const t = await getTranslations("auth.login");
 
   return (
     <AuthShell
-      title="Log in"
-      description="Welcome back — pick up right where you left off."
+      title={t("title")}
+      description={t("description")}
       footer={
         <>
-          Don&apos;t have an account?{" "}
+          {t("noAccount")}{" "}
           <Link href="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
-            Sign up
+            {t("signUp")}
           </Link>
         </>
       }

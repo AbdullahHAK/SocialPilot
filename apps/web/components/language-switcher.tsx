@@ -1,7 +1,7 @@
 "use client";
 
 import { Globe } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import {
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
  * router.refresh() is what actually picks up the new locale's messages. */
 export function LanguageSwitcher({ className }: { className?: string }) {
   const locale = useLocale();
+  const t = useTranslations("common");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -36,7 +37,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
     <Select value={locale} onValueChange={handleChange} disabled={isPending}>
       <SelectTrigger
         className={cn("h-9 w-auto gap-1.5 border-none bg-transparent px-2 shadow-none", className)}
-        aria-label="Language"
+        aria-label={t("languageLabel")}
       >
         <Globe className="size-4 opacity-70" />
         <SelectValue />

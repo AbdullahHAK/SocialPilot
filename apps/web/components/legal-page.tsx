@@ -1,9 +1,17 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 
-export function LegalPage({
+// The surrounding chrome (nav, dates, footer) is fully translated - the
+// legal body text itself (passed as children by each page) deliberately
+// stays in English in every locale. Auto-translating Terms of Service /
+// Privacy Policy language via LLM without professional legal review is a
+// real compliance risk, unlike UI chrome where a wrong word just reads
+// oddly - so English is kept everywhere here rather than risk a
+// mistranslated legal document being someone's binding terms.
+export async function LegalPage({
   title,
   updatedDate,
   children,
@@ -12,6 +20,11 @@ export function LegalPage({
   updatedDate: string;
   children: ReactNode;
 }) {
+  const [t, tFooter] = await Promise.all([
+    getTranslations("legal"),
+    getTranslations("landing.footer"),
+  ]);
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border/60">
@@ -26,7 +39,9 @@ export function LegalPage({
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-12 sm:px-6">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Last updated: {updatedDate}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("lastUpdated")}: {updatedDate}
+          </p>
         </div>
         <div className="prose-legal flex flex-col gap-6 text-sm leading-relaxed text-foreground/90 [&_h2]:mt-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:tracking-tight [&_p]:text-muted-foreground [&_li]:text-muted-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-1.5">
           {children}
@@ -35,16 +50,18 @@ export function LegalPage({
 
       <footer className="border-t border-border/60">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-6 text-xs text-muted-foreground sm:px-6">
-          <span>© {new Date().getFullYear()} YOPAPI. All rights reserved.</span>
+          <span>
+            © {new Date().getFullYear()} YOPAPI. {tFooter("rights")}
+          </span>
           <nav className="flex gap-4">
             <Link href="/privacy" className="hover:text-foreground hover:underline">
-              Privacy
+              {tFooter("privacy")}
             </Link>
             <Link href="/terms" className="hover:text-foreground hover:underline">
-              Terms
+              {tFooter("terms")}
             </Link>
             <Link href="/data-deletion" className="hover:text-foreground hover:underline">
-              Data deletion
+              {tFooter("dataDeletion")}
             </Link>
           </nav>
         </div>

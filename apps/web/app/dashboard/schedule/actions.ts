@@ -14,15 +14,20 @@ import {
 import { isBrandSetupComplete } from "@socialpilot/content-engine";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
-import { oneTimePostSchema, scheduleSlotSchema, timezoneSchema } from "@/lib/validation";
+import {
+  createOneTimePostSchema,
+  createScheduleSlotSchema,
+  createTimezoneSchema,
+} from "@/lib/validation";
 
 /** A submitted timezone always comes from the browser's own
  * Intl.DateTimeFormat, so it should already be valid - this is just
  * defense in depth against a missing/garbled field, falling back to UTC
  * (the previous, always-correct-for-UTC-orgs behavior) rather than
- * throwing. */
+ * throwing. The schema's message is never actually shown (safeParse just
+ * falls back to UTC), so a fixed placeholder translator is fine here. */
 function parseTimezone(value: FormDataEntryValue | null): string {
-  const parsed = timezoneSchema.safeParse(value);
+  const parsed = createTimezoneSchema((key) => key).safeParse(value);
   return parsed.success ? parsed.data : "UTC";
 }
 
@@ -41,6 +46,7 @@ export async function addScheduleSlotAction(formData: FormData) {
   const time = formData.get("time");
   const platforms = formData.getAll("platform");
 
+  const scheduleSlotSchema = createScheduleSlotSchema((key) => key);
   for (const dayOfWeek of days) {
     for (const platform of platforms) {
       const parsed = scheduleSlotSchema.safeParse({ dayOfWeek, time, platform });
@@ -110,6 +116,7 @@ export async function addOneTimePostAction(
   const timezone = parseTimezone(formData.get("timezone"));
   await ensurePublishingScheduleTimezone(session.organizationId, timezone);
 
+  const oneTimePostSchema = createOneTimePostSchema((key) => key);
   const platforms: Platform[] = [];
   let parsedDate: string | undefined;
   let parsedTime: string | undefined;

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ImagePlus, Plus, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useState, type ReactNode } from "react";
 import type { OnboardingFormState } from "@/app/onboarding/actions";
 import { Button } from "@/components/ui/button";
@@ -16,24 +17,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-const STEPS = [
-  "Business basics",
-  "Logo & colors",
-  "Products & services",
-  "Language & tone",
-  "Review",
-] as const;
-
-const LANGUAGE_OPTIONS = [
-  { value: "en", label: "English" },
-  { value: "ur", label: "Urdu" },
-  { value: "ar", label: "Arabic" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "hi", label: "Hindi" },
-  { value: "pt", label: "Portuguese" },
-  { value: "de", label: "German" },
-];
+const LANGUAGE_VALUES = ["en", "ur", "ar", "es", "fr", "hi", "pt", "de"] as const;
 
 const DEFAULT_COLORS = ["#111111", "#ffffff"];
 
@@ -43,6 +27,8 @@ export type OnboardingAction = (
 ) => Promise<OnboardingFormState>;
 
 export function OnboardingWizard({ action }: { action: OnboardingAction }) {
+  const t = useTranslations("onboarding.wizard");
+  const steps = t.raw("steps") as string[];
   const [state, formAction, isPending] = useActionState<
     OnboardingFormState,
     FormData
@@ -52,11 +38,11 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
   const [products, setProducts] = useState<string[]>([""]);
   const [logoName, setLogoName] = useState<string | null>(null);
 
-  const isLastStep = step === STEPS.length - 1;
+  const isLastStep = step === steps.length - 1;
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
-      <Stepper currentStep={step} />
+      <Stepper steps={steps} currentStep={step} />
 
       <Step active={step === 0}>
         <div className="flex flex-col gap-5">
@@ -65,24 +51,25 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
               ancestor is `hidden` on a later step, so it can block
               submission on a field the user can't see or fix. The server
               action validates this instead. */}
-          <Field label="Business name" name="businessName" placeholder="Acme Coffee Co" />
           <Field
-            label="Category"
+            label={t("step1.businessName")}
+            name="businessName"
+            placeholder={t("step1.businessNamePlaceholder")}
+          />
+          <Field
+            label={t("step1.category")}
             name="category"
-            placeholder="e.g. Cafe, Clothing brand, Fitness studio"
+            placeholder={t("step1.categoryPlaceholder")}
           />
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Tell us about your business</Label>
+            <Label htmlFor="description">{t("step1.describeLabel")}</Label>
             <Textarea
               id="description"
               name="description"
-              placeholder="e.g. I own a crispy chicken restaurant. I want daily content that highlights the quality and deliciousness of our food, professional and appetizing visuals, and a bold, memorable tone."
+              placeholder={t("step1.describePlaceholder")}
               rows={4}
             />
-            <p className="text-xs text-muted-foreground">
-              Write naturally — leave category or tone blank above and
-              YOPAPI&apos;s AI will fill them in from this description.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("step1.describeHint")}</p>
           </div>
         </div>
       </Step>
@@ -90,13 +77,13 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
       <Step active={step === 1}>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="logo">Logo</Label>
+            <Label htmlFor="logo">{t("step2.logo")}</Label>
             <label
               htmlFor="logo"
               className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-input px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent/30"
             >
               <ImagePlus className="size-5 shrink-0" />
-              {logoName ?? "Click to upload a logo (PNG, JPEG, WebP, or SVG)"}
+              {logoName ?? t("step2.logoUploadPrompt")}
             </label>
             <input
               id="logo"
@@ -106,14 +93,11 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
               onChange={(e) => setLogoName(e.target.files?.[0]?.name ?? null)}
               className="sr-only"
             />
-            <p className="text-xs text-muted-foreground">
-              Don&apos;t have a logo yet? Skip this for now — the next step
-              can generate one with AI for you.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("step2.logoHint")}</p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>Brand colors</Label>
+            <Label>{t("step2.brandColors")}</Label>
             <div className="flex flex-wrap items-center gap-3">
               {colors.map((color, index) => (
                 <div key={index} className="group relative">
@@ -131,11 +115,11 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
                   {colors.length > 1 && (
                     <button
                       type="button"
-                      aria-label={`Remove color ${index + 1}`}
+                      aria-label={t("step2.removeColor", { number: index + 1 })}
                       onClick={() =>
                         setColors((prev) => prev.filter((_, i) => i !== index))
                       }
-                      className="absolute -top-1.5 -right-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
+                      className="absolute -top-1.5 -end-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
                     >
                       <X className="size-2.5" />
                     </button>
@@ -145,7 +129,7 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
               {colors.length < 6 && (
                 <button
                   type="button"
-                  aria-label="Add color"
+                  aria-label={t("step2.addColor")}
                   onClick={() => setColors((prev) => [...prev, "#888888"])}
                   className="flex size-10 items-center justify-center rounded-lg border border-dashed border-input text-muted-foreground hover:border-primary/50 hover:text-primary"
                 >
@@ -159,7 +143,7 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
 
       <Step active={step === 2}>
         <div className="flex flex-col gap-2">
-          <Label>Products / services</Label>
+          <Label>{t("step3.productsServices")}</Label>
           {products.map((product, index) => (
             <div key={index} className="flex items-center gap-2">
               <Input
@@ -170,7 +154,7 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
                     prev.map((p, i) => (i === index ? e.target.value : p)),
                   )
                 }
-                placeholder="e.g. Espresso, Wedding photography, Yoga classes"
+                placeholder={t("step3.productPlaceholder")}
               />
               {products.length > 1 && (
                 <Button
@@ -195,7 +179,7 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
             onClick={() => setProducts((prev) => [...prev, ""])}
           >
             <Plus className="size-4" />
-            Add another
+            {t("step3.addAnother")}
           </Button>
         </div>
       </Step>
@@ -203,32 +187,31 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
       <Step active={step === 3}>
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="language">Preferred language</Label>
+            <Label htmlFor="language">{t("step4.preferredLanguage")}</Label>
             <Select name="language" defaultValue="en">
               <SelectTrigger id="language">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                {LANGUAGE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`step4.languages.${value}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <Field
-            label="Content style / tone"
+            label={t("step4.toneLabel")}
             name="tone"
-            placeholder="e.g. Warm and friendly, Bold and playful, Professional"
+            placeholder={t("step4.tonePlaceholder")}
           />
         </div>
       </Step>
 
       <Step active={step === 4}>
         <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          Review your answers with Back, then Finish to go to your dashboard.
-          You&apos;ll be able to fine-tune these later in Brand Settings.
+          {t("step5.reviewText")}
         </div>
       </Step>
 
@@ -245,7 +228,7 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0}
         >
-          Back
+          {t("back")}
         </Button>
         {isLastStep ? (
           // `key` forces React to mount a fresh element here rather than
@@ -255,15 +238,15 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
           // click as activating the now-submit button, silently skipping
           // the review step and submitting onboarding one click early.
           <Button key="finish" type="submit" disabled={isPending}>
-            Finish
+            {t("finish")}
           </Button>
         ) : (
           <Button
             key="next"
             type="button"
-            onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+            onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
           >
-            Next
+            {t("next")}
           </Button>
         )}
       </div>
@@ -271,10 +254,10 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
   );
 }
 
-function Stepper({ currentStep }: { currentStep: number }) {
+function Stepper({ steps, currentStep }: { steps: string[]; currentStep: number }) {
   return (
     <ol className="flex items-center">
-      {STEPS.map((label, index) => {
+      {steps.map((label, index) => {
         const isCompleted = index < currentStep;
         const isCurrent = index === currentStep;
 
@@ -303,7 +286,7 @@ function Stepper({ currentStep }: { currentStep: number }) {
                 {label}
               </span>
             </div>
-            {index < STEPS.length - 1 && (
+            {index < steps.length - 1 && (
               <span
                 className={cn(
                   "mx-2 h-px flex-1",

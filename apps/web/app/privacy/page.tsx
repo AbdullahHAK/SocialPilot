@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 
 export const metadata: Metadata = { title: "Privacy Policy — YOPAPI" };
 
-const CONTACT_EMAIL = "support@socialpilot.app";
+const CONTACT_EMAIL = "support@yopapi.com";
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const t = await getTranslations("legal");
   return (
-    <LegalPage title="Privacy Policy" updatedDate="September 13, 2026">
+    <LegalPage title={t("privacyTitle")} updatedDate="September 13, 2026">
       <p>
         This Privacy Policy explains what information YOPAPI (&quot;we&quot;,
         &quot;us&quot;) collects when you use our website and dashboard (the

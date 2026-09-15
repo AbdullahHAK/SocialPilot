@@ -1,4 +1,5 @@
 import { getCreativeConcept } from "@socialpilot/db";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { RegenerateConceptForm } from "@/components/regenerate-concept-form";
@@ -34,17 +35,13 @@ export default async function ConceptReviewPage({
   }
 
   const tryAgainHref = `/dashboard/create?returnTo=${encodeURIComponent(returnTo)}`;
+  const t = await getTranslations("dashboard.conceptReview");
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Choose your style
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Pick the concept that feels most &ldquo;you&rdquo; — this sets the
-          visual style YOPAPI uses for future content.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("description")}</p>
       </div>
 
       <Card className="w-full max-w-sm overflow-hidden">
@@ -53,7 +50,7 @@ export default async function ConceptReviewPage({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={concept.imageUrls[0]}
-          alt="Generated content concept"
+          alt={t("imageAlt")}
           className="aspect-square w-full object-cover"
         />
         <CardContent className="p-3">
@@ -62,7 +59,7 @@ export default async function ConceptReviewPage({
             <input type="hidden" name="imageUrl" value={concept.imageUrls[0]} />
             <input type="hidden" name="returnTo" value={returnTo} />
             <Button type="submit" className="w-full">
-              Approve this style
+              {t("approveStyle")}
             </Button>
           </form>
         </CardContent>
@@ -75,7 +72,7 @@ export default async function ConceptReviewPage({
       />
 
       <Button asChild variant="outline" className="w-fit">
-        <Link href={tryAgainHref}>Try a different prompt</Link>
+        <Link href={tryAgainHref}>{t("tryDifferentPrompt")}</Link>
       </Button>
     </div>
   );

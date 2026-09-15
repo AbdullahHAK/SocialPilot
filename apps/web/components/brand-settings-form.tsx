@@ -1,6 +1,7 @@
 "use client";
 
 import { ImagePlus, Plus, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import type { BrandSettingsFormState } from "@/app/dashboard/brand/actions";
 import { Button } from "@/components/ui/button";
@@ -22,16 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-const LANGUAGE_OPTIONS = [
-  { value: "en", label: "English" },
-  { value: "ur", label: "Urdu" },
-  { value: "ar", label: "Arabic" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "hi", label: "Hindi" },
-  { value: "pt", label: "Portuguese" },
-  { value: "de", label: "German" },
-];
+const LANGUAGE_VALUES = ["en", "ur", "ar", "es", "fr", "hi", "pt", "de"] as const;
 
 export type BrandSettingsAction = (
   state: BrandSettingsFormState,
@@ -56,6 +48,8 @@ export function BrandSettingsForm({
   action: BrandSettingsAction;
   defaults: BrandProfileDefaults;
 }) {
+  const t = useTranslations("dashboard.brandForm");
+  const tLang = useTranslations("languages");
   const [state, formAction, isPending] = useActionState<
     BrandSettingsFormState,
     FormData
@@ -74,14 +68,12 @@ export function BrandSettingsForm({
     <form action={formAction} className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Business basics</CardTitle>
-          <CardDescription>
-            The core details YOPAPI uses to keep content on-brand.
-          </CardDescription>
+          <CardTitle>{t("businessBasics")}</CardTitle>
+          <CardDescription>{t("businessBasicsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="businessName">Business name</Label>
+            <Label htmlFor="businessName">{t("businessName")}</Label>
             <Input
               id="businessName"
               name="businessName"
@@ -89,42 +81,36 @@ export function BrandSettingsForm({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">{t("category")}</Label>
             <Input
               id="category"
               name="category"
               defaultValue={defaults.category}
-              placeholder="e.g. Cafe, Clothing brand, Fitness studio"
+              placeholder={t("categoryPlaceholder")}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Tell us about your business</Label>
+            <Label htmlFor="description">{t("describeLabel")}</Label>
             <Textarea
               id="description"
               name="description"
               defaultValue={defaults.description}
               rows={4}
-              placeholder="e.g. I own a crispy chicken restaurant. I want daily content that highlights the quality and deliciousness of our food, professional and appetizing visuals, and a bold, memorable tone that makes customers think of us first."
+              placeholder={t("describePlaceholder")}
             />
-            <p className="text-xs text-muted-foreground">
-              Write naturally — YOPAPI&apos;s AI reads this to understand
-              your category, tone, and products, and fills those in below
-              automatically if you leave them blank.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("describeHint")}</p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Logo & colors</CardTitle>
-          <CardDescription>
-            Used to keep generated visuals consistent with your brand.
-          </CardDescription>
+          <CardTitle>{t("logoAndColors")}</CardTitle>
+          <CardDescription>{t("logoAndColorsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="logo">Logo</Label>
+            <Label htmlFor="logo">{t("logo")}</Label>
             <div className="flex items-center gap-4">
               {logoPreview && (
                 // Either a blob: URL from a freshly-selected file (which
@@ -134,7 +120,7 @@ export function BrandSettingsForm({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={logoPreview}
-                  alt="Current logo"
+                  alt={t("currentLogoAlt")}
                   width={56}
                   height={56}
                   className="size-14 shrink-0 rounded-lg border border-border object-contain p-1"
@@ -145,7 +131,7 @@ export function BrandSettingsForm({
                 className="flex flex-1 cursor-pointer items-center gap-3 rounded-lg border border-dashed border-input px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent/30"
               >
                 <ImagePlus className="size-5 shrink-0" />
-                {logoPreview ? "Replace logo" : "Upload a logo"}
+                {logoPreview ? t("replaceLogo") : t("uploadLogo")}
               </label>
               <input
                 id="logo"
@@ -162,7 +148,7 @@ export function BrandSettingsForm({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>Brand colors</Label>
+            <Label>{t("brandColors")}</Label>
             <div className="flex flex-wrap items-center gap-3">
               {colors.map((color, index) => (
                 <div key={index} className="group relative">
@@ -180,11 +166,11 @@ export function BrandSettingsForm({
                   {colors.length > 1 && (
                     <button
                       type="button"
-                      aria-label={`Remove color ${index + 1}`}
+                      aria-label={t("removeColor", { number: index + 1 })}
                       onClick={() =>
                         setColors((prev) => prev.filter((_, i) => i !== index))
                       }
-                      className="absolute -top-1.5 -right-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
+                      className="absolute -top-1.5 -end-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
                     >
                       <X className="size-2.5" />
                     </button>
@@ -194,7 +180,7 @@ export function BrandSettingsForm({
               {colors.length < 6 && (
                 <button
                   type="button"
-                  aria-label="Add color"
+                  aria-label={t("addColor")}
                   onClick={() => setColors((prev) => [...prev, "#888888"])}
                   className="flex size-10 items-center justify-center rounded-lg border border-dashed border-input text-muted-foreground hover:border-primary/50 hover:text-primary"
                 >
@@ -208,7 +194,7 @@ export function BrandSettingsForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Products & services</CardTitle>
+          <CardTitle>{t("productsServices")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {products.map((product, index) => (
@@ -221,14 +207,14 @@ export function BrandSettingsForm({
                     prev.map((p, i) => (i === index ? e.target.value : p)),
                   )
                 }
-                placeholder="e.g. Espresso, Wedding photography, Yoga classes"
+                placeholder={t("productPlaceholder")}
               />
               {products.length > 1 && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label="Remove product"
+                  aria-label={t("removeProduct")}
                   className="shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() =>
                     setProducts((prev) => prev.filter((_, i) => i !== index))
@@ -247,38 +233,38 @@ export function BrandSettingsForm({
             onClick={() => setProducts((prev) => [...prev, ""])}
           >
             <Plus className="size-4" />
-            Add another
+            {t("addAnother")}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Language & tone</CardTitle>
+          <CardTitle>{t("languageAndTone")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="language">Preferred language</Label>
+            <Label htmlFor="language">{t("preferredLanguage")}</Label>
             <Select name="language" defaultValue={defaults.language}>
               <SelectTrigger id="language">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                {LANGUAGE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {tLang(value)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="tone">Content style / tone</Label>
+            <Label htmlFor="tone">{t("toneLabel")}</Label>
             <Input
               id="tone"
               name="tone"
               defaultValue={defaults.tone}
-              placeholder="e.g. Warm and friendly, Bold and playful, Professional"
+              placeholder={t("tonePlaceholder")}
             />
           </div>
         </CardContent>
@@ -286,10 +272,10 @@ export function BrandSettingsForm({
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={isPending}>
-          Save changes
+          {t("saveChanges")}
         </Button>
         {state.success && !state.note && (
-          <p className="text-sm font-medium text-success">Saved.</p>
+          <p className="text-sm font-medium text-success">{t("saved")}</p>
         )}
         {state.note && (
           <p className="text-sm font-medium text-muted-foreground">{state.note}</p>

@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 
 export const metadata: Metadata = { title: "Terms of Service — YOPAPI" };
 
-const CONTACT_EMAIL = "support@socialpilot.app";
+const CONTACT_EMAIL = "support@yopapi.com";
 
-export default function TermsOfServicePage() {
+export default async function TermsOfServicePage() {
+  const t = await getTranslations("legal");
   return (
-    <LegalPage title="Terms of Service" updatedDate="September 13, 2026">
+    <LegalPage title={t("termsTitle")} updatedDate="September 13, 2026">
       <p>
         These Terms of Service (&quot;Terms&quot;) govern your use of
         YOPAPI (the &quot;Service&quot;). By creating an account, you
