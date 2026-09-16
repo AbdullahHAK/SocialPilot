@@ -6,9 +6,30 @@
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
+/** Thrown specifically for Meta's error code 190 (OAuthException) - an
+ * invalid, expired, or revoked token, regardless of the exact subcode
+ * (expired, password changed, app deauthorized). Distinguished from a
+ * generic Error so callers can tell "this connection is dead" apart from
+ * a transient failure worth the normal retry ladder. */
+export class MetaAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MetaAuthError";
+  }
+}
+
 async function parseGraphResponse<T>(res: Response, context: string): Promise<T> {
   if (!res.ok) {
     const body = await res.text();
+    let code: number | undefined;
+    try {
+      code = (JSON.parse(body) as { error?: { code?: number } }).error?.code;
+    } catch {
+      // Not JSON - fall through to the generic error below.
+    }
+    if (code === 190) {
+      throw new MetaAuthError(`${context} failed (${res.status}): ${body}`);
+    }
     throw new Error(`${context} failed (${res.status}): ${body}`);
   }
   return res.json() as Promise<T>;

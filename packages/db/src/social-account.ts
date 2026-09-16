@@ -78,6 +78,18 @@ export async function getDecryptedAccessToken(
   return decryptToken(account.accessToken);
 }
 
+/** Flips a connected account to EXPIRED once the worker actually hits a
+ * dead token (Meta error code 190) publishing to it - surfaced on the
+ * accounts page as a "reconnect" prompt. Reconnecting via the normal Meta
+ * OAuth flow resets this back to ACTIVE (upsertSocialAccount always writes
+ * status: "ACTIVE"). */
+export function markSocialAccountExpired(accountId: string) {
+  return prisma.socialAccount.update({
+    where: { id: accountId },
+    data: { status: "EXPIRED" },
+  });
+}
+
 export async function disconnectSocialAccount(
   organizationId: string,
   accountId: string,

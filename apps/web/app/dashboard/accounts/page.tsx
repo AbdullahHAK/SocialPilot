@@ -1,6 +1,7 @@
 import { listSocialAccounts } from "@socialpilot/db";
 import { AlertCircle, CheckCircle2, Share2 } from "lucide-react";
 import { redirect } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
@@ -78,25 +79,34 @@ export default async function AccountsPage({
                     <p className="text-sm font-medium">
                       {account.displayName ?? account.externalId}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {account.provider === "INSTAGRAM"
-                        ? "Instagram"
-                        : "Facebook"}{" "}
-                      · {account.status === "ACTIVE" ? "Active" : account.status}
-                    </p>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span>{account.provider === "INSTAGRAM" ? "Instagram" : "Facebook"}</span>
+                      {account.status === "ACTIVE" ? (
+                        <span>· Active</span>
+                      ) : (
+                        <Badge variant="destructive">Needs reconnecting</Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <form action={disconnectAccountAction}>
-                  <input type="hidden" name="accountId" value={account.id} />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    Disconnect
-                  </Button>
-                </form>
+                <div className="flex items-center gap-1">
+                  {account.status !== "ACTIVE" && (
+                    <Button asChild size="sm">
+                      <a href="/api/meta/connect">Reconnect</a>
+                    </Button>
+                  )}
+                  <form action={disconnectAccountAction}>
+                    <input type="hidden" name="accountId" value={account.id} />
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      Disconnect
+                    </Button>
+                  </form>
+                </div>
               </CardContent>
             </Card>
           ))}
