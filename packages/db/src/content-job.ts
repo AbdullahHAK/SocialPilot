@@ -247,7 +247,10 @@ export async function cancelStaleContentJobs(
 }
 
 export type ContentJobWithAccounts = ContentJob & {
-  organization: { socialAccounts: import("@prisma/client").SocialAccount[] };
+  organization: {
+    socialAccounts: import("@prisma/client").SocialAccount[];
+    status: import("@prisma/client").OrganizationStatus;
+  };
 };
 
 export interface PublishCandidate {

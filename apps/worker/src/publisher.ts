@@ -85,6 +85,10 @@ async function publishOnePlatform(
   publication: ContentPublication,
   job: ContentJobWithAccounts,
 ): Promise<void> {
+  if (job.organization.status !== "ACTIVE") {
+    throw new Error(`Organization is ${job.organization.status.toLowerCase()}`);
+  }
+
   const account = job.organization.socialAccounts.find(
     (candidate) => candidate.provider === publication.platform,
   );

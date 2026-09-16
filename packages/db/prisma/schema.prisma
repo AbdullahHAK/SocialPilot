@@ -42,6 +42,32 @@ enum SubscriptionStatus {
   PAST_DUE
   CANCELED
   INCOMPLETE
+  // Admin-only manual state, distinct from CANCELED. Not used by this
+  // brand's own code yet (no admin panel here) - added so this schema
+  // stays in sync with the shared database, which YOPAPI's admin panel
+  // can set on its own orgs.
+  PAUSED
+}
+
+// Which product a customer signed up through - SocialPilot and YOPAPI share
+// one database/worker. Not set by this brand's own signup path (always
+// defaults to SOCIALPILOT); exists so this schema matches the shared
+// database, which also has YOPAPI-brand rows from the other app.
+enum OrgBrand {
+  SOCIALPILOT
+  YOPAPI
+}
+
+// Set by YOPAPI's admin panel on its own orgs; this brand's orgs stay
+// ACTIVE forever since nothing here ever changes it. Declared so the
+// worker (shared between both brands) can correctly type and skip
+// generation/publishing for a non-ACTIVE org regardless of which brand it
+// belongs to.
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  DELETED
 }
 
 enum CreativeConceptStatus {
@@ -131,10 +157,12 @@ model User {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
+  id        String             @id @default(cuid())
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  brand     OrgBrand           @default(SOCIALPILOT)
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
   memberships          Membership[]
   subscription         Subscription?
