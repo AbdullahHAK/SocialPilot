@@ -20,7 +20,7 @@ export async function startCheckoutAction(formData: FormData) {
   }
 
   const plan = formData.get("plan");
-  if (plan !== "MONTHLY" && plan !== "YEARLY") return;
+  if (plan !== "MONTHLY" && plan !== "SIX_MONTH" && plan !== "YEARLY") return;
 
   const stripe = getStripeClient();
   const existing = await getSubscription(session.organizationId);
@@ -37,8 +37,7 @@ export async function startCheckoutAction(formData: FormData) {
     });
   }
 
-  const priceId =
-    plan === "MONTHLY" ? STRIPE_PRICE_IDS.MONTHLY() : STRIPE_PRICE_IDS.YEARLY();
+  const priceId = STRIPE_PRICE_IDS[plan]();
   const baseUrl = await getBaseUrl();
 
   const checkoutSession = await stripe.checkout.sessions.create({

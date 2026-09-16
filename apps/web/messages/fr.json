@@ -78,8 +78,9 @@
     }
   },
   "plans": {
-    "monthly": { "name": "Mensuel", "price": "15 $", "cadence": "/mois", "description": "Accès complet, facturé chaque mois." },
-    "yearly": { "name": "Annuel", "price": "150 $", "cadence": "/an", "description": "Accès complet, facturé annuellement — 2 mois offerts." },
+    "monthly": { "name": "Mensuel", "price": "19,90 $", "cadence": "/mois", "description": "Accès complet, facturé chaque mois." },
+    "sixMonth": { "name": "6 mois", "price": "99 $", "cadence": "/6 mois", "description": "Accès complet, facturé tous les 6 mois — économisez 17 %." },
+    "yearly": { "name": "Annuel", "price": "178 $", "cadence": "/an", "description": "Accès complet, facturé annuellement — économisez 25 %." },
     "bestValue": "Meilleure offre",
     "features": [
       "2 designers IA + 1 gestionnaire de publication IA",
@@ -456,7 +457,7 @@
     "hero": {
       "badge": "Gestion des réseaux sociaux propulsée par l'IA",
       "headline": "Votre présence en ligne, propulsée par l'IA.",
-      "subhead": "Deux designers IA + un gestionnaire de publication IA — pour moins de 0,50 $ par jour.",
+      "subhead": "Deux designers IA + un gestionnaire de publication IA — pour moins de 0,75 $ par jour.",
       "supporting": "Plutôt que d'embaucher du personnel pour créer votre contenu et gérer vos publications, YOPAPI vous offre une équipe IA qui s'en charge pour vous.",
       "cta": "Commencer avec YOPAPI",
       "secondaryCta": "Se connecter",
@@ -480,7 +481,7 @@
           "description": "Programme et publie votre contenu automatiquement, chaque semaine, sans que vous leviez le petit doigt."
         }
       ],
-      "closing": "Trois rôles IA. Un seul abonnement simple. Moins de 0,50 $/jour."
+      "closing": "Trois rôles IA. Un seul abonnement simple. Moins de 0,75 $/jour."
     },
     "threeMinutes": {
       "eyebrow": "3 MINUTES",

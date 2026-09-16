@@ -14,7 +14,7 @@ export interface PendingMetaPage {
 }
 
 export interface PendingSignupPayload {
-  plan: "MONTHLY" | "YEARLY";
+  plan: "MONTHLY" | "SIX_MONTH" | "YEARLY";
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   metaPages?: PendingMetaPage[];
@@ -53,7 +53,13 @@ export async function verifyPendingSignupToken(
 ): Promise<PendingSignupPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    if (payload.plan !== "MONTHLY" && payload.plan !== "YEARLY") return null;
+    if (
+      payload.plan !== "MONTHLY" &&
+      payload.plan !== "SIX_MONTH" &&
+      payload.plan !== "YEARLY"
+    ) {
+      return null;
+    }
 
     const metaPages = Array.isArray(payload.metaPages)
       ? payload.metaPages.filter(isPendingMetaPage)

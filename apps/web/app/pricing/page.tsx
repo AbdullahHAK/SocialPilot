@@ -44,7 +44,7 @@ export default async function PricingPage({
       </header>
 
       <main className="flex-1">
-        <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
           <div className="mx-auto max-w-2xl text-center">
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               {t("title")}
@@ -71,7 +71,7 @@ export default async function PricingPage({
             </div>
           )}
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-2">
+          <div className="mt-12 grid gap-6 sm:grid-cols-3">
             {plans.map((plan) => (
               <Card
                 key={plan.id}

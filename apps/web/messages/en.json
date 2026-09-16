@@ -78,8 +78,9 @@
     }
   },
   "plans": {
-    "monthly": { "name": "Monthly", "price": "$15", "cadence": "/month", "description": "Full access, billed every month." },
-    "yearly": { "name": "Yearly", "price": "$150", "cadence": "/year", "description": "Full access, billed annually — 2 months free." },
+    "monthly": { "name": "Monthly", "price": "$19.90", "cadence": "/month", "description": "Full access, billed every month." },
+    "sixMonth": { "name": "6 Months", "price": "$99", "cadence": "/6 months", "description": "Full access, billed every 6 months — save 17%." },
+    "yearly": { "name": "Yearly", "price": "$178", "cadence": "/year", "description": "Full access, billed annually — save 25%." },
     "bestValue": "Best value",
     "features": [
       "2 AI image designers + 1 AI publishing manager",
@@ -456,7 +457,7 @@
     "hero": {
       "badge": "AI-Powered Social Media Management",
       "headline": "Your Online Presence, Powered by AI.",
-      "subhead": "Two AI Image Designers + One AI Publishing Manager — for less than $0.50 a day.",
+      "subhead": "Two AI Image Designers + One AI Publishing Manager — for less than $0.75 a day.",
       "supporting": "Instead of hiring people to create your content and manage your publishing, YOPAPI gives you an AI team that does it for you.",
       "cta": "Start With YOPAPI",
       "secondaryCta": "Log in",
@@ -480,7 +481,7 @@
           "description": "Schedules and publishes your content automatically, every week, without you lifting a finger."
         }
       ],
-      "closing": "Three AI roles. One simple subscription. Less than $0.50/day."
+      "closing": "Three AI roles. One simple subscription. Less than $0.75/day."
     },
     "threeMinutes": {
       "eyebrow": "3 MINUTES",

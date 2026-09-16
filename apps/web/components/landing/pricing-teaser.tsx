@@ -27,7 +27,7 @@ export async function PricingTeaser() {
           <p className="mt-4 text-lg text-muted-foreground">{t("subtitle")}</p>
         </div>
 
-        <div className="mt-14 grid gap-6 sm:grid-cols-2">
+        <div className="mt-14 grid gap-6 sm:grid-cols-3">
           {plans.map((plan) => (
             <Card
               key={plan.id}

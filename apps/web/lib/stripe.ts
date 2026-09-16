@@ -22,12 +22,14 @@ export function isStripeConfigured(): boolean {
   return Boolean(
     process.env.STRIPE_SECRET_KEY &&
       process.env.STRIPE_PRICE_ID_MONTHLY &&
+      process.env.STRIPE_PRICE_ID_SIXMONTH &&
       process.env.STRIPE_PRICE_ID_YEARLY,
   );
 }
 
 export const STRIPE_PRICE_IDS = {
   MONTHLY: () => requireEnv("STRIPE_PRICE_ID_MONTHLY"),
+  SIX_MONTH: () => requireEnv("STRIPE_PRICE_ID_SIXMONTH"),
   YEARLY: () => requireEnv("STRIPE_PRICE_ID_YEARLY"),
 } as const;
 
@@ -36,9 +38,10 @@ export const STRIPE_PRICE_IDS = {
  * the pre-account checkout-completion redirect. */
 export function planForPriceId(
   priceId: string | undefined,
-): "MONTHLY" | "YEARLY" | null {
+): "MONTHLY" | "SIX_MONTH" | "YEARLY" | null {
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_MONTHLY) return "MONTHLY";
+  if (priceId === process.env.STRIPE_PRICE_ID_SIXMONTH) return "SIX_MONTH";
   if (priceId === process.env.STRIPE_PRICE_ID_YEARLY) return "YEARLY";
   return null;
 }

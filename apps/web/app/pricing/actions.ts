@@ -23,7 +23,7 @@ async function getBaseUrl(): Promise<string> {
  * round of testing. Remove this branch once real Stripe keys land. */
 export async function startPendingCheckoutAction(formData: FormData) {
   const plan = formData.get("plan");
-  if (plan !== "MONTHLY" && plan !== "YEARLY") return;
+  if (plan !== "MONTHLY" && plan !== "SIX_MONTH" && plan !== "YEARLY") return;
 
   if (!isStripeConfigured()) {
     await setPendingSignupCookie({ plan });
@@ -31,8 +31,7 @@ export async function startPendingCheckoutAction(formData: FormData) {
   }
 
   const stripe = getStripeClient();
-  const priceId =
-    plan === "MONTHLY" ? STRIPE_PRICE_IDS.MONTHLY() : STRIPE_PRICE_IDS.YEARLY();
+  const priceId = STRIPE_PRICE_IDS[plan]();
   const baseUrl = await getBaseUrl();
 
   const checkoutSession = await stripe.checkout.sessions.create({

@@ -9,6 +9,7 @@ describe("isStripeConfigured", () => {
   it("is false when any required env var is missing", () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "");
     vi.stubEnv("STRIPE_PRICE_ID_MONTHLY", "");
+    vi.stubEnv("STRIPE_PRICE_ID_SIXMONTH", "");
     vi.stubEnv("STRIPE_PRICE_ID_YEARLY", "");
     expect(isStripeConfigured()).toBe(false);
 
@@ -16,9 +17,10 @@ describe("isStripeConfigured", () => {
     expect(isStripeConfigured()).toBe(false);
   });
 
-  it("is true once all three are set", () => {
+  it("is true once all four are set", () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_123");
     vi.stubEnv("STRIPE_PRICE_ID_MONTHLY", "price_monthly");
+    vi.stubEnv("STRIPE_PRICE_ID_SIXMONTH", "price_sixmonth");
     vi.stubEnv("STRIPE_PRICE_ID_YEARLY", "price_yearly");
     expect(isStripeConfigured()).toBe(true);
   });

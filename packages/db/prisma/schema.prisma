@@ -33,6 +33,7 @@ enum SocialAccountStatus {
 
 enum SubscriptionPlan {
   MONTHLY
+  SIX_MONTH
   YEARLY
 }
 

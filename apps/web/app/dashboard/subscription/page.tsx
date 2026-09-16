@@ -32,6 +32,7 @@ export default async function SubscriptionPage({
   ]);
   const plans = getPlans(tPlans);
   const features = getPlanFeatures(tPlans);
+  const currentPlanName = plans.find((plan) => plan.id === subscription?.plan)?.name;
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,8 +64,7 @@ export default async function SubscriptionPage({
           <CardHeader>
             <div className="flex items-center gap-2">
               <CardTitle>
-                {subscription.plan === "YEARLY" ? tPlans("yearly.name") : tPlans("monthly.name")}{" "}
-                {t("plan")}
+                {currentPlanName} {t("plan")}
               </CardTitle>
               <Badge variant="success">
                 {subscription.status === "TRIALING" ? t("trialing") : t("active")}
@@ -85,7 +85,7 @@ export default async function SubscriptionPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           {plans.map((plan) => (
             <Card
               key={plan.id}
