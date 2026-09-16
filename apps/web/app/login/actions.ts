@@ -28,6 +28,9 @@ export async function loginAction(
   if (!result) {
     return { error: tAuth("invalidCredentials") };
   }
+  if (result.organizationStatus !== "ACTIVE") {
+    return { error: tAuth("accountNotActive") };
+  }
 
   await setSessionCookie(result);
   redirect("/dashboard");

@@ -43,6 +43,9 @@ export function AuthForm({ mode, action }: AuthFormProps) {
         required
         minLength={mode === "signup" ? 8 : undefined}
       />
+      {mode === "signup" && (
+        <Field label={t("activationCode")} name="activationCode" />
+      )}
       {state.error && (
         <p role="alert" className="text-sm font-medium text-destructive">
           {state.error}

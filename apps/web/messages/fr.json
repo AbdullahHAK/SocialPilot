@@ -16,6 +16,7 @@
     "invalidInput": "Entrée invalide",
     "invalidCredentials": "E-mail ou mot de passe invalide.",
     "emailInUse": "Un compte avec cette adresse e-mail existe déjà.",
+    "accountNotActive": "Ce compte n'est pas actif. Contactez le support pour obtenir de l'aide.",
     "login": {
       "title": "Se connecter",
       "description": "Content de vous revoir — reprenez là où vous en étiez.",
@@ -37,6 +38,7 @@
       "yourName": "Votre nom",
       "email": "E-mail",
       "password": "Mot de passe",
+      "activationCode": "Code d'activation (facultatif)",
       "createAccount": "Créer un compte",
       "login": "Se connecter"
     }
@@ -179,6 +181,11 @@
     "shell": {
       "closeMenu": "Fermer le menu",
       "openMenu": "Ouvrir le menu",
+      "signOut": "Se déconnecter"
+    },
+    "accountStatus": {
+      "title": "Ce compte n'est pas actif",
+      "description": "Votre compte a été suspendu ou bloqué. Contactez le support si vous pensez qu'il s'agit d'une erreur.",
       "signOut": "Se déconnecter"
     },
     "accounts": {
@@ -436,7 +443,11 @@
       "active": "Actif",
       "renews": "Renouvellement le {date}",
       "manageBilling": "Gérer la facturation",
-      "subscribe": "S'abonner"
+      "subscribe": "S'abonner",
+      "redeemCodeTitle": "Vous avez un code d'activation ?",
+      "redeemCodeDescription": "Saisissez-le ci-dessous pour activer votre abonnement instantanément - aucun paiement requis.",
+      "redeemCode": "Valider",
+      "codeInvalid": "Ce code est invalide, expiré ou déjà utilisé."
     }
   },
   "validation": {

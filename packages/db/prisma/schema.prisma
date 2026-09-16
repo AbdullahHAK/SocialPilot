@@ -20,6 +20,39 @@ enum MembershipRole {
   ADMIN
 }
 
+// Which product a customer signed up through - SocialPilot and YOPAPI share
+// one database/worker, so this is the only thing keeping the two brands'
+// customers from being mixed together anywhere admin-facing.
+enum OrgBrand {
+  SOCIALPILOT
+  YOPAPI
+}
+
+// DELETED is a soft delete - restorable, since a hard delete would already
+// have cascaded away every child row (subscription, jobs, social accounts)
+// before an admin could ever "restore" it.
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  DELETED
+}
+
+// Platform-level staff, entirely separate from User/Membership (which are
+// customer-side and scoped to a single org). Not a customer concept at all.
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  FINANCE
+}
+
+enum ActivationCodeStatus {
+  UNUSED
+  REDEEMED
+  DISABLED
+}
+
 enum SocialProvider {
   INSTAGRAM
   FACEBOOK
@@ -43,6 +76,9 @@ enum SubscriptionStatus {
   PAST_DUE
   CANCELED
   INCOMPLETE
+  // Admin-only manual state, distinct from CANCELED - the client's explicit
+  // "pause" action. Never set by the Stripe webhook path.
+  PAUSED
 }
 
 enum CreativeConceptStatus {
@@ -119,12 +155,17 @@ enum ContentPublicationStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  name           String?
+  // Bumped to force every outstanding session JWT for this user to fail
+  // verification immediately (see apps/web/lib/session.ts) - the only way
+  // to revoke a stateless JWT before it naturally expires. Admin's "force
+  // logout" action just increments this by one.
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   memberships Membership[]
 
@@ -132,10 +173,12 @@ model User {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
+  id        String             @id @default(cuid())
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  brand     OrgBrand           @default(SOCIALPILOT)
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
   memberships          Membership[]
   subscription         Subscription?
@@ -147,6 +190,7 @@ model Organization {
   contentPosts         ContentPost[]
   contentJobs          ContentJob[]
 
+  @@index([brand])
   @@map("organizations")
 }
 
@@ -395,4 +439,59 @@ model ContentPublication {
   @@unique([contentJobId, platform])
   @@index([status])
   @@map("content_publications")
+}
+
+// Platform staff, not customers - deliberately its own model rather than a
+// role flag on User, so an admin session can never be confused with (or
+// forged from) a customer session. See apps/web/lib/admin-session.ts.
+model AdminUser {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  name           String?
+  role           AdminRole @default(SUPPORT)
+  sessionVersion Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("admin_users")
+}
+
+// One row per mutating admin action, for accountability - the client's
+// explicit requirement. adminEmail is denormalized so a log entry stays
+// meaningful even if the AdminUser row is ever removed later.
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  adminEmail String
+  action     String
+  targetType String?
+  targetId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+  @@map("admin_audit_logs")
+}
+
+// Manual, no-payment subscription activation - the client's explicit
+// requirement for onboarding early customers paying in cash before Stripe
+// is live. redeemActivationCode() (packages/db/src/activation-code.ts)
+// redeems one atomically inside a transaction, so it can never be
+// double-redeemed under a race.
+model ActivationCode {
+  id               String               @id @default(cuid())
+  code             String               @unique
+  plan             SubscriptionPlan
+  durationDays     Int
+  status           ActivationCodeStatus @default(UNUSED)
+  expiresAt        DateTime?
+  redeemedByOrgId  String?
+  redeemedAt       DateTime?
+  createdByAdminId String
+  createdAt        DateTime             @default(now())
+
+  @@index([status])
+  @@map("activation_codes")
 }

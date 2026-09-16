@@ -16,6 +16,7 @@
     "invalidInput": "Invalid input",
     "invalidCredentials": "Invalid email or password.",
     "emailInUse": "An account with that email already exists.",
+    "accountNotActive": "This account isn't active. Contact support for help.",
     "login": {
       "title": "Log in",
       "description": "Welcome back — pick up right where you left off.",
@@ -37,6 +38,7 @@
       "yourName": "Your name",
       "email": "Email",
       "password": "Password",
+      "activationCode": "Activation code (optional)",
       "createAccount": "Create account",
       "login": "Log in"
     }
@@ -179,6 +181,11 @@
     "shell": {
       "closeMenu": "Close menu",
       "openMenu": "Open menu",
+      "signOut": "Sign out"
+    },
+    "accountStatus": {
+      "title": "This account isn't active",
+      "description": "Your account has been suspended or blocked. Contact support if you think this is a mistake.",
       "signOut": "Sign out"
     },
     "accounts": {
@@ -436,7 +443,11 @@
       "active": "Active",
       "renews": "Renews {date}",
       "manageBilling": "Manage billing",
-      "subscribe": "Subscribe"
+      "subscribe": "Subscribe",
+      "redeemCodeTitle": "Have an activation code?",
+      "redeemCodeDescription": "Enter it below to activate your subscription instantly - no payment needed.",
+      "redeemCode": "Redeem",
+      "codeInvalid": "That code is invalid, expired, or already used."
     }
   },
   "validation": {

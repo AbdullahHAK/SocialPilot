@@ -62,6 +62,8 @@ describe("authenticate", () => {
     expect(result).toEqual({
       userId: signedUp.userId,
       organizationId: signedUp.organizationId,
+      organizationStatus: "ACTIVE",
+      sessionVersion: 0,
     });
   });
 

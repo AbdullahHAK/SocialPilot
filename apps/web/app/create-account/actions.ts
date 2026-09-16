@@ -1,8 +1,10 @@
 "use server";
 
 import {
+  ActivationCodeInvalidError,
   decryptToken,
   EmailAlreadyInUseError,
+  redeemActivationCode,
   setStripeCustomer,
   signUp,
   syncSubscriptionFromStripe,
@@ -96,7 +98,20 @@ export async function createAccountAction(
     });
   }
 
-  await setSessionCookie({ userId, organizationId });
+  // Optional - the account already exists at this point regardless of
+  // whether the code turns out to be valid, so an invalid/typo'd code
+  // doesn't block signup; it can still be redeemed correctly later from
+  // /dashboard/subscription.
+  const activationCode = formData.get("activationCode");
+  if (typeof activationCode === "string" && activationCode.trim()) {
+    try {
+      await redeemActivationCode(activationCode.trim().toUpperCase(), organizationId);
+    } catch (error) {
+      if (!(error instanceof ActivationCodeInvalidError)) throw error;
+    }
+  }
+
+  await setSessionCookie({ userId, organizationId, sessionVersion: 0 });
   await clearPendingSignupCookie();
 
   redirect("/onboarding");

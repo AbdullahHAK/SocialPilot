@@ -15,6 +15,7 @@
     "migrate": "prisma migrate dev",
     "seed": "tsx prisma/seed.ts",
     "backfill-content-jobs": "tsx scripts/backfill-content-jobs.ts",
+    "create-admin": "tsx scripts/create-admin.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

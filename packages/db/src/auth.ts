@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type OrgBrand, type OrganizationStatus } from "@prisma/client";
 import { prisma } from "./index";
 import { hashPassword, verifyPassword } from "./password";
 
@@ -7,6 +7,14 @@ export class EmailAlreadyInUseError extends Error {
     super("Email is already in use");
     this.name = "EmailAlreadyInUseError";
   }
+}
+
+/** Which brand a new signup belongs to - PRODUCT_BRAND is only set to
+ * "YOPAPI" in that Vercel project's env vars; unset (main/SocialPilot)
+ * falls back to SOCIALPILOT. Guards against a garbage env value ever
+ * reaching Prisma. */
+function resolveBrand(): OrgBrand {
+  return process.env.PRODUCT_BRAND === "YOPAPI" ? "YOPAPI" : "SOCIALPILOT";
 }
 
 export interface SignUpInput {
@@ -40,6 +48,7 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
             organization: {
               create: {
                 name: input.organizationName,
+                brand: resolveBrand(),
                 publishingSchedule: { create: {} },
               },
             },
@@ -69,6 +78,16 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
 export interface AuthenticateResult {
   userId: string;
   organizationId: string;
+  organizationStatus: OrganizationStatus;
+  sessionVersion: number;
+}
+
+/** Admin's "reset access" action - no email-sending infrastructure exists
+ * in this app, so a temp password an admin hands off directly is the
+ * practical equivalent of a reset-link flow. */
+export async function setUserPassword(userId: string, newPassword: string) {
+  const passwordHash = await hashPassword(newPassword);
+  return prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 }
 
 export async function authenticate(
@@ -77,7 +96,7 @@ export async function authenticate(
 ): Promise<AuthenticateResult | null> {
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { memberships: true },
+    include: { memberships: { include: { organization: true } } },
   });
   if (!user) return null;
 
@@ -87,5 +106,10 @@ export async function authenticate(
   const membership = user.memberships[0];
   if (!membership) return null;
 
-  return { userId: user.id, organizationId: membership.organizationId };
+  return {
+    userId: user.id,
+    organizationId: membership.organizationId,
+    organizationStatus: membership.organization.status,
+    sessionVersion: user.sessionVersion,
+  };
 }

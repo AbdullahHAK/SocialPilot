@@ -3,6 +3,7 @@ import {
   claimContentJobForGeneration,
   getBrandCreativeProfile,
   getBrandProfile,
+  getOrganizationStatus,
   getSubscription,
   listGenerationCandidates,
   markContentJobCancelled,
@@ -41,24 +42,29 @@ const GENERATION_BATCH_SIZE = 10;
 // PAST_DUE (a grace period, not a cancellation), TRIALING, ACTIVE - as
 // still eligible, so this stays consistent with how the rest of the app
 // already treats subscription status until real billing enforcement
-// exists.
+// exists. PAUSED is an admin-only manual state added alongside CANCELED -
+// its whole point is stopping generation, unlike the other passive states.
 function isEligibleToGenerate(subscription: { status: SubscriptionStatus } | null): boolean {
-  return subscription?.status !== "CANCELED";
+  return subscription?.status !== "CANCELED" && subscription?.status !== "PAUSED";
 }
 
 /** Re-checks everything that could have changed since this job was
- * materialized: the org must not have explicitly cancelled its
- * subscription, and its brand/creative setup must still be complete (a
- * business could delete its logo, or the slot that produced this job
- * could have been removed out from under it in a narrow window between
- * materialize cycles). */
+ * materialized: the org must not be admin-suspended/blocked, must not have
+ * explicitly cancelled or paused its subscription, and its brand/creative
+ * setup must still be complete (a business could delete its logo, or the
+ * slot that produced this job could have been removed out from under it in
+ * a narrow window between materialize cycles). */
 async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const [subscription, brandProfile, creativeProfile] = await Promise.all([
+  const [orgStatus, subscription, brandProfile, creativeProfile] = await Promise.all([
+    getOrganizationStatus(job.organizationId),
     getSubscription(job.organizationId),
     getBrandProfile(job.organizationId),
     getBrandCreativeProfile(job.organizationId),
   ]);
 
+  if (orgStatus && orgStatus !== "ACTIVE") {
+    return { ok: false, reason: `Organization is ${orgStatus.toLowerCase()}` };
+  }
   if (!isEligibleToGenerate(subscription)) {
     return { ok: false, reason: "Subscription was cancelled" };
   }

@@ -6,6 +6,12 @@ const SESSION_DURATION = "30d";
 export interface SessionPayload {
   userId: string;
   organizationId: string;
+  /** Embedded at issuance and re-checked against the User row on every
+   * getSession() call (apps/web/lib/session.ts) - the only way to revoke a
+   * stateless JWT before it naturally expires. An admin's "force logout"
+   * action increments the DB value, which immediately invalidates every
+   * outstanding token carrying the old one. */
+  sessionVersion: number;
 }
 
 function getSecretKey(): Uint8Array {
@@ -17,7 +23,7 @@ function getSecretKey(): Uint8Array {
 }
 
 export function createSessionToken(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ org: payload.organizationId })
+  return new SignJWT({ org: payload.organizationId, sv: payload.sessionVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.userId)
     .setIssuedAt()
@@ -30,10 +36,14 @@ export async function verifySessionToken(
 ): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    if (typeof payload.sub !== "string" || typeof payload.org !== "string") {
+    if (
+      typeof payload.sub !== "string" ||
+      typeof payload.org !== "string" ||
+      typeof payload.sv !== "number"
+    ) {
       return null;
     }
-    return { userId: payload.sub, organizationId: payload.org };
+    return { userId: payload.sub, organizationId: payload.org, sessionVersion: payload.sv };
   } catch {
     return null;
   }

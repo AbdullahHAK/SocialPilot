@@ -1,6 +1,11 @@
 "use server";
 
-import { getSubscription, setStripeCustomer } from "@socialpilot/db";
+import {
+  ActivationCodeInvalidError,
+  getSubscription,
+  redeemActivationCode,
+  setStripeCustomer,
+} from "@socialpilot/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
@@ -52,6 +57,29 @@ export async function startCheckoutAction(formData: FormData) {
     throw new Error("Stripe did not return a checkout URL");
   }
   redirect(checkoutSession.url);
+}
+
+export async function redeemActivationCodeAction(formData: FormData) {
+  const session = await getSession();
+  if (!session) {
+    redirect("/login");
+  }
+
+  const code = String(formData.get("code") ?? "").trim().toUpperCase();
+  if (!code) {
+    redirect("/dashboard/subscription?codeError=1");
+  }
+
+  try {
+    await redeemActivationCode(code, session.organizationId);
+  } catch (error) {
+    if (error instanceof ActivationCodeInvalidError) {
+      redirect("/dashboard/subscription?codeError=1");
+    }
+    throw error;
+  }
+
+  redirect("/dashboard/subscription?checkout=success");
 }
 
 export async function openBillingPortalAction() {

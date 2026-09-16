@@ -59,3 +59,58 @@ export function isSubscriptionActive(
     subscription?.status === "ACTIVE" || subscription?.status === "TRIALING"
   );
 }
+
+/** Extends (positive) or reduces (negative) a subscription's expiration by
+ * a number of days, e.g. "+15 days" or "-5 days" as compensation/correction.
+ * Bases off `now` rather than erroring when there's no existing
+ * subscription/currentPeriodEnd yet - an admin doing this for a fresh
+ * no-subscription org should just get one created starting now. */
+export async function adjustSubscriptionDays(
+  organizationId: string,
+  deltaDays: number,
+): Promise<Date> {
+  const existing = await prisma.subscription.findUnique({ where: { organizationId } });
+  const base = existing?.currentPeriodEnd ?? new Date();
+  const newExpiration = new Date(base.getTime() + deltaDays * 24 * 60 * 60 * 1000);
+
+  await prisma.subscription.upsert({
+    where: { organizationId },
+    create: { organizationId, status: "ACTIVE", currentPeriodEnd: newExpiration },
+    update: { currentPeriodEnd: newExpiration },
+  });
+  return newExpiration;
+}
+
+export function setSubscriptionExpiration(organizationId: string, expiration: Date) {
+  return prisma.subscription.upsert({
+    where: { organizationId },
+    create: { organizationId, status: "ACTIVE", currentPeriodEnd: expiration },
+    update: { currentPeriodEnd: expiration },
+  });
+}
+
+/** Direct admin activation with no code and no payment - the client's
+ * "direct activation in the account name" requirement, for friends he
+ * activates by hand. */
+export function manuallyActivateSubscription(
+  organizationId: string,
+  plan: SubscriptionPlan,
+  durationDays: number,
+) {
+  const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+  return prisma.subscription.upsert({
+    where: { organizationId },
+    create: { organizationId, plan, status: "ACTIVE", currentPeriodEnd },
+    update: { plan, status: "ACTIVE", currentPeriodEnd },
+  });
+}
+
+export function setSubscriptionStatus(
+  organizationId: string,
+  status: Extract<SubscriptionStatus, "PAUSED" | "CANCELED" | "ACTIVE">,
+) {
+  return prisma.subscription.update({
+    where: { organizationId },
+    data: { status },
+  });
+}

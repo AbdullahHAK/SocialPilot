@@ -11,9 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { getSession } from "@/lib/session";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
-import { openBillingPortalAction, startCheckoutAction } from "./actions";
+import {
+  openBillingPortalAction,
+  redeemActivationCodeAction,
+  startCheckoutAction,
+} from "./actions";
 
 export default async function SubscriptionPage({
   searchParams,
@@ -23,7 +28,7 @@ export default async function SubscriptionPage({
     redirect("/login");
   }
 
-  const { checkout } = await searchParams;
+  const { checkout, codeError } = await searchParams;
   const subscription = await getSubscription(session.organizationId);
   const active = isSubscriptionActive(subscription);
   const [t, tPlans] = await Promise.all([
@@ -57,6 +62,29 @@ export default async function SubscriptionPage({
           <AlertCircle className="size-4 shrink-0" />
           {t("paymentFailed")}
         </div>
+      )}
+      {typeof codeError === "string" && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          {t("codeInvalid")}
+        </div>
+      )}
+
+      {!active && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("redeemCodeTitle")}</CardTitle>
+            <CardDescription>{t("redeemCodeDescription")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={redeemActivationCodeAction} className="flex gap-2">
+              <Input name="code" placeholder="YOPA-XXXX-XXXX" className="max-w-56" required />
+              <Button type="submit" variant="outline">
+                {t("redeemCode")}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       {active && subscription ? (

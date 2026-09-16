@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { prisma } from "./index";
 import {
+  adjustSubscriptionDays,
   getSubscription,
   isSubscriptionActive,
+  manuallyActivateSubscription,
   setStripeCustomer,
+  setSubscriptionExpiration,
   syncSubscriptionFromStripe,
 } from "./subscription";
 
@@ -59,6 +62,51 @@ describe("syncSubscriptionFromStripe", () => {
       currentPeriodEnd: null,
     });
     expect(result).toBeNull();
+  });
+});
+
+describe("adjustSubscriptionDays", () => {
+  it("extends an existing expiration by the given number of days", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await setSubscriptionExpiration(org.id, new Date("2026-09-20T00:00:00Z"));
+
+    const newExpiration = await adjustSubscriptionDays(org.id, 15);
+
+    expect(newExpiration.toISOString()).toBe("2026-10-05T00:00:00.000Z");
+  });
+
+  it("reduces an existing expiration for a negative delta", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await setSubscriptionExpiration(org.id, new Date("2026-09-20T00:00:00Z"));
+
+    const newExpiration = await adjustSubscriptionDays(org.id, -5);
+
+    expect(newExpiration.toISOString()).toBe("2026-09-15T00:00:00.000Z");
+  });
+
+  it("bases off now when there's no existing subscription", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const before = Date.now();
+
+    const newExpiration = await adjustSubscriptionDays(org.id, 30);
+
+    const expected = before + 30 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(newExpiration.getTime() - expected)).toBeLessThan(5000);
+  });
+});
+
+describe("manuallyActivateSubscription", () => {
+  it("sets the plan, ACTIVE status, and a correct expiration", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const before = Date.now();
+
+    await manuallyActivateSubscription(org.id, "YEARLY", 365);
+
+    const sub = await getSubscription(org.id);
+    expect(sub?.plan).toBe("YEARLY");
+    expect(sub?.status).toBe("ACTIVE");
+    const expected = before + 365 * 24 * 60 * 60 * 1000;
+    expect(Math.abs((sub?.currentPeriodEnd?.getTime() ?? 0) - expected)).toBeLessThan(5000);
   });
 });
 
