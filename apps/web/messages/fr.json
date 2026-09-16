@@ -191,6 +191,8 @@
       "instagram": "Instagram",
       "facebook": "Facebook",
       "active": "Actif",
+      "expired": "Reconnexion nécessaire",
+      "reconnect": "Reconnecter",
       "disconnect": "Déconnecter"
     },
     "brandForm": {

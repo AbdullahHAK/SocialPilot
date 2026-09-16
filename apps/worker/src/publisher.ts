@@ -6,12 +6,14 @@ import {
   markContentPublicationFailed,
   markContentPublicationPublished,
   markContentPublicationStoryPublished,
+  markSocialAccountExpired,
   recordContentPublicationExternalId,
   rollupContentJobStatus,
   type ContentJobWithAccounts,
   type ContentPublication,
 } from "@socialpilot/db";
 import {
+  MetaAuthError,
   publishFacebookStory,
   publishInstagramStory,
   publishToFacebook,
@@ -89,53 +91,67 @@ async function publishOnePlatform(
   if (!account) {
     throw new Error(`No connected ${publication.platform} account`);
   }
+  // Already known dead from a prior attempt on ANY post for this account -
+  // fail fast instead of re-discovering the same 190 through a live Graph
+  // call, so every other scheduled post on a broken connection stops
+  // burning retry attempts the moment the first one finds out.
+  if (account.status === "EXPIRED") {
+    throw new MetaAuthError(`${publication.platform} account disconnected - reconnect required`);
+  }
   if (!job.masterImageUrl) {
     throw new Error("Job has no master image to publish");
   }
 
   const accessToken = decryptToken(account.accessToken);
 
-  if (publication.externalPostId) {
-    const alreadyPublished = await verifyGraphObjectExists(publication.externalPostId, accessToken);
-    if (alreadyPublished) {
-      await markContentPublicationPublished(publication.id, publication.externalPostId);
-      await publishStoryBestEffort(publication, job, account.externalId, accessToken);
-      return;
+  try {
+    if (publication.externalPostId) {
+      const alreadyPublished = await verifyGraphObjectExists(publication.externalPostId, accessToken);
+      if (alreadyPublished) {
+        await markContentPublicationPublished(publication.id, publication.externalPostId);
+        await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+        return;
+      }
+      // The stored id never actually resolved to a live post - fall through
+      // and publish fresh, same as if nothing had been recorded yet.
     }
-    // The stored id never actually resolved to a live post - fall through
-    // and publish fresh, same as if nothing had been recorded yet.
+
+    const caption = buildCaption(job.caption, job.hashtags);
+    const externalPostId =
+      publication.platform === "INSTAGRAM"
+        ? await publishToInstagram({
+            pageAccessToken: accessToken,
+            igUserId: account.externalId,
+            imageUrl: job.masterImageUrl,
+            caption,
+          })
+        : await publishToFacebook({
+            pageAccessToken: accessToken,
+            pageId: account.externalId,
+            imageUrl: job.masterImageUrl,
+            caption,
+          });
+
+    // Persisted immediately, before verification or the Story sub-step, so a
+    // crash right after this line still leaves durable proof that stops a
+    // retry from ever calling the publish endpoint again for this platform.
+    await recordContentPublicationExternalId(publication.id, externalPostId);
+
+    const verified = await verifyGraphObjectExists(externalPostId, accessToken);
+    if (!verified) {
+      throw new Error(`Published ${publication.platform} post did not verify (${externalPostId})`);
+    }
+
+    await markContentPublicationPublished(publication.id, externalPostId);
+    console.log(`Published job ${job.id} -> ${publication.platform} (${externalPostId})`);
+
+    await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+  } catch (error) {
+    if (error instanceof MetaAuthError) {
+      await markSocialAccountExpired(account.id);
+    }
+    throw error;
   }
-
-  const caption = buildCaption(job.caption, job.hashtags);
-  const externalPostId =
-    publication.platform === "INSTAGRAM"
-      ? await publishToInstagram({
-          pageAccessToken: accessToken,
-          igUserId: account.externalId,
-          imageUrl: job.masterImageUrl,
-          caption,
-        })
-      : await publishToFacebook({
-          pageAccessToken: accessToken,
-          pageId: account.externalId,
-          imageUrl: job.masterImageUrl,
-          caption,
-        });
-
-  // Persisted immediately, before verification or the Story sub-step, so a
-  // crash right after this line still leaves durable proof that stops a
-  // retry from ever calling the publish endpoint again for this platform.
-  await recordContentPublicationExternalId(publication.id, externalPostId);
-
-  const verified = await verifyGraphObjectExists(externalPostId, accessToken);
-  if (!verified) {
-    throw new Error(`Published ${publication.platform} post did not verify (${externalPostId})`);
-  }
-
-  await markContentPublicationPublished(publication.id, externalPostId);
-  console.log(`Published job ${job.id} -> ${publication.platform} (${externalPostId})`);
-
-  await publishStoryBestEffort(publication, job, account.externalId, accessToken);
 }
 
 /**
@@ -172,7 +188,11 @@ export async function runPublishCycle(now: Date = new Date()): Promise<void> {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`Publishing job ${job.id} -> ${publication.platform} failed: ${message}`);
       await markContentPublicationFailed(claimedPublication.id, message, {
-        permanent: claimedPublication.attempts + 1 >= MAX_PUBLISH_ATTEMPTS,
+        // A dead connection won't fix itself on the next attempt - no
+        // point burning the usual retry ladder before giving up.
+        permanent:
+          error instanceof MetaAuthError ||
+          claimedPublication.attempts + 1 >= MAX_PUBLISH_ATTEMPTS,
       });
     }
 

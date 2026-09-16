@@ -191,6 +191,8 @@
       "instagram": "إنستغرام",
       "facebook": "فيسبوك",
       "active": "نشط",
+      "expired": "يتطلب إعادة الربط",
+      "reconnect": "إعادة الربط",
       "disconnect": "قطع الاتصال"
     },
     "brandForm": {
