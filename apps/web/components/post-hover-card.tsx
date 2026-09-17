@@ -131,6 +131,9 @@ export interface CalendarPost {
   platform: "INSTAGRAM" | "FACEBOOK";
   status: CalendarPostStatus;
   caption: string | null;
+  /** The free-text instruction behind `caption`, if this job's caption has
+   * ever been manually (re)generated - see EditPostDialog. */
+  captionInstruction: string | null;
   imageUrls: string[];
   scheduledFor: string;
 }
@@ -250,7 +253,7 @@ export function PostHoverCard({
         <div className="mt-3 flex justify-end gap-1.5 border-t border-border pt-3">
           <EditPostDialog
             jobId={post.jobId}
-            caption={post.caption ?? ""}
+            instruction={post.captionInstruction ?? post.caption ?? ""}
             scheduledForIso={post.scheduledFor}
             status={post.status}
             platform={post.platform}

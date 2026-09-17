@@ -382,6 +382,13 @@ model ContentJob {
   // generated per platform, per the client's "publish the same content
   // everywhere" requirement.
   caption        String?
+  // The free-text instruction (e.g. "Promote our new chicken meal,
+  // highlight the crispy chicken") behind `caption` - a customer edits
+  // this, not the caption directly; the caption is regenerated from it
+  // plus the brand's profile each time. Null for a job whose caption came
+  // from the fully-automatic scheduled pipeline and was never manually
+  // instructed.
+  captionInstruction String?
   hashtags       String[]
   masterImageUrl String?
   storyImageUrl  String?

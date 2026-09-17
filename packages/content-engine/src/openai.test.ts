@@ -101,6 +101,59 @@ describe("generateCaption", () => {
     expect(result.caption).toBe("Weekend special is here!");
     expect(result.hashtags).toEqual(["#weekendoffer", "#burger"]);
   });
+
+  it("includes category, products/services, and language when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify({ caption: "x", hashtags: [] }) } }],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateCaption({
+      businessName: "Acme Burgers",
+      category: "Fast food restaurant",
+      description: "A family-owned burger joint since 1990",
+      productsServices: ["Chicken burgers", "Fries"],
+      language: "French",
+      tone: "Bold and playful",
+      brief: "Promote our new chicken meal, highlight the crispy chicken",
+    });
+
+    const [, options] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(options.body as string);
+    const userMessage = body.messages[1].content as string;
+    expect(userMessage).toContain("Fast food restaurant");
+    expect(userMessage).toContain("family-owned burger joint since 1990");
+    expect(userMessage).toContain("Chicken burgers, Fries");
+    expect(userMessage).toContain("Write the caption in French");
+    expect(userMessage).toContain("Bold and playful");
+    expect(userMessage).toContain("Promote our new chicken meal");
+  });
+
+  it("omits optional context lines entirely when not provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify({ caption: "x", hashtags: [] }) } }],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateCaption({ businessName: "Acme Burgers", brief: "Weekend offer" });
+
+    const [, options] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(options.body as string);
+    const userMessage = body.messages[1].content as string;
+    expect(userMessage).not.toContain("Products/services");
+    expect(userMessage).not.toContain("Write the caption in");
+    expect(userMessage).toContain("Tone: friendly");
+  });
 });
 
 describe("analyzeBrandDescription", () => {

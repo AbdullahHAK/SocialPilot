@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, ImagePlus, Plus, X } from "lucide-react";
+import { ImagePlus, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useState } from "react";
 import type { OnboardingFormState } from "@/app/onboarding/actions";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 
 const LANGUAGE_VALUES = ["en", "ur", "ar", "es", "fr", "hi", "pt", "de"] as const;
 
@@ -28,29 +28,21 @@ export type OnboardingAction = (
 
 export function OnboardingWizard({ action }: { action: OnboardingAction }) {
   const t = useTranslations("onboarding.wizard");
-  const steps = t.raw("steps") as string[];
   const [state, formAction, isPending] = useActionState<
     OnboardingFormState,
     FormData
   >(action, {});
-  const [step, setStep] = useState(0);
   const [colors, setColors] = useState<string[]>(DEFAULT_COLORS);
   const [products, setProducts] = useState<string[]>([""]);
   const [logoName, setLogoName] = useState<string | null>(null);
 
-  const isLastStep = step === steps.length - 1;
-
   return (
-    <form action={formAction} className="flex flex-col gap-8">
-      <Stepper steps={steps} currentStep={step} />
-
-      <Step active={step === 0}>
-        <div className="flex flex-col gap-5">
-          {/* No `required` here: Chromium doesn't reliably exempt a
-              required field from constraint validation just because an
-              ancestor is `hidden` on a later step, so it can block
-              submission on a field the user can't see or fix. The server
-              action validates this instead. */}
+    <form action={formAction} className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("steps.0")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
           <Field
             label={t("step1.businessName")}
             name="businessName"
@@ -71,11 +63,14 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
             />
             <p className="text-xs text-muted-foreground">{t("step1.describeHint")}</p>
           </div>
-        </div>
-      </Step>
+        </CardContent>
+      </Card>
 
-      <Step active={step === 1}>
-        <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("steps.1")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <Label htmlFor="logo">{t("step2.logo")}</Label>
             <label
@@ -138,12 +133,14 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
               )}
             </div>
           </div>
-        </div>
-      </Step>
+        </CardContent>
+      </Card>
 
-      <Step active={step === 2}>
-        <div className="flex flex-col gap-2">
-          <Label>{t("step3.productsServices")}</Label>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("steps.2")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
           {products.map((product, index) => (
             <div key={index} className="flex items-center gap-2">
               <Input
@@ -181,11 +178,14 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
             <Plus className="size-4" />
             {t("step3.addAnother")}
           </Button>
-        </div>
-      </Step>
+        </CardContent>
+      </Card>
 
-      <Step active={step === 3}>
-        <div className="flex flex-col gap-5">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("steps.3")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="language">{t("step4.preferredLanguage")}</Label>
             <Select name="language" defaultValue="en">
@@ -206,14 +206,8 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
             name="tone"
             placeholder={t("step4.tonePlaceholder")}
           />
-        </div>
-      </Step>
-
-      <Step active={step === 4}>
-        <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          {t("step5.reviewText")}
-        </div>
-      </Step>
+        </CardContent>
+      </Card>
 
       {state.error && (
         <p role="alert" className="text-sm font-medium text-destructive">
@@ -221,94 +215,11 @@ export function OnboardingWizard({ action }: { action: OnboardingAction }) {
         </p>
       )}
 
-      <div className="flex items-center justify-between border-t border-border pt-6">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-        >
-          {t("back")}
-        </Button>
-        {isLastStep ? (
-          // `key` forces React to mount a fresh element here rather than
-          // mutating the Next button in place: without it, the same DOM
-          // node's type flips button -> submit as part of the very click
-          // that turns Next into Finish, and the browser can treat that
-          // click as activating the now-submit button, silently skipping
-          // the review step and submitting onboarding one click early.
-          <Button key="finish" type="submit" disabled={isPending}>
-            {t("finish")}
-          </Button>
-        ) : (
-          <Button
-            key="next"
-            type="button"
-            onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
-          >
-            {t("next")}
-          </Button>
-        )}
-      </div>
+      <Button type="submit" size="lg" disabled={isPending} className="w-fit">
+        {t("saveAndContinue")}
+      </Button>
     </form>
   );
-}
-
-function Stepper({ steps, currentStep }: { steps: string[]; currentStep: number }) {
-  return (
-    <ol className="flex items-center">
-      {steps.map((label, index) => {
-        const isCompleted = index < currentStep;
-        const isCurrent = index === currentStep;
-
-        return (
-          <li key={label} className="flex flex-1 items-center last:flex-none">
-            <div className="flex flex-col items-center gap-1.5">
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
-                  isCompleted && "bg-primary text-primary-foreground",
-                  isCurrent &&
-                    "border-2 border-primary text-primary",
-                  !isCompleted &&
-                    !isCurrent &&
-                    "border border-border text-muted-foreground",
-                )}
-              >
-                {isCompleted ? <Check className="size-3.5" /> : index + 1}
-              </span>
-              <span
-                className={cn(
-                  "hidden text-center text-[11px] font-medium whitespace-nowrap sm:block",
-                  isCurrent ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {label}
-              </span>
-            </div>
-            {index < steps.length - 1 && (
-              <span
-                className={cn(
-                  "mx-2 h-px flex-1",
-                  isCompleted ? "bg-primary" : "bg-border",
-                )}
-              />
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-function Step({ active, children }: { active: boolean; children: ReactNode }) {
-  // The `hidden` attribute must be the only display-affecting thing on this
-  // element: Tailwind's `flex`/`grid`/etc. utility classes live in a later
-  // cascade layer than the browser's default `[hidden]{display:none}` rule,
-  // so putting a layout class on the same element as `hidden` would win and
-  // silently un-hide it (Chrome then refuses to submit the form because a
-  // "hidden" required field is actually still visible and empty).
-  return <div hidden={!active}>{children}</div>;
 }
 
 function Field({

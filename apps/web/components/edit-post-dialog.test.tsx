@@ -9,7 +9,7 @@ function openDialog() {
 
 const defaultProps = {
   jobId: "job-1",
-  caption: "Original caption",
+  instruction: "Promote our weekend chicken burger offer",
   scheduledForIso: "2026-09-13T14:30:00.000Z",
   status: "SCHEDULED" as const,
   platform: "INSTAGRAM" as const,
@@ -17,31 +17,33 @@ const defaultProps = {
 };
 
 describe("EditPostDialog - not yet published", () => {
-  it("pre-fills the caption and the scheduled time in the browser's local time", () => {
+  it("pre-fills the instruction and the scheduled time in the browser's local time", () => {
     render(<EditPostDialog {...defaultProps} action={vi.fn().mockResolvedValue({ ok: true })} />);
     openDialog();
 
-    expect(screen.getByDisplayValue("Original caption")).toBeVisible();
+    expect(
+      screen.getByDisplayValue("Promote our weekend chicken burger offer"),
+    ).toBeVisible();
   });
 
-  it("submits the edited caption and the jobId, preserving the original instant", async () => {
+  it("submits the edited instruction and the jobId, preserving the original instant", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true });
     render(<EditPostDialog {...defaultProps} action={action} />);
     openDialog();
 
-    const textarea = screen.getByDisplayValue("Original caption");
-    fireEvent.change(textarea, { target: { value: "Updated caption" } });
+    const textarea = screen.getByDisplayValue("Promote our weekend chicken burger offer");
+    fireEvent.change(textarea, { target: { value: "Announce our new spicy wrap" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     const formData = action.mock.calls[0][0] as FormData;
     expect(formData.get("jobId")).toBe("job-1");
-    expect(formData.get("caption")).toBe("Updated caption");
+    expect(formData.get("instruction")).toBe("Announce our new spicy wrap");
     expect(formData.get("timezone")).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
     // Reconstruct the instant from the submitted date+time+timezone and
     // confirm it's unchanged from what was passed in, since only the
-    // caption was edited.
+    // instruction was edited.
     const date = String(formData.get("date"));
     const time = String(formData.get("time"));
     const timezone = String(formData.get("timezone"));
@@ -56,17 +58,19 @@ describe("EditPostDialog - not yet published", () => {
     render(<EditPostDialog {...defaultProps} action={vi.fn().mockResolvedValue({ ok: true })} />);
     openDialog();
 
-    const textarea = screen.getByDisplayValue("Original caption");
+    const textarea = screen.getByDisplayValue("Promote our weekend chicken burger offer");
     fireEvent.change(textarea, { target: { value: "Unsaved edit" } });
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
 
     openDialog();
-    expect(screen.getByDisplayValue("Original caption")).toBeVisible();
+    expect(
+      screen.getByDisplayValue("Promote our weekend chicken burger offer"),
+    ).toBeVisible();
   });
 
   it("uses today's date key format for the date field", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true });
-    render(<EditPostDialog {...defaultProps} caption="" action={action} />);
+    render(<EditPostDialog {...defaultProps} instruction="" action={action} />);
     openDialog();
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -92,20 +96,20 @@ describe("EditPostDialog - already published", () => {
     expect(screen.queryByText(/^date/i)).not.toBeInTheDocument();
   });
 
-  it("submits only the caption and jobId, no date/time fields", async () => {
+  it("submits only the instruction and jobId, no date/time fields", async () => {
     const action = vi.fn().mockResolvedValue({ ok: true });
     render(<EditPostDialog {...defaultProps} status="PUBLISHED" action={action} />);
     openDialog();
 
-    fireEvent.change(screen.getByDisplayValue("Original caption"), {
-      target: { value: "Updated after publish" },
+    fireEvent.change(screen.getByDisplayValue("Promote our weekend chicken burger offer"), {
+      target: { value: "Announce our new spicy wrap" },
     });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     const formData = action.mock.calls[0][0] as FormData;
     expect(formData.get("jobId")).toBe("job-1");
-    expect(formData.get("caption")).toBe("Updated after publish");
+    expect(formData.get("instruction")).toBe("Announce our new spicy wrap");
     expect(formData.get("date")).toBeNull();
     expect(formData.get("time")).toBeNull();
   });

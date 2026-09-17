@@ -97,13 +97,23 @@ export function createOneTimePostSchema(t: Translate) {
 }
 export type OneTimePostInput = z.infer<ReturnType<typeof createOneTimePostSchema>>;
 
-function captionSchema(t: Translate) {
-  return z.string().trim().max(2200, t("captionTooLong"));
+// This is the free-text INSTRUCTION describing what the post should say
+// (e.g. "Promote our new chicken meal, highlight the crispy chicken") -
+// AI turns it into the actual caption, so it's validated as an
+// instruction, not against a platform's final-caption length limit. 5000
+// is a generous ceiling against pathological input, not a real practical
+// constraint on what someone would type.
+function captionInstructionSchema(t: Translate) {
+  return z
+    .string()
+    .trim()
+    .min(1, t("instructionRequired"))
+    .max(5000, t("instructionTooLong"));
 }
 
 export function createEditContentPostSchema(t: Translate) {
   return z.object({
-    caption: captionSchema(t),
+    instruction: captionInstructionSchema(t),
     date: isoDateSchema(t),
     time: hhmmTimeSchema(t),
   });
@@ -111,10 +121,10 @@ export function createEditContentPostSchema(t: Translate) {
 export type EditContentPostInput = z.infer<ReturnType<typeof createEditContentPostSchema>>;
 
 /** A published post's schedule can't change (it already went out) - only
- * the caption is still editable. */
+ * the caption (via its instruction) is still editable. */
 export function createEditPublishedPostSchema(t: Translate) {
   return z.object({
-    caption: captionSchema(t),
+    instruction: captionInstructionSchema(t),
   });
 }
 

@@ -83,6 +83,16 @@ export async function generateImage(input: GenerateImageInput): Promise<Buffer> 
 export interface GenerateCaptionInput {
   businessName: string;
   tone?: string;
+  /** Additional brand context, all optional - richer input produces a
+   * more accurately on-brand caption, but every field here was already
+   * optional before this was added, so omitting all of them reproduces
+   * the original minimal behavior exactly. */
+  category?: string;
+  description?: string;
+  productsServices?: string[];
+  /** Language name (e.g. "French", "Arabic") to write the caption in;
+   * omitted defaults to whatever language `brief` itself is written in. */
+  language?: string;
   brief: string;
 }
 
@@ -96,6 +106,17 @@ export async function generateCaption(
 ): Promise<GeneratedCaption> {
   const apiKey = requireEnv("OPENAI_API_KEY");
 
+  const contextLines = [
+    `Business: ${input.businessName}${input.category ? ` (${input.category})` : ""}.`,
+    input.description ? `About the business: ${input.description}.` : null,
+    input.productsServices?.length
+      ? `Products/services: ${input.productsServices.join(", ")}.`
+      : null,
+    `Tone: ${input.tone ?? "friendly"}.`,
+    input.language ? `Write the caption in ${input.language}.` : null,
+    `Post about: ${input.brief}`,
+  ].filter((line): line is string => Boolean(line));
+
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -108,11 +129,11 @@ export async function generateCaption(
         {
           role: "system",
           content:
-            'You write short, engaging Instagram/Facebook captions with relevant hashtags for small businesses. Default to building brand recognition and making the business memorable - do not invent or mention a specific price, discount percentage, or limited-time deal unless the post topic explicitly names one; when no price is given, prefer broader phrases like "special offer available" or "discover our menu". Respond ONLY with JSON matching {"caption": string, "hashtags": string[]}. Hashtags should not include the "#" character.',
+            'You write short, engaging Instagram/Facebook captions with relevant hashtags for small businesses, using the "Post about" instruction as what this specific post should communicate - not as literal text to copy verbatim. Default to building brand recognition and making the business memorable - do not invent or mention a specific price, discount percentage, or limited-time deal unless the post topic explicitly names one; when no price is given, prefer broader phrases like "special offer available" or "discover our menu". Respond ONLY with JSON matching {"caption": string, "hashtags": string[]}. Hashtags should not include the "#" character.',
         },
         {
           role: "user",
-          content: `Business: ${input.businessName}. Tone: ${input.tone ?? "friendly"}. Post about: ${input.brief}`,
+          content: contextLines.join(" "),
         },
       ],
       response_format: { type: "json_object" },

@@ -161,12 +161,7 @@
           "de": "German"
         }
       },
-      "step5": {
-        "reviewText": "Review your answers with Back, then Finish to go to your dashboard. You'll be able to fine-tune these later in Brand Settings."
-      },
-      "back": "Back",
-      "next": "Next",
-      "finish": "Finish"
+      "saveAndContinue": "Save & Continue"
     }
   },
   "dashboard": {
@@ -349,9 +344,10 @@
     "editPostDialog": {
       "saveFailed": "Couldn't save those changes. Please try again.",
       "title": "Edit post",
-      "descriptionPublished": "This post already went out - you can still update its caption.",
-      "descriptionEditable": "Change the caption or move it to a different date and time.",
-      "caption": "Caption",
+      "descriptionPublished": "This post already went out - you can still change what its caption says.",
+      "descriptionEditable": "Describe what this post should say, or move it to a different date and time.",
+      "caption": "What should this post say?",
+      "captionHint": "Describe what you want this post to communicate - YOPAPI writes the actual caption for you, using your brand profile, products/services, language, and tone.",
       "instagramCaptionLocked": "Instagram doesn't support editing a caption after it's published - saving here only updates your record, not the live post.",
       "facebookWillUpdate": "This will also update the caption on the live Facebook post.",
       "time": "Time",
@@ -459,7 +455,8 @@
     "chooseLanguage": "Choose a language",
     "invalidTime": "Enter a time as HH:MM",
     "invalidDate": "Enter a date as YYYY-MM-DD",
-    "captionTooLong": "Keep the caption under 2200 characters",
+    "instructionRequired": "Tell us what this post should say",
+    "instructionTooLong": "Keep this under 5000 characters",
     "invalidTimezone": "Invalid timezone"
   },
   "landing": {

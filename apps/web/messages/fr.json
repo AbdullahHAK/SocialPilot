@@ -161,12 +161,7 @@
           "de": "Allemand"
         }
       },
-      "step5": {
-        "reviewText": "Vérifiez vos réponses avec Retour, puis Terminer pour accéder à votre tableau de bord. Vous pourrez les affiner plus tard dans les Paramètres de marque."
-      },
-      "back": "Retour",
-      "next": "Suivant",
-      "finish": "Terminer"
+      "saveAndContinue": "Enregistrer et continuer"
     }
   },
   "dashboard": {
@@ -349,9 +344,10 @@
     "editPostDialog": {
       "saveFailed": "Impossible d'enregistrer ces modifications. Veuillez réessayer.",
       "title": "Modifier la publication",
-      "descriptionPublished": "Cette publication a déjà été diffusée - vous pouvez toujours modifier sa légende.",
-      "descriptionEditable": "Modifiez la légende ou déplacez-la à une autre date et heure.",
-      "caption": "Légende",
+      "descriptionPublished": "Cette publication a déjà été diffusée - vous pouvez toujours modifier ce que dit sa légende.",
+      "descriptionEditable": "Décrivez ce que cette publication doit dire, ou déplacez-la à une autre date et heure.",
+      "caption": "Que doit dire cette publication ?",
+      "captionHint": "Décrivez ce que vous voulez que cette publication communique - YOPAPI rédige la légende à votre place, en utilisant votre profil de marque, vos produits/services, votre langue et votre ton.",
       "instagramCaptionLocked": "Instagram ne permet pas de modifier une légende après publication - l'enregistrement ici ne met à jour que votre enregistrement, pas la publication en ligne.",
       "facebookWillUpdate": "Cela mettra également à jour la légende sur la publication Facebook en ligne.",
       "time": "Heure",
@@ -459,7 +455,8 @@
     "chooseLanguage": "Choisissez une langue",
     "invalidTime": "Saisissez une heure au format HH:MM",
     "invalidDate": "Saisissez une date au format AAAA-MM-JJ",
-    "captionTooLong": "Limitez la légende à 2200 caractères",
+    "instructionRequired": "Indiquez ce que cette publication doit dire",
+    "instructionTooLong": "Limitez ceci à 5000 caractères",
     "invalidTimezone": "Fuseau horaire invalide"
   },
   "landing": {

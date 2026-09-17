@@ -41,7 +41,7 @@ function initialStateFor(scheduledForIso: string) {
 
 export function EditPostDialog({
   jobId,
-  caption,
+  instruction,
   scheduledForIso,
   status,
   platform,
@@ -49,7 +49,10 @@ export function EditPostDialog({
   trigger,
 }: {
   jobId: string;
-  caption: string;
+  /** Pre-fill for the instruction textarea - the job's own
+   * captionInstruction if it's ever been manually edited before, or its
+   * current caption as a starting point if not (see calendar/page.tsx). */
+  instruction: string;
   scheduledForIso: string;
   status: "GENERATING" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED" | "RETRYING" | "CANCELLED";
   platform: "INSTAGRAM" | "FACEBOOK";
@@ -64,14 +67,14 @@ export function EditPostDialog({
   const locale = useLocale();
   const monthLabels = getMonthLabels(locale);
   const [open, setOpen] = useState(false);
-  const [captionText, setCaptionText] = useState(caption);
+  const [instructionText, setInstructionText] = useState(instruction);
   const [state, setState] = useState(() => initialStateFor(scheduledForIso));
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function reset() {
-    setCaptionText(caption);
+    setInstructionText(instruction);
     setState(initialStateFor(scheduledForIso));
     setError(null);
     setNote(null);
@@ -82,7 +85,7 @@ export function EditPostDialog({
     setNote(null);
     const formData = new FormData();
     formData.set("jobId", jobId);
-    formData.set("caption", captionText);
+    formData.set("instruction", instructionText);
     if (!isPublished) {
       formData.set("date", dateKey(state.date));
       formData.set(
@@ -130,11 +133,11 @@ export function EditPostDialog({
           <div>
             <p className="mb-2 text-sm font-medium">{t("caption")}</p>
             <Textarea
-              value={captionText}
-              onChange={(e) => setCaptionText(e.target.value)}
+              value={instructionText}
+              onChange={(e) => setInstructionText(e.target.value)}
               rows={4}
-              maxLength={2200}
             />
+            <p className="mt-1.5 text-xs text-muted-foreground">{t("captionHint")}</p>
             {/* Once a save returns a note, it says the same thing more
                 specifically (e.g. whether the live push actually
                 succeeded) - no need to show both. */}

@@ -560,6 +560,8 @@ export function getContentJob(organizationId: string, jobId: string) {
 
 export interface UpdateContentJobInput {
   caption?: string;
+  hashtags?: string[];
+  captionInstruction?: string;
   scheduledFor?: Date;
 }
 

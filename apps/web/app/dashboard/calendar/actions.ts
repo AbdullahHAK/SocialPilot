@@ -3,6 +3,7 @@
 import {
   decryptToken,
   ensurePublishingScheduleTimezone,
+  getBrandProfile,
   getContentJob,
   listSocialAccounts,
   removeContentJobPlatform,
@@ -10,6 +11,7 @@ import {
   zonedTimeToUtc,
   type Platform,
 } from "@socialpilot/db";
+import { asStringArray, generateCaption } from "@socialpilot/content-engine";
 import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { updateFacebookPostCaption } from "@/lib/meta";
@@ -19,6 +21,40 @@ import {
   createEditPublishedPostSchema,
   createTimezoneSchema,
 } from "@/lib/validation";
+
+// The language SELECTed in onboarding/Brand Settings is stored as a short
+// code (e.g. "fr"), but generateCaption's prompt wants a plain language
+// name the model can follow as an instruction ("Write the caption in
+// French") - this is the same fixed set already offered to customers in
+// onboarding-wizard.tsx / brand-settings-form.tsx.
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  ur: "Urdu",
+  ar: "Arabic",
+  es: "Spanish",
+  fr: "French",
+  hi: "Hindi",
+  pt: "Portuguese",
+  de: "German",
+};
+
+/** Turns a customer's free-text instruction into the actual caption -
+ * shared by both the locked (already-published) and normal edit paths so
+ * a manual re-caption always goes through the same brand-aware
+ * generation as the rest of the product, rather than saving whatever was
+ * typed verbatim. */
+async function generateCaptionFromInstruction(organizationId: string, instruction: string) {
+  const brand = await getBrandProfile(organizationId);
+  return generateCaption({
+    businessName: brand?.businessName ?? "this business",
+    category: brand?.category ?? undefined,
+    description: brand?.description ?? undefined,
+    productsServices: asStringArray(brand?.productsServices) ?? undefined,
+    tone: brand?.tone ?? undefined,
+    language: brand?.language ? LANGUAGE_NAMES[brand.language] : undefined,
+    brief: instruction,
+  });
+}
 
 function parseTimezone(value: FormDataEntryValue | null): string {
   const parsed = createTimezoneSchema((key) => key).safeParse(value);
@@ -60,12 +96,26 @@ export async function editContentJobAction(
 
   if (isLocked(existing.status)) {
     const parsed = createEditPublishedPostSchema((key) => key).safeParse({
-      caption: formData.get("caption"),
+      instruction: formData.get("instruction"),
     });
     if (!parsed.success) return { ok: false };
 
+    let caption: string;
+    let hashtags: string[];
+    try {
+      ({ caption, hashtags } = await generateCaptionFromInstruction(
+        session.organizationId,
+        parsed.data.instruction,
+      ));
+    } catch (error) {
+      console.error("Generating the caption from the instruction failed", error);
+      return { ok: false };
+    }
+
     const updated = await rescheduleContentJob(session.organizationId, jobId, {
-      caption: parsed.data.caption,
+      caption,
+      hashtags,
+      captionInstruction: parsed.data.instruction,
     });
     if ("error" in updated) return { ok: false };
 
@@ -85,7 +135,7 @@ export async function editContentJobAction(
           await updateFacebookPostCaption(
             decryptToken(facebookAccount.accessToken),
             facebookPublication.externalPostId!,
-            parsed.data.caption,
+            caption,
           );
         } catch (error) {
           console.error("Updating the live Facebook post caption failed", error);
@@ -103,11 +153,23 @@ export async function editContentJobAction(
   }
 
   const parsed = createEditContentPostSchema((key) => key).safeParse({
-    caption: formData.get("caption"),
+    instruction: formData.get("instruction"),
     date: formData.get("date"),
     time: formData.get("time"),
   });
   if (!parsed.success) return { ok: false };
+
+  let caption: string;
+  let hashtags: string[];
+  try {
+    ({ caption, hashtags } = await generateCaptionFromInstruction(
+      session.organizationId,
+      parsed.data.instruction,
+    ));
+  } catch (error) {
+    console.error("Generating the caption from the instruction failed", error);
+    return { ok: false };
+  }
 
   const timezone = parseTimezone(formData.get("timezone"));
   await ensurePublishingScheduleTimezone(session.organizationId, timezone);
@@ -117,7 +179,9 @@ export async function editContentJobAction(
   const scheduledFor = zonedTimeToUtc({ year, month, day, hour, minute }, timezone);
 
   const result = await rescheduleContentJob(session.organizationId, jobId, {
-    caption: parsed.data.caption,
+    caption,
+    hashtags,
+    captionInstruction: parsed.data.instruction,
     scheduledFor,
   });
   if ("error" in result) {
