@@ -63,7 +63,7 @@ export default async function AdminCodesPage({
         <Input name="q" placeholder="Search codes" defaultValue={search ?? ""} />
       </form>
 
-      <Card className="overflow-hidden">
+      <Card className="hidden overflow-hidden sm:block">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
             <tr>
@@ -114,6 +114,36 @@ export default async function AdminCodesPage({
           </tbody>
         </table>
       </Card>
+
+      <div className="flex flex-col gap-3 sm:hidden">
+        {codes.map((code) => (
+          <Card key={code.id} className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-sm font-medium">{code.code}</span>
+              <Badge variant={STATUS_BADGE_VARIANT[code.status]}>{code.status}</Badge>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>{code.plan} · {code.durationDays}d</span>
+              <span>
+                {code.redeemedAt ? `Redeemed ${code.redeemedAt.toLocaleDateString()}` : "Unredeemed"}
+              </span>
+            </div>
+            {code.status !== "REDEEMED" && (
+              <form
+                action={toggleCodeDisabledAction.bind(null, code.id, code.status === "UNUSED")}
+                className="mt-2"
+              >
+                <Button type="submit" variant="outline" size="sm">
+                  {code.status === "UNUSED" ? "Disable" : "Enable"}
+                </Button>
+              </form>
+            )}
+          </Card>
+        ))}
+        {codes.length === 0 && (
+          <Card className="p-8 text-center text-muted-foreground">No codes yet.</Card>
+        )}
+      </div>
     </div>
   );
 }

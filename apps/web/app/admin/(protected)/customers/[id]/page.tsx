@@ -124,7 +124,7 @@ export default async function AdminCustomerDetailPage({
           </div>
 
           <div className="flex flex-wrap items-end gap-3 border-t border-border pt-4">
-            <form action={adjustSubscriptionDaysAction} className="flex items-end gap-2">
+            <form action={adjustSubscriptionDaysAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="organizationId" value={id} />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="deltaDays">Adjust by days (+/-)</Label>
@@ -133,7 +133,7 @@ export default async function AdminCustomerDetailPage({
               <Button type="submit" variant="outline" size="sm">Apply</Button>
             </form>
 
-            <form action={setExpirationAction} className="flex items-end gap-2">
+            <form action={setExpirationAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="organizationId" value={id} />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="expiration">Set exact expiration</Label>
@@ -144,7 +144,7 @@ export default async function AdminCustomerDetailPage({
           </div>
 
           <div className="flex flex-wrap items-end gap-3 border-t border-border pt-4">
-            <form action={manualActivateAction} className="flex items-end gap-2">
+            <form action={manualActivateAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="organizationId" value={id} />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="plan">Manually activate - plan</Label>
@@ -161,7 +161,7 @@ export default async function AdminCustomerDetailPage({
               <Button type="submit" size="sm">Activate</Button>
             </form>
 
-            <form action={redeemCodeForCustomerAction} className="flex items-end gap-2">
+            <form action={redeemCodeForCustomerAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="organizationId" value={id} />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="code">Redeem code for this customer</Label>

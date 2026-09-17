@@ -31,7 +31,11 @@ export default async function AdminCustomersPage({
         <Input name="q" placeholder="Search by name, email, or ID" defaultValue={search ?? ""} />
       </form>
 
-      <Card className="overflow-hidden">
+      {/* A 5-column table works on desktop but doesn't fit a phone screen -
+          confirmed live, it squeezed to an unusable single column next to
+          the sidebar. Below sm, show a card per customer instead; the
+          table is unchanged at sm and up. */}
+      <Card className="hidden overflow-hidden sm:block">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30 text-start text-xs font-medium text-muted-foreground">
             <tr>
@@ -74,6 +78,29 @@ export default async function AdminCustomersPage({
           </tbody>
         </table>
       </Card>
+
+      <div className="flex flex-col gap-3 sm:hidden">
+        {organizations.map((org) => (
+          <Link key={org.id} href={`/admin/customers/${org.id}`}>
+            <Card className="p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium">{org.name}</p>
+                <Badge variant={STATUS_BADGE_VARIANT[org.status]}>{org.status}</Badge>
+              </div>
+              <p className="mt-1 truncate text-sm text-muted-foreground">
+                {org.memberships[0]?.user.email ?? "—"}
+              </p>
+              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{org.subscription?.plan ?? "No plan"}</span>
+                <span>Joined {org.createdAt.toLocaleDateString()}</span>
+              </div>
+            </Card>
+          </Link>
+        ))}
+        {organizations.length === 0 && (
+          <Card className="p-8 text-center text-muted-foreground">No customers found.</Card>
+        )}
+      </div>
     </div>
   );
 }
