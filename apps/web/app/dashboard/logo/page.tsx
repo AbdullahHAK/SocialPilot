@@ -1,11 +1,11 @@
 import { getBrandProfile, getMonthlyImageUsage, MONTHLY_LOGO_CAP } from "@socialpilot/db";
+import { asStringArray } from "@socialpilot/content-engine";
 import { getTranslations } from "next-intl/server";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GenerateLogoForm } from "@/components/generate-logo-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
-import { generateLogoConceptsAction } from "./actions";
+import { generateLogoConceptsAction, saveBrandColorsAction, uploadLogoAction } from "./actions";
 
 export default async function LogoPage({
   searchParams,
@@ -42,24 +42,19 @@ export default async function LogoPage({
               alt={t("currentLogoAlt")}
               className="size-14 shrink-0 rounded-lg border border-border object-contain p-1"
             />
-            <p className="text-sm text-muted-foreground">
-              {t("haveDifferentLogo")}{" "}
-              <Link
-                href="/dashboard/brand"
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {t("uploadInBrandSettings")}
-              </Link>
-              {t("orGenerateNew")}
-            </p>
+            <p className="text-sm text-muted-foreground">{t("haveDifferentLogo")}</p>
           </CardContent>
         </Card>
       )}
 
       <GenerateLogoForm
         action={generateLogoConceptsAction}
+        uploadAction={uploadLogoAction}
+        colorsAction={saveBrandColorsAction}
         returnTo={typeof returnTo === "string" ? returnTo : undefined}
         remainingLogoRevisions={Math.max(0, MONTHLY_LOGO_CAP - usage.logo)}
+        logoCap={MONTHLY_LOGO_CAP}
+        initialColors={asStringArray(brand?.colors) ?? []}
       />
     </div>
   );

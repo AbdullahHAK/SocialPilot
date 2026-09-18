@@ -1,15 +1,11 @@
 "use server";
 
 import { upsertBrandProfile } from "@socialpilot/db";
-import { analyzeBrandDescription, uploadLogo } from "@socialpilot/content-engine";
+import { analyzeBrandDescription } from "@socialpilot/content-engine";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import {
-  createBrandProfileSchema,
-  LOGO_ALLOWED_TYPES,
-  LOGO_MAX_BYTES,
-} from "@/lib/validation";
+import { createBrandProfileSchema } from "@/lib/validation";
 
 export interface OnboardingFormState {
   error?: string;
@@ -40,7 +36,6 @@ export async function saveBrandProfileAction(
     businessName: formData.get("businessName"),
     category: formData.get("category"),
     description: formData.get("description"),
-    colors: stringValues(formData, "colors"),
     language: formData.get("language"),
     tone: formData.get("tone"),
     productsServices: stringValues(formData, "productsServices"),
@@ -48,23 +43,6 @@ export async function saveBrandProfileAction(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
-  }
-
-  let logoUrl: string | undefined;
-  const logoFile = formData.get("logo");
-  if (logoFile instanceof File && logoFile.size > 0) {
-    if (logoFile.size > LOGO_MAX_BYTES) {
-      return { error: tErrors("logoTooLarge") };
-    }
-    if (!LOGO_ALLOWED_TYPES.includes(logoFile.type)) {
-      return { error: tErrors("logoInvalidType") };
-    }
-    try {
-      logoUrl = await uploadLogo(session.organizationId, logoFile);
-    } catch (error) {
-      console.error("Logo upload failed", error);
-      return { error: tErrors("logoUploadFailed") };
-    }
   }
 
   let category = parsed.data.category || undefined;
@@ -93,11 +71,9 @@ export async function saveBrandProfileAction(
     businessName: parsed.data.businessName,
     category,
     description: parsed.data.description || undefined,
-    colors: parsed.data.colors,
     language: parsed.data.language,
     tone,
     productsServices,
-    ...(logoUrl ? { logoUrl } : {}),
   });
 
   // Straight into the one-time brand setup (logo, then an approved visual

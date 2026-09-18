@@ -44,3 +44,19 @@ export async function setBrandLogo(organizationId: string, logoUrl: string) {
     create: { organizationId, logoUrl, businessName: organization.name },
   });
 }
+
+/** Same narrow, no-full-profile-required shape as setBrandLogo, for the
+ * brand colors picker on the logo generation page - a user can save colors
+ * there independently of touching the logo at all. */
+export async function setBrandColors(organizationId: string, colors: string[]) {
+  const organization = await prisma.organization.findUniqueOrThrow({
+    where: { id: organizationId },
+    select: { name: true },
+  });
+
+  return prisma.brandProfile.upsert({
+    where: { organizationId },
+    update: { colors },
+    create: { organizationId, colors, businessName: organization.name },
+  });
+}

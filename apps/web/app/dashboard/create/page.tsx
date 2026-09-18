@@ -4,12 +4,17 @@ import {
   MONTHLY_BRAND_STYLE_CAP,
   MONTHLY_LOGO_CAP,
 } from "@socialpilot/db";
+import { asStringArray } from "@socialpilot/content-engine";
 import { ImagePlus } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { CreateContentForm } from "@/components/create-content-form";
 import { GenerateLogoForm } from "@/components/generate-logo-form";
-import { generateLogoConceptsAction } from "@/app/dashboard/logo/actions";
+import {
+  generateLogoConceptsAction,
+  saveBrandColorsAction,
+  uploadLogoAction,
+} from "@/app/dashboard/logo/actions";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
 import { generateConceptsAction } from "./actions";
@@ -58,8 +63,12 @@ export default async function CreateContentPage({
         </div>
         <GenerateLogoForm
           action={generateLogoConceptsAction}
+          uploadAction={uploadLogoAction}
+          colorsAction={saveBrandColorsAction}
           returnTo={logoReturnTo}
           remainingLogoRevisions={Math.max(0, MONTHLY_LOGO_CAP - usage.logo)}
+          logoCap={MONTHLY_LOGO_CAP}
+          initialColors={asStringArray(brand?.colors) ?? []}
         />
       </div>
     );

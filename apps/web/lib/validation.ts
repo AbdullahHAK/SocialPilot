@@ -32,6 +32,15 @@ function hexColorSchema(t: Translate) {
     .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, t("invalidHexColor"));
 }
 
+/** Standalone, for the logo generation page's colors-only save action -
+ * createBrandProfileSchema's `colors` field needs businessName/language
+ * alongside it, which a colors-only save has no reason to require. */
+export function createColorsSchema(t: Translate) {
+  return z.object({
+    colors: z.array(hexColorSchema(t)).max(6).default([]),
+  });
+}
+
 export function createBrandProfileSchema(t: Translate) {
   return z.object({
     businessName: z.string().trim().min(1, t("businessNameRequired")).max(200),

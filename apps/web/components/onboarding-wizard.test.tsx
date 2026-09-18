@@ -7,7 +7,7 @@ describe("OnboardingWizard", () => {
     render(<OnboardingWizard action={vi.fn()} />);
 
     expect(screen.getByLabelText(/business name/i)).toBeVisible();
-    expect(screen.getByLabelText(/^logo$/i)).toBeVisible();
+    expect(screen.getAllByPlaceholderText(/espresso/i)[0]).toBeVisible();
     expect(screen.getByLabelText(/preferred language/i)).toBeVisible();
     expect(
       screen.queryByRole("button", { name: /^next$/i }),

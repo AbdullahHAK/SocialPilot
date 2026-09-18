@@ -6,11 +6,13 @@ import {
   getMonthlyImageUsage,
   MONTHLY_LOGO_CAP,
   MONTHLY_TOTAL_IMAGE_CAP,
+  setBrandColors,
   setBrandLogo,
 } from "@socialpilot/db";
-import { buildLogoPrompt, generateImage, uploadGeneratedImage } from "@socialpilot/content-engine";
+import { buildLogoPrompt, generateImage, uploadGeneratedImage, uploadLogo } from "@socialpilot/content-engine";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
+import { createColorsSchema, LOGO_ALLOWED_TYPES, LOGO_MAX_BYTES } from "@/lib/validation";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
 
@@ -95,4 +97,80 @@ export async function approveLogoAction(formData: FormData) {
   const returnTo = safeReturnTo(formData.get("returnTo"), "/dashboard/brand");
   const separator = returnTo.includes("?") ? "&" : "?";
   redirect(`${returnTo}${separator}logoApproved=1`);
+}
+
+/** The alternative to AI generation on the same page - a business that
+ * already has a logo file shouldn't have to describe it to an image model
+ * just to get it set. Mirrors approveLogoAction's redirect-with-a-flag
+ * pattern so the destination page shows the same "logo saved" banner
+ * either way. */
+export async function uploadLogoAction(
+  _prevState: GenerateLogoFormState,
+  formData: FormData,
+): Promise<GenerateLogoFormState> {
+  const session = await getSession();
+  if (!session) {
+    redirect("/login");
+  }
+
+  const tErrors = await getTranslations("common.errors");
+  const logoFile = formData.get("logo");
+  if (!(logoFile instanceof File) || logoFile.size === 0) {
+    return { error: tErrors("logoRequired") };
+  }
+  if (logoFile.size > LOGO_MAX_BYTES) {
+    return { error: tErrors("logoTooLarge") };
+  }
+  if (!LOGO_ALLOWED_TYPES.includes(logoFile.type)) {
+    return { error: tErrors("logoInvalidType") };
+  }
+
+  let logoUrl: string;
+  try {
+    logoUrl = await uploadLogo(session.organizationId, logoFile);
+  } catch (error) {
+    console.error("Logo upload failed", error);
+    return { error: tErrors("logoUploadFailed") };
+  }
+
+  await setBrandLogo(session.organizationId, logoUrl);
+
+  const returnTo = safeReturnTo(formData.get("returnTo"), "/dashboard/brand");
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}logoApproved=1`);
+}
+
+export interface SaveColorsFormState {
+  error?: string;
+  success?: boolean;
+}
+
+/** Independent of the logo entirely - a business can set/update its brand
+ * colors here without generating or uploading anything, and content
+ * generation already favors these colors where natural (see
+ * packages/content-engine/src/brand-prompt.ts). */
+export async function saveBrandColorsAction(
+  _prevState: SaveColorsFormState,
+  formData: FormData,
+): Promise<SaveColorsFormState> {
+  const session = await getSession();
+  if (!session) {
+    redirect("/login");
+  }
+
+  const tValidation = await getTranslations("validation");
+  const colors = formData
+    .getAll("colors")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  const parsed = createColorsSchema(tValidation).safeParse({ colors });
+  if (!parsed.success) {
+    const tErrors = await getTranslations("common.errors");
+    return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
+  }
+
+  await setBrandColors(session.organizationId, parsed.data.colors);
+  return { success: true };
 }

@@ -9,7 +9,7 @@ import { prisma } from "./index";
 // flows too, which previously had no cap at all.
 export const MONTHLY_TOTAL_IMAGE_CAP = 40;
 export const MONTHLY_BRAND_STYLE_CAP = 10;
-export const MONTHLY_LOGO_CAP = 10;
+export const MONTHLY_LOGO_CAP = 3;
 
 export interface MonthlyImageUsage {
   total: number;

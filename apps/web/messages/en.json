@@ -7,6 +7,7 @@
     "errors": {
       "invalidInput": "Invalid input",
       "sessionExpired": "Your session expired. Please log in again.",
+      "logoRequired": "Choose a logo file to upload.",
       "logoTooLarge": "Logo must be 4MB or smaller.",
       "logoInvalidType": "Logo must be a PNG, JPEG, WebP, or SVG image.",
       "logoUploadFailed": "Couldn't upload the logo. Please try again."
@@ -124,7 +125,7 @@
     "title": "Tell us about your business",
     "description": "This is what YOPAPI will use to keep your content on-brand.",
     "wizard": {
-      "steps": ["Business basics", "Logo & colors", "Products & services", "Language & tone", "Review"],
+      "steps": ["Business basics", "Products & services", "Language & tone"],
       "step1": {
         "businessName": "Business name",
         "businessNamePlaceholder": "Acme Coffee Co",
@@ -133,14 +134,6 @@
         "describeLabel": "Tell us about your business",
         "describePlaceholder": "e.g. I own a crispy chicken restaurant. I want daily content that highlights the quality and deliciousness of our food, professional and appetizing visuals, and a bold, memorable tone.",
         "describeHint": "Write naturally — leave category or tone blank above and YOPAPI's AI will fill them in from this description."
-      },
-      "step2": {
-        "logo": "Logo",
-        "logoUploadPrompt": "Click to upload a logo (PNG, JPEG, WebP, or SVG)",
-        "logoHint": "Don't have a logo yet? Skip this for now — the next step can generate one with AI for you.",
-        "brandColors": "Brand colors",
-        "removeColor": "Remove color {number}",
-        "addColor": "Add color"
       },
       "step3": {
         "productsServices": "Products / services",
@@ -229,7 +222,7 @@
     },
     "create": {
       "title": "First, let's set up your logo",
-      "description": "YOPAPI needs your logo to keep every image on-brand. Describe the logo you want below.",
+      "description": "YOPAPI needs your logo to keep every image on-brand. Upload your own file or generate one with AI below.",
       "errors": {
         "totalCapReached": "You've reached this month's image limit ({cap}). It resets next month.",
         "brandStyleCapReached": "You've used all {cap} Brand Style revisions this month. This resets next month.",
@@ -264,10 +257,23 @@
       "generate": "Generate concept"
     },
     "logoForm": {
-      "revisionsWarning": "You have {count} of 10 logo revisions left this month. Craft your prompt carefully and describe exactly what you want for the best result.",
+      "logo": "Logo",
+      "modeGenerate": "Generate with AI",
+      "modeUpload": "Upload your own",
+      "revisionsWarning": "You have {count} of {cap} logo revisions left this month. Craft your prompt carefully and describe exactly what you want for the best result.",
       "promptPlaceholder": "e.g. Create a modern logo for a premium crispy chicken restaurant called DC Chicken. Bold, memorable, suitable for a fast-food brand.",
       "generating": "Generating logo concept…",
-      "generate": "Generate logo concept"
+      "generate": "Generate logo concept",
+      "uploadLabel": "Logo file",
+      "uploadPrompt": "Click to upload a logo (PNG, JPEG, WebP, or SVG)",
+      "saveLogo": "Save logo",
+      "saving": "Saving…",
+      "brandColors": "Brand colors",
+      "brandColorsHint": "YOPAPI favors these colors in your generated content, where it makes sense. Optional.",
+      "removeColor": "Remove color {number}",
+      "addColor": "Add color",
+      "saveColors": "Save colors",
+      "colorsSaved": "Saved"
     },
     "regenerateForm": {
       "label": "Not quite right? Describe what to change",
@@ -284,13 +290,11 @@
     },
     "logo": {
       "yourLogo": "Your logo",
-      "generateLogo": "Generate a logo",
+      "generateLogo": "Your logo & brand colors",
       "consistentUse": "This is what YOPAPI uses consistently across your content.",
-      "describeAndGenerate": "Describe the logo you want and YOPAPI's AI will generate one concept to review.",
+      "describeAndGenerate": "Upload your own logo file, or describe one and let YOPAPI's AI generate it for you.",
       "currentLogoAlt": "Current logo",
-      "haveDifferentLogo": "Already have a different logo file?",
-      "uploadInBrandSettings": "Upload it in Brand Settings",
-      "orGenerateNew": ", or generate new concepts below to replace this one.",
+      "haveDifferentLogo": "Want to change it? Upload a different file or generate a new AI concept below.",
       "errors": {
         "describeLogo": "Describe the logo you want.",
         "descriptionTooLong": "Keep the description under 500 characters.",

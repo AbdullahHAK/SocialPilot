@@ -7,6 +7,7 @@
     "errors": {
       "invalidInput": "Entrée invalide",
       "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+      "logoRequired": "Choisissez un fichier logo à téléverser.",
       "logoTooLarge": "Le logo doit faire 4 Mo maximum.",
       "logoInvalidType": "Le logo doit être une image PNG, JPEG, WebP ou SVG.",
       "logoUploadFailed": "Impossible de téléverser le logo. Veuillez réessayer."
@@ -124,7 +125,7 @@
     "title": "Parlez-nous de votre entreprise",
     "description": "C'est ce que YOPAPI utilisera pour garder votre contenu fidèle à votre marque.",
     "wizard": {
-      "steps": ["L'essentiel", "Logo et couleurs", "Produits et services", "Langue et ton", "Vérification"],
+      "steps": ["L'essentiel", "Produits et services", "Langue et ton"],
       "step1": {
         "businessName": "Nom de l'entreprise",
         "businessNamePlaceholder": "Café Acme",
@@ -133,14 +134,6 @@
         "describeLabel": "Parlez-nous de votre entreprise",
         "describePlaceholder": "ex. Je possède un restaurant de poulet croustillant. Je veux du contenu quotidien qui met en valeur la qualité et le côté délicieux de notre nourriture, des visuels professionnels et appétissants, et un ton audacieux et mémorable.",
         "describeHint": "Écrivez naturellement — laissez la catégorie ou le ton vides ci-dessus et l'IA de YOPAPI les déduira de cette description."
-      },
-      "step2": {
-        "logo": "Logo",
-        "logoUploadPrompt": "Cliquez pour téléverser un logo (PNG, JPEG, WebP ou SVG)",
-        "logoHint": "Pas encore de logo ? Passez cette étape pour l'instant — l'étape suivante peut en générer un avec l'IA.",
-        "brandColors": "Couleurs de la marque",
-        "removeColor": "Supprimer la couleur {number}",
-        "addColor": "Ajouter une couleur"
       },
       "step3": {
         "productsServices": "Produits / services",
@@ -229,7 +222,7 @@
     },
     "create": {
       "title": "D'abord, configurons votre logo",
-      "description": "YOPAPI a besoin de votre logo pour garder chaque image fidèle à votre marque. Décrivez le logo que vous voulez ci-dessous.",
+      "description": "YOPAPI a besoin de votre logo pour garder chaque image fidèle à votre marque. Téléversez votre propre fichier ou générez-en un avec l'IA ci-dessous.",
       "errors": {
         "totalCapReached": "Vous avez atteint votre limite d'images pour ce mois-ci ({cap}). Elle se réinitialise le mois prochain.",
         "brandStyleCapReached": "Vous avez utilisé vos {cap} révisions de style de marque ce mois-ci. Cela se réinitialise le mois prochain.",
@@ -264,10 +257,23 @@
       "generate": "Générer le concept"
     },
     "logoForm": {
-      "revisionsWarning": "Il vous reste {count} révisions de logo sur 10 ce mois-ci. Rédigez votre description avec soin et précisez exactement ce que vous voulez pour un meilleur résultat.",
+      "logo": "Logo",
+      "modeGenerate": "Générer avec l'IA",
+      "modeUpload": "Téléverser le vôtre",
+      "revisionsWarning": "Il vous reste {count} révisions de logo sur {cap} ce mois-ci. Rédigez votre description avec soin et précisez exactement ce que vous voulez pour un meilleur résultat.",
       "promptPlaceholder": "ex. Créer un logo moderne pour un restaurant de poulet croustillant haut de gamme appelé DC Chicken. Audacieux, mémorable, adapté à une marque de restauration rapide.",
       "generating": "Génération du logo…",
-      "generate": "Générer le concept de logo"
+      "generate": "Générer le concept de logo",
+      "uploadLabel": "Fichier du logo",
+      "uploadPrompt": "Cliquez pour téléverser un logo (PNG, JPEG, WebP ou SVG)",
+      "saveLogo": "Enregistrer le logo",
+      "saving": "Enregistrement…",
+      "brandColors": "Couleurs de la marque",
+      "brandColorsHint": "YOPAPI privilégie ces couleurs dans votre contenu généré, quand c'est pertinent. Facultatif.",
+      "removeColor": "Supprimer la couleur {number}",
+      "addColor": "Ajouter une couleur",
+      "saveColors": "Enregistrer les couleurs",
+      "colorsSaved": "Enregistré"
     },
     "regenerateForm": {
       "label": "Ce n'est pas tout à fait ça ? Décrivez ce qu'il faut changer",
@@ -284,13 +290,11 @@
     },
     "logo": {
       "yourLogo": "Votre logo",
-      "generateLogo": "Générer un logo",
+      "generateLogo": "Votre logo et vos couleurs de marque",
       "consistentUse": "C'est ce que YOPAPI utilise de façon cohérente dans tout votre contenu.",
-      "describeAndGenerate": "Décrivez le logo que vous voulez et l'IA de YOPAPI générera un concept à examiner.",
+      "describeAndGenerate": "Téléversez votre propre fichier de logo, ou décrivez-en un et laissez l'IA de YOPAPI le générer pour vous.",
       "currentLogoAlt": "Logo actuel",
-      "haveDifferentLogo": "Vous avez déjà un autre fichier de logo ?",
-      "uploadInBrandSettings": "Téléversez-le dans les Paramètres de marque",
-      "orGenerateNew": ", ou générez de nouveaux concepts ci-dessous pour remplacer celui-ci.",
+      "haveDifferentLogo": "Vous voulez le changer ? Téléversez un autre fichier ou générez un nouveau concept IA ci-dessous.",
       "errors": {
         "describeLogo": "Décrivez le logo que vous voulez.",
         "descriptionTooLong": "Limitez la description à 500 caractères.",
