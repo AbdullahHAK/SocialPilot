@@ -24,6 +24,13 @@ import {
 export const MAX_PUBLISH_ATTEMPTS = 5;
 const PUBLISH_BATCH_SIZE = 20;
 
+/** A condition retrying won't fix on its own - no connected account for
+ * the platform, or no image to publish - so it's marked FAILED on the
+ * first attempt instead of cycling through RETRYING for the usual
+ * backoff ladder (up to ~30 minutes per attempt) with no chance of ever
+ * succeeding. */
+class PermanentPublishError extends Error {}
+
 /** Escalating backoff (2, 4, 8, 16, capped at 30 minutes) compared against
  * a publication's own lastAttemptAt - keeps retries from hammering the
  * Graph API while still trying again reasonably soon after a transient
@@ -93,6 +100,14 @@ async function publishOnePlatform(
     (candidate) => candidate.provider === publication.platform,
   );
   if (!account) {
+    // Deliberately still retryable (not permanent): the client's explicit
+    // requirement is that a post scheduled while an account was connected
+    // self-heals if the account gets reconnected before the retry ladder
+    // (5 attempts, backoff up to 30 min) runs out - see "Instagram and
+    // Facebook publish independently" below. The picker itself (and the
+    // schedule actions server-side) now refuse to let a *new* post target
+    // a platform with no connected account in the first place, so this
+    // path is only reachable for a job scheduled before a disconnect.
     throw new Error(`No connected ${publication.platform} account`);
   }
   // Already known dead from a prior attempt on ANY post for this account -
@@ -103,7 +118,7 @@ async function publishOnePlatform(
     throw new MetaAuthError(`${publication.platform} account disconnected - reconnect required`);
   }
   if (!job.masterImageUrl) {
-    throw new Error("Job has no master image to publish");
+    throw new PermanentPublishError("Job has no master image to publish");
   }
 
   const accessToken = decryptToken(account.accessToken);
@@ -192,10 +207,12 @@ export async function runPublishCycle(now: Date = new Date()): Promise<void> {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`Publishing job ${job.id} -> ${publication.platform} failed: ${message}`);
       await markContentPublicationFailed(claimedPublication.id, message, {
-        // A dead connection won't fix itself on the next attempt - no
-        // point burning the usual retry ladder before giving up.
+        // A dead connection - or one that was never there - won't fix
+        // itself on the next attempt, no point burning the usual retry
+        // ladder before giving up.
         permanent:
           error instanceof MetaAuthError ||
+          error instanceof PermanentPublishError ||
           claimedPublication.attempts + 1 >= MAX_PUBLISH_ATTEMPTS,
       });
     }

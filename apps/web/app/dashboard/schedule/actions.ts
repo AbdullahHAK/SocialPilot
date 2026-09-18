@@ -6,6 +6,7 @@ import {
   ensurePublishingScheduleTimezone,
   getBrandCreativeProfile,
   getBrandProfile,
+  listSocialAccounts,
   materializeContentJob,
   updateScheduleSlot,
   zonedTimeToUtc,
@@ -31,6 +32,17 @@ function parseTimezone(value: FormDataEntryValue | null): string {
   return parsed.success ? parsed.data : "UTC";
 }
 
+/** The platform picker (add-schedule-slot-dialog.tsx) already disables any
+ * platform without a connected account, but that's client-side only - both
+ * actions below re-check server-side so a disconnected platform can never
+ * get a slot/job created for it, no matter how the request was made. */
+async function getConnectedPlatforms(organizationId: string): Promise<Set<Platform>> {
+  const accounts = await listSocialAccounts(organizationId);
+  return new Set(
+    accounts.filter((account) => account.status === "ACTIVE").map((account) => account.provider),
+  );
+}
+
 export async function addScheduleSlotAction(formData: FormData) {
   const session = await getSession();
   if (!session) return;
@@ -45,12 +57,14 @@ export async function addScheduleSlotAction(formData: FormData) {
   const days = formData.getAll("dayOfWeek");
   const time = formData.get("time");
   const platforms = formData.getAll("platform");
+  const connectedPlatforms = await getConnectedPlatforms(session.organizationId);
 
   const scheduleSlotSchema = createScheduleSlotSchema((key) => key);
   for (const dayOfWeek of days) {
     for (const platform of platforms) {
       const parsed = scheduleSlotSchema.safeParse({ dayOfWeek, time, platform });
       if (!parsed.success) continue;
+      if (!connectedPlatforms.has(parsed.data.platform)) continue;
 
       await addScheduleSlot({
         organizationId: session.organizationId,
@@ -82,7 +96,7 @@ export async function toggleScheduleSlotAction(formData: FormData) {
 
 export interface OneTimePostResult {
   ok: boolean;
-  reason?: "not_ready" | "invalid";
+  reason?: "not_ready" | "invalid" | "not_connected";
 }
 
 /** Schedules a post for one specific calendar date on one or both
@@ -116,18 +130,28 @@ export async function addOneTimePostAction(
   const timezone = parseTimezone(formData.get("timezone"));
   await ensurePublishingScheduleTimezone(session.organizationId, timezone);
 
+  const connectedPlatforms = await getConnectedPlatforms(session.organizationId);
+
   const oneTimePostSchema = createOneTimePostSchema((key) => key);
   const platforms: Platform[] = [];
   let parsedDate: string | undefined;
   let parsedTime: string | undefined;
+  let sawUnconnectedPlatform = false;
   for (const platform of platformValues) {
     const parsed = oneTimePostSchema.safeParse({ date, time, platform });
     if (!parsed.success) continue;
+    if (!connectedPlatforms.has(parsed.data.platform)) {
+      sawUnconnectedPlatform = true;
+      continue;
+    }
     platforms.push(parsed.data.platform);
     parsedDate = parsed.data.date;
     parsedTime = parsed.data.time;
   }
-  if (platforms.length === 0 || !parsedDate || !parsedTime) {
+  if (platforms.length === 0) {
+    return { ok: false, reason: sawUnconnectedPlatform ? "not_connected" : "invalid" };
+  }
+  if (!parsedDate || !parsedTime) {
     return { ok: false, reason: "invalid" };
   }
 

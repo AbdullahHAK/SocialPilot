@@ -6,6 +6,7 @@ import {
   getOrganizationStatus,
   getSubscription,
   listGenerationCandidates,
+  listSocialAccounts,
   markContentJobCancelled,
   markContentJobGenerationFailed,
   type ContentJob,
@@ -55,11 +56,12 @@ function isEligibleToGenerate(subscription: { status: SubscriptionStatus } | nul
  * slot that produced this job could have been removed out from under it in
  * a narrow window between materialize cycles). */
 async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const [orgStatus, subscription, brandProfile, creativeProfile] = await Promise.all([
+  const [orgStatus, subscription, brandProfile, creativeProfile, socialAccounts] = await Promise.all([
     getOrganizationStatus(job.organizationId),
     getSubscription(job.organizationId),
     getBrandProfile(job.organizationId),
     getBrandCreativeProfile(job.organizationId),
+    listSocialAccounts(job.organizationId),
   ]);
 
   if (orgStatus && orgStatus !== "ACTIVE") {
@@ -70,6 +72,16 @@ async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok
   }
   if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
     return { ok: false, reason: "Brand setup is no longer complete" };
+  }
+  // Generating a caption+image just to fail publishing every single
+  // platform (e.g. the account was disconnected after this job was
+  // scheduled) wastes an image-generation call for content that can never
+  // go anywhere - skip it if none of the job's platforms are connected.
+  const connected = new Set(
+    socialAccounts.filter((account) => account.status === "ACTIVE").map((account) => account.provider),
+  );
+  if (!job.platforms.some((platform) => connected.has(platform))) {
+    return { ok: false, reason: "No connected account for any of this post's platforms" };
   }
   return { ok: true };
 }

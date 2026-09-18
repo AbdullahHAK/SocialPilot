@@ -22,9 +22,13 @@ function noopOnce() {
   return vi.fn().mockResolvedValue({ ok: true });
 }
 
+const BOTH_CONNECTED = ["INSTAGRAM", "FACEBOOK"] as const;
+
 describe("AddScheduleSlotDialog - weekly mode", () => {
   it("requires at least one day before submitting", () => {
-    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} />);
+    render(
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
@@ -34,7 +38,9 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
 
   it("submits the chosen day, default time (6:00 PM -> 18:00), and platform", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
-    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
+    render(
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "W" }));
@@ -52,7 +58,9 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
 
   it("allows selecting both platforms at once", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
-    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
+    render(
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "W" }));
@@ -66,7 +74,9 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
   });
 
   it("requires at least one platform", async () => {
-    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} />);
+    render(
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "W" }));
@@ -78,7 +88,9 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
 
   it("includes the browser's own timezone so the time isn't misread as UTC", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
-    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
+    render(
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "M" }));
@@ -91,7 +103,9 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
 
   it("allows selecting multiple days for one time", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
-    render(<AddScheduleSlotDialog action={action} onceAction={noopOnce()} />);
+    render(
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: "M" }));
@@ -102,12 +116,34 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
     const formData = action.mock.calls[0][0] as FormData;
     expect(formData.getAll("dayOfWeek").sort()).toEqual(["MONDAY", "WEDNESDAY"]);
   });
+
+  it("disables a platform that has no connected account", () => {
+    render(
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={["FACEBOOK"]} />,
+    );
+    openDialog();
+
+    expect(screen.getByRole("button", { name: /instagram/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /facebook/i })).toBeEnabled();
+  });
+
+  it("disables Save and shows a warning when no account is connected at all", () => {
+    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[]} />);
+    openDialog();
+
+    expect(screen.getByRole("button", { name: /instagram/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /facebook/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^save$/i })).toBeDisabled();
+    expect(screen.getByText(/connect an instagram or facebook account first/i)).toBeVisible();
+  });
 });
 
 describe("AddScheduleSlotDialog - one-time mode", () => {
   it("submits today's date by default and redirects to the calendar", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: true });
-    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);
+    render(
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
@@ -130,7 +166,9 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
 
   it("lets you pick a date from next month via the mini calendar", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: true });
-    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);
+    render(
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
@@ -153,7 +191,9 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
 
   it("shows a message and keeps the dialog open when the brand isn't ready", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: false, reason: "not_ready" });
-    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} />);
+    render(
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
@@ -164,5 +204,19 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
     expect(push).not.toHaveBeenCalled();
     // Dialog should still be open - the title is still on screen.
     expect(screen.getByText(/add a posting time/i)).toBeVisible();
+  });
+
+  it("shows a message when the picked platform's account got disconnected", async () => {
+    const onceAction = vi.fn().mockResolvedValue({ ok: false, reason: "not_connected" });
+    render(
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+    );
+    openDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(onceAction).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/that account got disconnected/i)).toBeVisible();
   });
 });

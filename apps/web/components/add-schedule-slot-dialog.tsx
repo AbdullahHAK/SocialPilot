@@ -40,12 +40,26 @@ function todayUTC(): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
+/** Instagram, if it's connected, same as the previous hardcoded default -
+ * otherwise Facebook if that's connected instead, otherwise nothing (the
+ * platform row itself explains why when no account is connected at all). */
+function defaultPlatforms(connectedPlatforms: Platform[]): Set<Platform> {
+  if (connectedPlatforms.includes("INSTAGRAM")) return new Set(["INSTAGRAM"]);
+  if (connectedPlatforms.includes("FACEBOOK")) return new Set(["FACEBOOK"]);
+  return new Set();
+}
+
 export function AddScheduleSlotDialog({
   action,
   onceAction,
+  connectedPlatforms,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   onceAction: (formData: FormData) => Promise<OneTimePostResult>;
+  /** Platforms with a live connected account - a platform missing here
+   * can't be picked, since scheduling a post for a disconnected account
+   * would just sit there and eventually fail. */
+  connectedPlatforms: Platform[];
 }) {
   const t = useTranslations("dashboard.addSlotDialog");
   const tDays = useTranslations("days");
@@ -59,7 +73,7 @@ export function AddScheduleSlotDialog({
   const [hour12, setHour12] = useState(6);
   const [minute, setMinute] = useState(0);
   const [meridiem, setMeridiem] = useState<Meridiem>("PM");
-  const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["INSTAGRAM"]));
+  const [platforms, setPlatforms] = useState<Set<Platform>>(() => defaultPlatforms(connectedPlatforms));
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -88,7 +102,7 @@ export function AddScheduleSlotDialog({
     setHour12(6);
     setMinute(0);
     setMeridiem("PM");
-    setPlatforms(new Set(["INSTAGRAM"]));
+    setPlatforms(defaultPlatforms(connectedPlatforms));
     setError(null);
   }
 
@@ -133,9 +147,9 @@ export function AddScheduleSlotDialog({
     startTransition(async () => {
       const result = await onceAction(formData);
       if (!result.ok) {
-        setError(
-          result.reason === "not_ready" ? t("brandNotReady") : t("scheduleFailed"),
-        );
+        if (result.reason === "not_ready") setError(t("brandNotReady"));
+        else if (result.reason === "not_connected") setError(t("notConnected"));
+        else setError(t("scheduleFailed"));
         return;
       }
       setOpen(false);
@@ -252,35 +266,40 @@ export function AddScheduleSlotDialog({
               </span>
             </p>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => togglePlatform("INSTAGRAM")}
-                aria-pressed={platforms.has("INSTAGRAM")}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                  platforms.has("INSTAGRAM")
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                )}
-              >
-                <InstagramIcon className="size-4" />
-                {t("instagram")}
-              </button>
-              <button
-                type="button"
-                onClick={() => togglePlatform("FACEBOOK")}
-                aria-pressed={platforms.has("FACEBOOK")}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                  platforms.has("FACEBOOK")
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                )}
-              >
-                <FacebookIcon className="size-4" />
-                {t("facebook")}
-              </button>
+              {(
+                [
+                  { value: "INSTAGRAM" as const, label: t("instagram"), Icon: InstagramIcon },
+                  { value: "FACEBOOK" as const, label: t("facebook"), Icon: FacebookIcon },
+                ]
+              ).map(({ value, label, Icon }) => {
+                const connected = connectedPlatforms.includes(value);
+                const selected = platforms.has(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => togglePlatform(value)}
+                    disabled={!connected}
+                    title={connected ? undefined : t("connectFirst")}
+                    aria-pressed={selected}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                      !connected
+                        ? "cursor-not-allowed border-input text-muted-foreground/50"
+                        : selected
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+            {connectedPlatforms.length === 0 && (
+              <p className="mt-2 text-xs text-destructive">{t("noAccountsConnected")}</p>
+            )}
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -290,7 +309,7 @@ export function AddScheduleSlotDialog({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isPending}
+            disabled={isPending || connectedPlatforms.length === 0}
             className="gap-2"
           >
             {isPending && <Loader2 className="size-4 animate-spin" />}

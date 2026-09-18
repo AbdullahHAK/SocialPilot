@@ -4,6 +4,7 @@ import {
   getLastPublishedContentJob,
   getNextScheduledContentJob,
   getPublishingSchedule,
+  listSocialAccounts,
 } from "@socialpilot/db";
 import { isBrandSetupComplete } from "@socialpilot/content-engine";
 import { Sparkles, Trash2 } from "lucide-react";
@@ -41,16 +42,20 @@ export default async function SchedulePage() {
     redirect("/login");
   }
 
-  const [schedule, lastPublished, nextScheduled, brandProfile, creativeProfile, t, tDays] =
+  const [schedule, lastPublished, nextScheduled, brandProfile, creativeProfile, socialAccounts, t, tDays] =
     await Promise.all([
       getPublishingSchedule(session.organizationId),
       getLastPublishedContentJob(session.organizationId),
       getNextScheduledContentJob(session.organizationId),
       getBrandProfile(session.organizationId),
       getBrandCreativeProfile(session.organizationId),
+      listSocialAccounts(session.organizationId),
       getTranslations("dashboard.schedule"),
       getTranslations("days"),
     ]);
+  const connectedPlatforms = socialAccounts
+    .filter((account) => account.status === "ACTIVE")
+    .map((account) => account.provider);
 
   if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
     return (
@@ -92,6 +97,7 @@ export default async function SchedulePage() {
         <AddScheduleSlotDialog
           action={addScheduleSlotAction}
           onceAction={addOneTimePostAction}
+          connectedPlatforms={connectedPlatforms}
         />
       </div>
 
