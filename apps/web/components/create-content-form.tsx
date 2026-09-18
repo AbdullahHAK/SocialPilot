@@ -173,6 +173,12 @@ export function CreateContentForm({
         </p>
       )}
 
+      {isPending && (
+        <p className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary">
+          {t("stayOnPage")}
+        </p>
+      )}
+
       <Button
         type="submit"
         size="lg"

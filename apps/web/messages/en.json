@@ -254,7 +254,8 @@
       "clickToUpload": "Click to upload images",
       "removeFile": "Remove {name}",
       "generating": "Generating concept…",
-      "generate": "Generate concept"
+      "generate": "Generate concept",
+      "stayOnPage": "Generating your image — this can take up to a minute. Please stay on this page."
     },
     "logoForm": {
       "logo": "Logo",
@@ -264,6 +265,7 @@
       "promptPlaceholder": "e.g. Create a modern logo for a premium crispy chicken restaurant called DC Chicken. Bold, memorable, suitable for a fast-food brand.",
       "generating": "Generating logo concept…",
       "generate": "Generate logo concept",
+      "stayOnPage": "Generating your logo — this can take up to a minute. Please stay on this page.",
       "uploadLabel": "Logo file",
       "uploadPrompt": "Click to upload a logo (PNG, JPEG, WebP, or SVG)",
       "saveLogo": "Save logo",

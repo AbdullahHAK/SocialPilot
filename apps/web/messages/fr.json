@@ -254,7 +254,8 @@
       "clickToUpload": "Cliquez pour téléverser des images",
       "removeFile": "Supprimer {name}",
       "generating": "Génération du concept…",
-      "generate": "Générer le concept"
+      "generate": "Générer le concept",
+      "stayOnPage": "Génération de votre image — cela peut prendre jusqu'à une minute. Veuillez rester sur cette page."
     },
     "logoForm": {
       "logo": "Logo",
@@ -264,6 +265,7 @@
       "promptPlaceholder": "ex. Créer un logo moderne pour un restaurant de poulet croustillant haut de gamme appelé DC Chicken. Audacieux, mémorable, adapté à une marque de restauration rapide.",
       "generating": "Génération du logo…",
       "generate": "Générer le concept de logo",
+      "stayOnPage": "Génération de votre logo — cela peut prendre jusqu'à une minute. Veuillez rester sur cette page.",
       "uploadLabel": "Fichier du logo",
       "uploadPrompt": "Cliquez pour téléverser un logo (PNG, JPEG, WebP ou SVG)",
       "saveLogo": "Enregistrer le logo",
