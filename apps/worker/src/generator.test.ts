@@ -1,4 +1,4 @@
-import { prisma, upsertBrandProfile } from "@socialpilot/db";
+import { prisma, upsertBrandProfile, upsertSocialAccount } from "@socialpilot/db";
 import { MonthlyImageCapReachedError } from "@socialpilot/content-engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GENERATION_LEAD_MINUTES, MAX_GENERATION_ATTEMPTS, runGenerationCycle } from "./generator";
@@ -30,6 +30,15 @@ async function setUpReadyOrg(name = "Acme") {
     data: { organizationId: org.id, promptTemplateAdditions: "content" },
   });
   await prisma.subscription.create({ data: { organizationId: org.id, status: "ACTIVE" } });
+  // createJob defaults to platforms: ["INSTAGRAM"] - without a connected
+  // account for it, verifyStillEligible would cancel every job here before
+  // these tests ever get to what they're actually checking.
+  await upsertSocialAccount({
+    organizationId: org.id,
+    provider: "INSTAGRAM",
+    externalId: "ig-1",
+    accessToken: "raw-page-token",
+  });
   return org;
 }
 
@@ -73,6 +82,12 @@ describe("runGenerationCycle", () => {
     await prisma.brandCreativeProfile.create({
       data: { organizationId: org.id, promptTemplateAdditions: "content" },
     });
+    await upsertSocialAccount({
+      organizationId: org.id,
+      provider: "INSTAGRAM",
+      externalId: "ig-1",
+      accessToken: "raw-page-token",
+    });
     const now = new Date("2026-09-15T12:00:00Z");
     const job = await createJob(org.id, new Date(now.getTime() + 60_000));
 
@@ -105,6 +120,51 @@ describe("runGenerationCycle", () => {
     await runGenerationCycle(now);
 
     expect(generateContentForJobMock).not.toHaveBeenCalled();
+  });
+
+  it("cancels rather than generates when none of the job's platforms have a connected account", async () => {
+    // e.g. the account was disconnected after this job was materialized -
+    // no point spending an image-generation call on a post that has
+    // nowhere left to publish to.
+    const org = await prisma.organization.create({ data: { name: "Acme", publishingSchedule: { create: {} } } });
+    await upsertBrandProfile({
+      organizationId: org.id,
+      businessName: "Acme",
+      language: "en",
+      logoUrl: "https://example.com/logo.png",
+    });
+    await prisma.brandCreativeProfile.create({
+      data: { organizationId: org.id, promptTemplateAdditions: "content" },
+    });
+    await prisma.subscription.create({ data: { organizationId: org.id, status: "ACTIVE" } });
+    const now = new Date("2026-09-15T12:00:00Z");
+    const job = await createJob(org.id, new Date(now.getTime() + 60_000));
+
+    await runGenerationCycle(now);
+
+    expect(generateContentForJobMock).not.toHaveBeenCalled();
+    const updated = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
+    expect(updated.status).toBe("CANCELLED");
+    expect(updated.errorMessage).toMatch(/no connected account/i);
+  });
+
+  it("still generates when only one of two platforms has a connected account", async () => {
+    const org = await setUpReadyOrg();
+    const now = new Date("2026-09-15T12:00:00Z");
+    const job = await prisma.contentJob.create({
+      data: {
+        organizationId: org.id,
+        scheduledFor: new Date(now.getTime() + 60_000),
+        platforms: ["INSTAGRAM", "FACEBOOK"],
+        origin: "ONE_TIME",
+        publications: { create: [{ platform: "INSTAGRAM" }, { platform: "FACEBOOK" }] },
+      },
+    });
+
+    await runGenerationCycle(now);
+
+    expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+    expect(generateContentForJobMock.mock.calls[0]![0].id).toBe(job.id);
   });
 
   it("cancels rather than generates when the subscription is no longer active", async () => {
