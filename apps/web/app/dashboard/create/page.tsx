@@ -19,6 +19,12 @@ import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
 import { generateConceptsAction } from "./actions";
 
+// Image generation (especially with a reference image attached) can run
+// past Vercel's default function duration, killing the connection mid
+// request - looks like a network failure client-side, but is really the
+// server being cut off before it finished.
+export const maxDuration = 120;
+
 export default async function CreateContentPage({
   searchParams,
 }: PageProps<"/dashboard/create">) {

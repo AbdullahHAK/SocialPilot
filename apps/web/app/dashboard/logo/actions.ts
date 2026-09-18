@@ -1,7 +1,5 @@
 "use server";
 
-export const maxDuration = 120;
-
 import {
   createCreativeConcept,
   getBrandProfile,

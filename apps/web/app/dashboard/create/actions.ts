@@ -1,11 +1,5 @@
 "use server";
 
-// Image generation (especially with a reference image attached) can run
-// past Vercel's default function duration, killing the connection mid
-// request - looks like a network failure client-side, but is really the
-// server being cut off before it finished.
-export const maxDuration = 120;
-
 import {
   approveCreativeConcept,
   createCreativeConcept,

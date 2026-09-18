@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
 import { generateLogoConceptsAction, saveBrandColorsAction, uploadLogoAction } from "./actions";
 
+export const maxDuration = 120;
+
 export default async function LogoPage({
   searchParams,
 }: PageProps<"/dashboard/logo">) {
