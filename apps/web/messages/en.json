@@ -466,7 +466,8 @@
   "landing": {
     "nav": {
       "login": "Log in",
-      "cta": "Start With YOPAPI"
+      "cta": "Start With YOPAPI",
+      "ctaShort": "Get Started"
     },
     "hero": {
       "badge": "AI-Powered Social Media Management",

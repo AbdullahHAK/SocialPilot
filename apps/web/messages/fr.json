@@ -466,7 +466,8 @@
   "landing": {
     "nav": {
       "login": "Se connecter",
-      "cta": "Commencer avec YOPAPI"
+      "cta": "Commencer avec YOPAPI",
+      "ctaShort": "Commencer"
     },
     "hero": {
       "badge": "Gestion des réseaux sociaux propulsée par l'IA",

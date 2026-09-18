@@ -13,32 +13,32 @@ export async function Hero() {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 -top-40 -z-0 flex justify-center blur-3xl"
       >
-        <div className="aspect-1155/678 w-[72rem] bg-gradient-to-tr from-primary/40 via-gold/10 to-transparent opacity-50" />
+        <div className="aspect-1155/678 w-[72rem] animate-drift bg-gradient-to-tr from-primary/40 via-gold/10 to-transparent opacity-50" />
       </div>
 
       <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-7 px-4 py-24 text-center sm:px-6 sm:py-32">
-        <Badge className="gap-1.5 border-gold/30 bg-gold/10 px-3 py-1 text-gold">
+        <Badge className="animate-in fade-in slide-in-from-bottom-4 gap-1.5 border-gold/30 bg-gold/10 px-3 py-1 text-gold duration-700">
           <Sparkles className="size-3.5" />
           {t("badge")}
         </Badge>
 
-        <h1 className="text-4xl leading-tight font-bold tracking-tight text-balance sm:text-6xl lg:text-7xl">
+        <h1 className="animate-in fade-in slide-in-from-bottom-4 text-4xl leading-tight font-bold tracking-tight text-balance duration-700 delay-100 sm:text-6xl lg:text-7xl">
           {t("headline")}
         </h1>
 
-        <p className="max-w-2xl text-xl font-medium text-balance text-navy-foreground/90 sm:text-2xl">
+        <p className="animate-in fade-in slide-in-from-bottom-4 max-w-2xl text-xl font-medium text-balance text-navy-foreground/90 duration-700 delay-200 sm:text-2xl">
           {t("subhead")}
         </p>
 
-        <p className="max-w-xl text-base text-pretty text-navy-foreground/70">
+        <p className="animate-in fade-in slide-in-from-bottom-4 max-w-xl text-base text-pretty text-navy-foreground/70 duration-700 delay-300">
           {t("supporting")}
         </p>
 
-        <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
+        <div className="animate-in fade-in slide-in-from-bottom-4 mt-2 flex flex-col items-center gap-3 duration-700 delay-500 sm:flex-row">
           <Button
             asChild
             size="lg"
-            className="bg-gold px-8 text-base font-semibold text-gold-foreground hover:bg-gold/90"
+            className="bg-gold px-8 text-base font-semibold text-gold-foreground transition-transform duration-200 hover:scale-[1.03] hover:bg-gold/90 active:scale-[0.97]"
           >
             <Link href="/pricing">{t("cta")}</Link>
           </Button>
@@ -46,13 +46,13 @@ export async function Hero() {
             asChild
             size="lg"
             variant="outline"
-            className="border-navy-foreground/25 bg-transparent text-navy-foreground hover:bg-navy-foreground/10 hover:text-navy-foreground"
+            className="border-navy-foreground/25 bg-transparent text-navy-foreground transition-transform duration-200 hover:scale-[1.03] hover:bg-navy-foreground/10 hover:text-navy-foreground active:scale-[0.97]"
           >
             <Link href="/login">{t("secondaryCta")}</Link>
           </Button>
         </div>
 
-        <p className="text-sm text-navy-foreground/60">{t("ctaSub")}</p>
+        <p className="animate-in fade-in text-sm text-navy-foreground/60 duration-700 delay-700">{t("ctaSub")}</p>
       </div>
     </section>
   );

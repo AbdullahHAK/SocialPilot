@@ -1,5 +1,6 @@
 import { CalendarClock, Palette, Sparkles } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { Reveal } from "@/components/landing/reveal";
 
 const ROLE_ICONS = [Palette, Sparkles, CalendarClock] as const;
 
@@ -15,7 +16,7 @@ export async function AiTeam() {
   return (
     <section className="border-b border-border bg-secondary/30">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-        <div className="mx-auto max-w-2xl text-center">
+        <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold tracking-wide text-gold uppercase">
             {t("eyebrow")}
           </p>
@@ -23,29 +24,30 @@ export async function AiTeam() {
             {t("title")}
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">{t("subtitle")}</p>
-        </div>
+        </Reveal>
 
         <div className="mt-14 grid gap-6 sm:grid-cols-3">
           {roles.map((role, index) => {
             const Icon = ROLE_ICONS[index] ?? Sparkles;
             return (
-              <div
-                key={role.title}
-                className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-7 shadow-sm"
-              >
-                <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Icon className="size-6" />
-                </span>
-                <h3 className="text-lg font-semibold">{role.title}</h3>
-                <p className="text-sm text-muted-foreground">{role.description}</p>
-              </div>
+              <Reveal key={role.title} delayMs={index * 120}>
+                <div className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                  <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon className="size-6" />
+                  </span>
+                  <h3 className="text-lg font-semibold">{role.title}</h3>
+                  <p className="text-sm text-muted-foreground">{role.description}</p>
+                </div>
+              </Reveal>
             );
           })}
         </div>
 
-        <p className="mt-14 text-center text-xl font-semibold tracking-tight text-balance">
-          {t("closing")}
-        </p>
+        <Reveal delayMs={200}>
+          <p className="mt-14 text-center text-xl font-semibold tracking-tight text-balance">
+            {t("closing")}
+          </p>
+        </Reveal>
       </div>
     </section>
   );

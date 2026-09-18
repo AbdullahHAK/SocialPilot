@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { setLocaleAction } from "@/lib/locale-actions";
-import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@/lib/locale";
+import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 /** Present on every top-level shell (marketing header, auth shell, legal
@@ -40,7 +40,12 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         aria-label={t("languageLabel")}
       >
         <Globe className="size-4 opacity-70" />
-        <SelectValue />
+        {/* The full name still reads in the dropdown itself - hiding it in
+            the trigger below sm: is what keeps a header with a logo and
+            nav buttons next to it from overflowing a narrow phone screen. */}
+        <SelectValue>
+          <span className="hidden sm:inline">{LOCALE_LABELS[locale as Locale]}</span>
+        </SelectValue>
       </SelectTrigger>
       <SelectContent align="end">
         {SUPPORTED_LOCALES.map((code) => (

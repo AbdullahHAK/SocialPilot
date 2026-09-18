@@ -41,7 +41,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       dir={rtl ? "rtl" : "ltr"}
       className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} h-full antialiased ${rtl ? "font-arabic" : ""}`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-full flex-col overflow-x-hidden">
+        {/* Scroll-reveal sections (components/landing/reveal.tsx) start
+            invisible so JS can fade them in - a visitor with JS disabled
+            would otherwise never see them at all, so force them visible
+            here instead. */}
+        <noscript>
+          <style>{".reveal{opacity:1 !important;transform:none !important}"}</style>
+        </noscript>
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
         </NextIntlClientProvider>

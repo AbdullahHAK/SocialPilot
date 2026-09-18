@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Reveal } from "@/components/landing/reveal";
 
 export async function StayVisible() {
   const t = await getTranslations("landing.stayVisible");
@@ -6,7 +7,7 @@ export async function StayVisible() {
   return (
     <section className="bg-navy text-navy-foreground">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-2 lg:items-center">
-        <div className="order-2 flex flex-col items-start gap-5 text-start lg:order-1">
+        <Reveal className="order-2 flex flex-col items-start gap-5 text-start lg:order-1">
           <p className="text-sm font-semibold tracking-wide text-gold uppercase">
             {t("eyebrow")}
           </p>
@@ -19,9 +20,9 @@ export async function StayVisible() {
             <p className="text-xl font-medium">{t("emotionalLine1")}</p>
             <p className="text-xl font-bold">{t("emotionalLine2")}</p>
           </div>
-        </div>
+        </Reveal>
 
-        <div className="order-1 lg:order-2">
+        <Reveal delayMs={150} className="order-1 lg:order-2">
           <div className="relative overflow-hidden rounded-2xl border border-navy-foreground/10 shadow-2xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -30,7 +31,7 @@ export async function StayVisible() {
               className="aspect-4/5 size-full object-cover"
             />
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

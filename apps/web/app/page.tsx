@@ -21,11 +21,17 @@ export default async function Home() {
           <Logo />
           <nav className="flex items-center gap-1 sm:gap-2">
             <LanguageSwitcher />
-            <Button asChild variant="ghost">
+            {/* The ghost "Log in" link only fits alongside the primary CTA
+                once there's real room for it - hidden below sm so a narrow
+                phone never has to squeeze both into one row. */}
+            <Button asChild variant="ghost" className="hidden sm:inline-flex">
               <Link href="/login">{t("nav.login")}</Link>
             </Button>
-            <Button asChild>
-              <Link href="/pricing">{t("nav.cta")}</Link>
+            <Button asChild className="px-3 sm:px-4">
+              <Link href="/pricing">
+                <span className="sm:hidden">{t("nav.ctaShort")}</span>
+                <span className="hidden sm:inline">{t("nav.cta")}</span>
+              </Link>
             </Button>
           </nav>
         </div>

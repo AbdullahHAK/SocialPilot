@@ -154,3 +154,32 @@
     font-family: var(--font-cairo), var(--font-geist-sans), sans-serif;
   }
 }
+
+/* Slow ambient drift for the hero's decorative background glow - direction-
+   agnostic (only ever moves diagonally by a tiny amount) so it needs no
+   separate RTL variant. */
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-2%, 2%) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-drift {
+    animation: drift 14s ease-in-out infinite;
+  }
+}
+
+/* tw-animate-css's animate-in has no built-in reduced-motion guard - skip
+   straight to the animation's end state instead of respecting the user's
+   OS-level request for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}
