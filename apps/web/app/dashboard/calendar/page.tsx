@@ -36,7 +36,8 @@ function displayStatus(
 ): CalendarPostStatus {
   if (jobStatus === "CANCELLED") return "CANCELLED";
   if (publicationStatus !== "PENDING") return publicationStatus as CalendarPostStatus;
-  if (jobStatus === "PENDING" || jobStatus === "GENERATING") return "GENERATING";
+  if (jobStatus === "GENERATING") return "GENERATING";
+  if (jobStatus === "PENDING") return "QUEUED"; // not yet in its generation lead-time window - nothing is happening
   return "SCHEDULED"; // job's creative is READY (or job is PUBLISHING), this platform hasn't been attempted yet
 }
 

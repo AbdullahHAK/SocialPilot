@@ -92,6 +92,7 @@
     ]
   },
   "postStatus": {
+    "QUEUED": "قيد الانتظار",
     "GENERATING": "قيد الإنشاء",
     "SCHEDULED": "مجدول",
     "PUBLISHING": "قيد النشر",

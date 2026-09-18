@@ -54,7 +54,7 @@ export function EditPostDialog({
    * current caption as a starting point if not (see calendar/page.tsx). */
   instruction: string;
   scheduledForIso: string;
-  status: "GENERATING" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED" | "RETRYING" | "CANCELLED";
+  status: "QUEUED" | "GENERATING" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED" | "RETRYING" | "CANCELLED";
   platform: "INSTAGRAM" | "FACEBOOK";
   action: (formData: FormData) => Promise<EditContentJobResult>;
   trigger: ReactNode;

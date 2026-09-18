@@ -111,10 +111,13 @@ function ImageZoomPreview({ imageUrl }: { imageUrl: string }) {
 }
 
 // A card's status is derived (in calendar/page.tsx) from its ContentJob and
-// ContentPublication together, not read off a single field - GENERATING
-// and SCHEDULED both mean "not published yet" but distinguish whether the
-// shared creative exists yet at all.
+// ContentPublication together, not read off a single field. QUEUED means
+// the job hasn't reached its generation lead-time window yet (nothing is
+// happening); GENERATING means the worker has actually claimed it and is
+// generating the creative right now; SCHEDULED means the creative is done
+// and it's just waiting for its scheduled moment to publish.
 export const STATUS_BADGE_VARIANT = {
+  QUEUED: "outline",
   GENERATING: "secondary",
   SCHEDULED: "default",
   PUBLISHING: "default",

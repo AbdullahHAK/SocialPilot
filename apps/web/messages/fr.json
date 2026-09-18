@@ -92,6 +92,7 @@
     ]
   },
   "postStatus": {
+    "QUEUED": "EN ATTENTE",
     "GENERATING": "GÉNÉRATION",
     "SCHEDULED": "PROGRAMMÉ",
     "PUBLISHING": "PUBLICATION",
