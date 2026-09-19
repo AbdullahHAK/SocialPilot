@@ -22,11 +22,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
-import {
-  REFERENCE_IMAGE_ALLOWED_TYPES,
-  REFERENCE_IMAGE_MAX_BYTES,
-  REFERENCE_IMAGE_MAX_COUNT,
-} from "@/lib/validation";
+import { REFERENCE_IMAGE_MAX_COUNT } from "@/lib/validation";
 
 // Once a style is approved, "now go set posting times" is the natural
 // next step - the whole point of this pipeline is that content generates
@@ -36,6 +32,7 @@ const DEFAULT_RETURN_TO = "/dashboard/schedule";
 export interface CreateContentFormState {
   error?: string;
 }
+
 
 // The client's explicit cost-control request: one image per generation
 // request, not several to choose from.
@@ -102,25 +99,25 @@ export async function generateConceptsAction(
     return { error: quotaError };
   }
 
-  const files = formData
-    .getAll("referenceImages")
-    .filter((value): value is File => value instanceof File && value.size > 0);
+  // Already uploaded straight to R2 by the client (see
+  // getReferenceImageUploadTargetsAction) - only the resulting public URLs
+  // travel through this request, so it stays far under Vercel's platform
+  // body-size limit regardless of how large the original photos were.
+  const referenceImageUrls = formData
+    .getAll("referenceImageUrls")
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
 
-  if (files.length > REFERENCE_IMAGE_MAX_COUNT) {
+  if (referenceImageUrls.length > REFERENCE_IMAGE_MAX_COUNT) {
     return { error: t("tooManyImages", { max: REFERENCE_IMAGE_MAX_COUNT }) };
   }
-  for (const file of files) {
-    if (file.size > REFERENCE_IMAGE_MAX_BYTES) {
-      return { error: t("imageTooLarge") };
-    }
-    if (!REFERENCE_IMAGE_ALLOWED_TYPES.includes(file.type)) {
-      return { error: t("invalidImageType") };
-    }
-  }
 
-  const referenceImages: Buffer[] = await Promise.all(
-    files.map(async (file) => Buffer.from(await file.arrayBuffer())),
-  );
+  let referenceImages: Buffer[];
+  try {
+    referenceImages = await Promise.all(referenceImageUrls.map(fetchImageBuffer));
+  } catch (error) {
+    console.error("Fetching an uploaded reference image failed", error);
+    return { error: t("generationFailed") };
+  }
 
   try {
     referenceImages.push(await fetchImageBuffer(brand.logoUrl));

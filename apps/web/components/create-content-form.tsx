@@ -1,13 +1,14 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { type FormEvent, useActionState, useState, useTransition } from "react";
 import type { CreateContentFormState } from "@/app/dashboard/create/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { REFERENCE_IMAGE_MAX_COUNT } from "@/lib/validation";
+import { REFERENCE_IMAGE_MAX_BYTES, REFERENCE_IMAGE_MAX_COUNT } from "@/lib/validation";
 
 // labelKey is UI copy (translated) - prompt is sent to the AI model as an
 // English instruction fragment and deliberately stays English in every
@@ -60,32 +61,68 @@ export function CreateContentForm({
   remainingBrandStyleRevisions: number;
 }) {
   const t = useTranslations("dashboard.createForm");
-  const [state, formAction, isPending] = useActionState<
+  const tErrors = useTranslations("dashboard.create.errors");
+  const [state, formAction, isActionPending] = useActionState<
     CreateContentFormState,
     FormData
   >(action, {});
   const [prompt, setPrompt] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, startUpload] = useTransition();
+  const isPending = isUploading || isActionPending;
 
   function addFiles(fileList: FileList | null) {
     if (!fileList) return;
-    setFiles((prev) => [...prev, ...Array.from(fileList)].slice(0, REFERENCE_IMAGE_MAX_COUNT));
+    const incoming = Array.from(fileList);
+    const oversized = incoming.some((file) => file.size > REFERENCE_IMAGE_MAX_BYTES);
+    setUploadError(oversized ? tErrors("imageTooLarge") : null);
+    setFiles((prev) =>
+      [...prev, ...incoming.filter((file) => file.size <= REFERENCE_IMAGE_MAX_BYTES)].slice(
+        0,
+        REFERENCE_IMAGE_MAX_COUNT,
+      ),
+    );
   }
 
-  // The visible upload control is reset after each pick so users can add
-  // images across multiple selections; this hidden input carries the
-  // accumulated set into the form submit.
-  useEffect(() => {
-    const transfer = new DataTransfer();
-    files.forEach((file) => transfer.items.add(file));
-    if (fileInputRef.current) {
-      fileInputRef.current.files = transfer.files;
-    }
-  }, [files]);
+  // Files never travel through this Server Action's own request body - each
+  // one goes straight from the browser to Vercel Blob (see
+  // app/api/reference-image-upload/route.ts), since Vercel's platform
+  // enforces a hard ~4.5MB request body limit on every function regardless
+  // of any app-level config (confirmed live: a 413 FUNCTION_PAYLOAD_TOO_LARGE
+  // at just over 4.2MB), and a real multi-photo upload routinely exceeds
+  // that. Only the resulting small URLs are submitted to the real action.
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setUploadError(null);
+    startUpload(async () => {
+      const referenceImageUrls: string[] = [];
+      try {
+        await Promise.all(
+          files.map(async (file) => {
+            const blob = await upload(`reference/${file.name}`, file, {
+              access: "public",
+              handleUploadUrl: "/api/reference-image-upload",
+            });
+            referenceImageUrls.push(blob.url);
+          }),
+        );
+      } catch (error) {
+        console.error("Reference image upload failed", error);
+        setUploadError(tErrors("generationFailed"));
+        return;
+      }
+
+      const formData = new FormData();
+      formData.set("prompt", prompt);
+      if (returnTo) formData.set("returnTo", returnTo);
+      referenceImageUrls.forEach((url) => formData.append("referenceImageUrls", url));
+      formAction(formData);
+    });
+  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
@@ -166,18 +203,11 @@ export function CreateContentForm({
             ))}
           </ul>
         )}
-        <input
-          type="file"
-          name="referenceImages"
-          multiple
-          hidden
-          ref={fileInputRef}
-        />
       </div>
 
-      {state.error && (
+      {(uploadError || state.error) && (
         <p role="alert" className="text-sm font-medium text-destructive">
-          {state.error}
+          {uploadError ?? state.error}
         </p>
       )}
 
