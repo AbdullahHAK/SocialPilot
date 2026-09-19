@@ -66,6 +66,22 @@ export function BrandSettingsForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
+      {/* Duplicated next to the Save button below - this form is long
+       * enough on mobile that submitting (from anywhere, e.g. the Logo
+       * field near the top) never scrolls the page, so a result shown only
+       * at the very bottom went unseen and looked like nothing happened. */}
+      {(state.error || state.success) && (
+        <div
+          role={state.error ? "alert" : undefined}
+          className={
+            state.error
+              ? "rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+              : "rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success"
+          }
+        >
+          {state.error ?? state.note ?? t("saved")}
+        </div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>{t("businessBasics")}</CardTitle>

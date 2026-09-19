@@ -3,6 +3,7 @@
 import {
   decryptToken,
   encryptToken,
+  SocialAccountAlreadyConnectedError,
   SocialAccountLimitError,
   upsertSocialAccount,
 } from "@socialpilot/db";
@@ -62,9 +63,21 @@ export async function chooseMetaPageAction(formData: FormData) {
 
       redirect(`/dashboard/accounts?connected=${connectedCount}`);
     } catch (error) {
-      if (error instanceof SocialAccountLimitError) {
+      // Same page/IG account picked here can already belong to a *different*
+      // org (e.g. reused across two of this login's businesses) - this
+      // mirrors api/meta/callback's already-correct handling of the same two
+      // errors, which this form-based path (multi-Page choice) had never
+      // gotten, so it crashed with an unhandled 500 instead of a message.
+      if (
+        error instanceof SocialAccountAlreadyConnectedError ||
+        error instanceof SocialAccountLimitError
+      ) {
         const t = await getTranslations("metaConnect");
-        redirect(`/dashboard/accounts?error=${encodeURIComponent(t("accountLimitReached"))}`);
+        const message =
+          error instanceof SocialAccountAlreadyConnectedError
+            ? t("alreadyConnected")
+            : t("accountLimitReached");
+        redirect(`/dashboard/accounts?error=${encodeURIComponent(message)}`);
       }
       throw error;
     }
