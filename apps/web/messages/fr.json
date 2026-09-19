@@ -64,6 +64,7 @@
     "invalidRequest": "Requête de connexion invalide. Veuillez réessayer de vous connecter.",
     "noPagesFound": "Aucune Page Facebook trouvée. Assurez-vous d'avoir sélectionné une Page lors de la connexion.",
     "alreadyConnected": "L'un de ces comptes est déjà connecté à une autre organisation YOPAPI.",
+    "accountLimitReached": "Cette entreprise a déjà une Page Facebook et un compte Instagram connectés. Pour gérer une autre Page, ajoutez-la comme entreprise distincte depuis le menu de votre compte.",
     "genericFailure": "Une erreur s'est produite lors de la connexion de vos comptes. Veuillez réessayer."
   },
   "pricingPage": {
@@ -170,7 +171,23 @@
     "shell": {
       "closeMenu": "Fermer le menu",
       "openMenu": "Ouvrir le menu",
-      "signOut": "Se déconnecter"
+      "signOut": "Se déconnecter",
+      "switchBusiness": "Changer d'entreprise",
+      "addBusiness": "Ajouter une autre entreprise"
+    },
+    "addBusiness": {
+      "title": "Ajouter une autre entreprise",
+      "description": "Chaque entreprise a sa propre Page Facebook, son propre compte Instagram et son propre abonnement - le tout sous ce même identifiant.",
+      "businessName": "Nom de l'entreprise",
+      "businessNamePlaceholder": "ex. DC Chicken Rabat",
+      "activationCode": "Code d'activation",
+      "activationCodePlaceholder": "YOPA-XXXX-XXXX",
+      "activationCodeHint": "Chaque entreprise nécessite son propre code d'activation - demandez-en un si vous ne l'avez pas encore.",
+      "nameRequired": "Saisissez un nom d'entreprise.",
+      "codeRequired": "Saisissez un code d'activation.",
+      "invalidCode": "Ce code d'activation est invalide, déjà utilisé ou expiré.",
+      "creating": "Création…",
+      "create": "Créer l'entreprise"
     },
     "accountStatus": {
       "title": "Ce compte n'est pas actif",

@@ -1,6 +1,12 @@
 "use server";
 
-import { decryptToken, encryptToken, upsertSocialAccount } from "@socialpilot/db";
+import {
+  decryptToken,
+  encryptToken,
+  SocialAccountLimitError,
+  upsertSocialAccount,
+} from "@socialpilot/db";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { getPageById } from "@/lib/meta";
 import { clearMetaPageChoiceCookie, getMetaPageChoice } from "@/lib/meta-page-choice";
@@ -32,28 +38,36 @@ export async function chooseMetaPageAction(formData: FormData) {
       redirect("/login");
     }
 
-    await upsertSocialAccount({
-      organizationId: session.organizationId,
-      provider: "FACEBOOK",
-      externalId: page.id,
-      displayName: page.name,
-      accessToken: page.accessToken,
-    });
-    let connectedCount = 1;
-
-    if (page.instagramBusinessAccount) {
+    try {
       await upsertSocialAccount({
         organizationId: session.organizationId,
-        provider: "INSTAGRAM",
-        externalId: page.instagramBusinessAccount.id,
-        displayName: page.instagramBusinessAccount.username,
-        profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
+        provider: "FACEBOOK",
+        externalId: page.id,
+        displayName: page.name,
         accessToken: page.accessToken,
       });
-      connectedCount++;
-    }
+      let connectedCount = 1;
 
-    redirect(`/dashboard/accounts?connected=${connectedCount}`);
+      if (page.instagramBusinessAccount) {
+        await upsertSocialAccount({
+          organizationId: session.organizationId,
+          provider: "INSTAGRAM",
+          externalId: page.instagramBusinessAccount.id,
+          displayName: page.instagramBusinessAccount.username,
+          profilePictureUrl: page.instagramBusinessAccount.profilePictureUrl,
+          accessToken: page.accessToken,
+        });
+        connectedCount++;
+      }
+
+      redirect(`/dashboard/accounts?connected=${connectedCount}`);
+    } catch (error) {
+      if (error instanceof SocialAccountLimitError) {
+        const t = await getTranslations("metaConnect");
+        redirect(`/dashboard/accounts?error=${encodeURIComponent(t("accountLimitReached"))}`);
+      }
+      throw error;
+    }
   }
 
   const pending = await getPendingSignup();

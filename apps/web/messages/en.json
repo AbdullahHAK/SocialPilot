@@ -64,6 +64,7 @@
     "invalidRequest": "Invalid connection request. Please try connecting again.",
     "noPagesFound": "No Facebook Pages found. Make sure you selected a Page when connecting.",
     "alreadyConnected": "One of these accounts is already connected to a different YOPAPI organization.",
+    "accountLimitReached": "This business already has a connected Facebook Page and Instagram account. To manage another Page, add it as a separate business from your account menu.",
     "genericFailure": "Something went wrong connecting your accounts. Please try again."
   },
   "pricingPage": {
@@ -170,7 +171,23 @@
     "shell": {
       "closeMenu": "Close menu",
       "openMenu": "Open menu",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "switchBusiness": "Switch business",
+      "addBusiness": "Add another business"
+    },
+    "addBusiness": {
+      "title": "Add another business",
+      "description": "Each business gets its own Facebook Page, Instagram account, and subscription - all under this same login.",
+      "businessName": "Business name",
+      "businessNamePlaceholder": "e.g. DC Chicken Rabat",
+      "activationCode": "Activation code",
+      "activationCodePlaceholder": "YOPA-XXXX-XXXX",
+      "activationCodeHint": "Each business needs its own activation code - ask for one if you don't have it yet.",
+      "nameRequired": "Enter a business name.",
+      "codeRequired": "Enter an activation code.",
+      "invalidCode": "That activation code is invalid, already used, or expired.",
+      "creating": "Creating…",
+      "create": "Create business"
     },
     "accountStatus": {
       "title": "This account isn't active",

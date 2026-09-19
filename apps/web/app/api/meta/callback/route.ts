@@ -1,6 +1,7 @@
 import {
   encryptToken,
   SocialAccountAlreadyConnectedError,
+  SocialAccountLimitError,
   upsertSocialAccount,
 } from "@socialpilot/db";
 import { getTranslations } from "next-intl/server";
@@ -159,6 +160,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     if (error instanceof SocialAccountAlreadyConnectedError) {
       return redirectWith({ error: t("alreadyConnected") });
+    }
+    if (error instanceof SocialAccountLimitError) {
+      return redirectWith({ error: t("accountLimitReached") });
     }
     console.error("Meta OAuth callback failed", error);
     return redirectWith({ error: t("genericFailure") });

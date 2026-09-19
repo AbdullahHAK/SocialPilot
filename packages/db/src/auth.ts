@@ -75,6 +75,39 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
   }
 }
 
+/** A second (or third...) business under the same login - e.g. one person
+ * running two different restaurants, each with its own Page/Instagram and
+ * its own subscription. Mirrors signUp's org-creation shape but attaches
+ * to an existing user instead of creating one. */
+export async function createOrganizationForUser(userId: string, organizationName: string) {
+  return prisma.organization.create({
+    data: {
+      name: organizationName,
+      brand: resolveBrand(),
+      publishingSchedule: { create: {} },
+      memberships: { create: { userId, role: "OWNER" } },
+    },
+  });
+}
+
+/** Every organization this login can switch into, for the dashboard's
+ * account switcher. */
+export function listOrganizationsForUser(userId: string) {
+  return prisma.organization.findMany({
+    where: { memberships: { some: { userId } } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
+/** Guards switchOrganizationAction - a user can only switch into an org
+ * they actually belong to. */
+export function isOrganizationMember(userId: string, organizationId: string) {
+  return prisma.membership
+    .findUnique({ where: { userId_organizationId: { userId, organizationId } } })
+    .then(Boolean);
+}
+
 export interface AuthenticateResult {
   userId: string;
   organizationId: string;

@@ -1,8 +1,9 @@
-import { prisma } from "@socialpilot/db";
+import { listOrganizationsForUser, prisma } from "@socialpilot/db";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { switchOrganizationAction } from "@/app/dashboard/org-actions";
 import { clearSessionCookie, getSession } from "@/lib/session";
 
 async function logoutAction() {
@@ -42,9 +43,17 @@ export default async function DashboardLayout({
 
   const orgName = organization?.name ?? "YOPAPI";
   const initial = orgName.trim().charAt(0).toUpperCase() || "S";
+  const organizations = await listOrganizationsForUser(session.userId);
 
   return (
-    <DashboardShell orgName={orgName} initial={initial} logoutAction={logoutAction}>
+    <DashboardShell
+      orgName={orgName}
+      initial={initial}
+      organizations={organizations}
+      currentOrgId={session.organizationId}
+      switchOrgAction={switchOrganizationAction}
+      logoutAction={logoutAction}
+    >
       {children}
     </DashboardShell>
   );

@@ -9,6 +9,18 @@ export class SocialAccountAlreadyConnectedError extends Error {
   }
 }
 
+/** One Facebook Page + one Instagram account per organization - the
+ * publisher only ever picks the first matching account for a platform, so
+ * a second one silently never gets used. A business wanting to manage a
+ * second Page needs a second organization (its own subscription), not a
+ * second connection under this one. */
+export class SocialAccountLimitError extends Error {
+  constructor(provider: string) {
+    super(`This business already has a connected ${provider} account`);
+    this.name = "SocialAccountLimitError";
+  }
+}
+
 export interface UpsertSocialAccountInput {
   organizationId: string;
   provider: SocialProvider;
@@ -36,6 +48,16 @@ export async function upsertSocialAccount(input: UpsertSocialAccountInput) {
 
   if (existing && existing.organizationId !== input.organizationId) {
     throw new SocialAccountAlreadyConnectedError();
+  }
+
+  if (!existing) {
+    const otherAccountSameProvider = await prisma.socialAccount.findFirst({
+      where: { organizationId: input.organizationId, provider: input.provider },
+      select: { id: true },
+    });
+    if (otherAccountSameProvider) {
+      throw new SocialAccountLimitError(input.provider);
+    }
   }
 
   const data = {

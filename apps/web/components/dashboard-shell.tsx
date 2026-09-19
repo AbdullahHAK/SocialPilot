@@ -1,7 +1,8 @@
 "use client";
 
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, Plus, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DashboardNav } from "@/components/dashboard-nav";
@@ -13,11 +14,17 @@ import { cn } from "@/lib/utils";
 export function DashboardShell({
   orgName,
   initial,
+  organizations,
+  currentOrgId,
+  switchOrgAction,
   logoutAction,
   children,
 }: {
   orgName: string;
   initial: string;
+  organizations: { id: string; name: string }[];
+  currentOrgId: string;
+  switchOrgAction: (formData: FormData) => void;
   logoutAction: () => void;
   children: ReactNode;
 }) {
@@ -59,10 +66,36 @@ export function DashboardShell({
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
               {initial}
             </span>
-            <p className="truncate text-sm font-medium">{orgName}</p>
+            {organizations.length > 1 ? (
+              <form action={switchOrgAction} className="min-w-0">
+                <select
+                  name="organizationId"
+                  defaultValue={currentOrgId}
+                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                  aria-label={t("switchBusiness")}
+                  className="w-full max-w-40 truncate rounded-md border-none bg-transparent text-sm font-medium outline-none"
+                >
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </form>
+            ) : (
+              <p className="truncate text-sm font-medium">{orgName}</p>
+            )}
           </div>
           <LanguageSwitcher className="shrink-0 text-sidebar-foreground" />
         </div>
+
+        <Link
+          href="/dashboard/add-business"
+          className="mx-4 mb-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <Plus className="size-3.5" />
+          {t("addBusiness")}
+        </Link>
 
         <div
           className="flex-1 overflow-y-auto px-3 py-2"
