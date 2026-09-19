@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  approveLogoConcept,
   createCreativeConcept,
   getBrandProfile,
   getMonthlyImageUsage,
@@ -93,6 +94,14 @@ export async function approveLogoAction(formData: FormData) {
   if (!imageUrl) return;
 
   await setBrandLogo(session.organizationId, imageUrl);
+
+  // Without this, the concept backing this logo stays PENDING forever and
+  // concept-cleanup deletes its R2 image after 10 hours even though it's
+  // now the live logo - see approveLogoConcept.
+  const conceptId = formData.get("conceptId")?.toString();
+  if (conceptId) {
+    await approveLogoConcept(session.organizationId, conceptId);
+  }
 
   const returnTo = safeReturnTo(formData.get("returnTo"), "/dashboard/brand");
   const separator = returnTo.includes("?") ? "&" : "?";

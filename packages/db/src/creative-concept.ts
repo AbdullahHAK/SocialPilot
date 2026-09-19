@@ -26,6 +26,18 @@ export function getCreativeConcept(organizationId: string, id: string) {
   return prisma.creativeConcept.findFirst({ where: { id, organizationId } });
 }
 
+/** Marks a LOGO concept APPROVED, same protection approveCreativeConcept
+ * gives a BRAND_STYLE concept - without this, a logo a customer actively
+ * chose and is using stayed PENDING forever, so concept-cleanup deleted
+ * its R2 image once the 10-hour expiry passed regardless of it still
+ * being the live BrandProfile.logoUrl. */
+export function approveLogoConcept(organizationId: string, id: string) {
+  return prisma.creativeConcept.updateMany({
+    where: { id, organizationId },
+    data: { status: "APPROVED" },
+  });
+}
+
 /** The organization's latest not-yet-expired, not-yet-approved concept of
  * a given kind - for surfacing "your most recent generation" on a settings
  * page even after the user navigated away from the review page without

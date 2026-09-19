@@ -41,6 +41,7 @@ export default async function LogoReviewPage({
         <CardContent className="p-3">
           <form action={approveLogoAction}>
             <input type="hidden" name="imageUrl" value={concept.imageUrls[0]} />
+            <input type="hidden" name="conceptId" value={concept.id} />
             {typeof returnTo === "string" && (
               <input type="hidden" name="returnTo" value={returnTo} />
             )}
