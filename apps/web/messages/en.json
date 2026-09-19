@@ -269,6 +269,7 @@
       "addImages": "Add images (optional)",
       "addImagesHint": "Product photos, your logo, or anything you'd like the AI to use as inspiration.",
       "clickToUpload": "Click to upload images",
+      "maxImagesReached": "Maximum {max} images - remove one to add another.",
       "removeFile": "Remove {name}",
       "generating": "Generating concept…",
       "generate": "Generate concept",

@@ -11,18 +11,17 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { getSession, setSessionCookie } from "@/lib/session";
 
-export async function switchOrganizationAction(formData: FormData) {
+/** No redirect - the caller does router.refresh() so whichever dashboard
+ * page you're already on re-renders with the new business's data instead
+ * of bouncing you back to the overview. */
+export async function switchOrganizationAction(organizationId: string) {
   const session = await getSession();
   if (!session) redirect("/login");
-
-  const organizationId = formData.get("organizationId")?.toString();
-  if (!organizationId) return;
 
   const allowed = await isOrganizationMember(session.userId, organizationId);
   if (!allowed) return;
 
   await setSessionCookie({ ...session, organizationId });
-  redirect("/dashboard");
 }
 
 export interface AddBusinessFormState {

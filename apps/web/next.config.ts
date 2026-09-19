@@ -7,8 +7,12 @@ const nextConfig: NextConfig = {
     serverActions: {
       // Onboarding (logo) and content creation (product/reference images)
       // upload raw files through Server Actions; Next's 1MB default is far
-      // too small for real photos.
-      bodySizeLimit: "10mb",
+      // too small for real photos. Up to REFERENCE_IMAGE_MAX_COUNT (5)
+      // images at REFERENCE_IMAGE_MAX_BYTES (8MB) each - 10mb was too
+      // tight for that combination and silently dropped the request
+      // (looked like a crash) once someone actually uploaded several
+      // real photos.
+      bodySizeLimit: "40mb",
     },
   },
 };

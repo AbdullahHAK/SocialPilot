@@ -3,13 +3,25 @@
 import { LogOut, Menu, Plus, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { isRtl, type Locale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+
+function orgInitial(name: string): string {
+  return name.trim().charAt(0).toUpperCase() || "?";
+}
 
 export function DashboardShell({
   orgName,
@@ -24,12 +36,21 @@ export function DashboardShell({
   initial: string;
   organizations: { id: string; name: string }[];
   currentOrgId: string;
-  switchOrgAction: (formData: FormData) => void;
+  switchOrgAction: (organizationId: string) => Promise<void>;
   logoutAction: () => void;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [isSwitching, startTransition] = useTransition();
+  const router = useRouter();
   const t = useTranslations("dashboard.shell");
+
+  function handleSwitch(organizationId: string) {
+    startTransition(async () => {
+      await switchOrgAction(organizationId);
+      router.refresh();
+    });
+  }
   // Computed in JS rather than via a CSS `rtl:` variant class - that would
   // leave two variant-scoped rules (rtl: and lg:) both targeting
   // transform, and which one wins depends on Tailwind's internal variant
@@ -62,35 +83,44 @@ export function DashboardShell({
         </div>
 
         <div className="flex items-center justify-between gap-3 px-4 py-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-              {initial}
-            </span>
-            {organizations.length > 1 ? (
-              <form action={switchOrgAction} className="min-w-0">
-                <select
-                  name="organizationId"
-                  defaultValue={currentOrgId}
-                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                  aria-label={t("switchBusiness")}
-                  // The dropdown popup is native/OS-rendered, not styled by
-                  // Tailwind classes - without colorScheme:dark it defaults
-                  // to light (dark text on white), which the trigger's own
-                  // white text then blends invisibly into once selected.
-                  style={{ colorScheme: "dark" }}
-                  className="w-full max-w-40 truncate rounded-md border-none bg-sidebar text-sm font-medium text-sidebar-foreground outline-none"
-                >
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id} className="bg-sidebar text-sidebar-foreground">
-                      {org.name}
-                    </option>
-                  ))}
-                </select>
-              </form>
-            ) : (
+          {organizations.length > 1 ? (
+            <Select
+              value={currentOrgId}
+              onValueChange={handleSwitch}
+              disabled={isSwitching}
+            >
+              <SelectTrigger
+                aria-label={t("switchBusiness")}
+                className="h-auto min-w-0 flex-1 gap-2 border-none bg-transparent p-0 pe-2 shadow-none hover:bg-sidebar-accent focus:ring-0 focus:ring-offset-0 [&>svg]:text-sidebar-foreground/60"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+                  {initial}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-start text-sm font-medium text-sidebar-foreground">
+                  <SelectValue>{orgName}</SelectValue>
+                </span>
+              </SelectTrigger>
+              <SelectContent align="start" className="w-56">
+                {organizations.map((org) => (
+                  <SelectItem key={org.id} value={org.id} className="py-2 ps-9">
+                    <span className="flex items-center gap-2.5">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        {orgInitial(org.name)}
+                      </span>
+                      <span className="truncate">{org.name}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+                {initial}
+              </span>
               <p className="truncate text-sm font-medium">{orgName}</p>
-            )}
-          </div>
+            </div>
+          )}
           <LanguageSwitcher className="shrink-0 text-sidebar-foreground" />
         </div>
 

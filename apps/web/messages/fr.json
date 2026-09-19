@@ -269,6 +269,7 @@
       "addImages": "Ajouter des images (facultatif)",
       "addImagesHint": "Photos de produits, votre logo, ou tout ce que vous aimeriez que l'IA utilise comme inspiration.",
       "clickToUpload": "Cliquez pour téléverser des images",
+      "maxImagesReached": "Maximum {max} images - supprimez-en une pour en ajouter une autre.",
       "removeFile": "Supprimer {name}",
       "generating": "Génération du concept…",
       "generate": "Générer le concept",

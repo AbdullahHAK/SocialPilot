@@ -7,6 +7,7 @@ import type { CreateContentFormState } from "@/app/dashboard/create/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { REFERENCE_IMAGE_MAX_COUNT } from "@/lib/validation";
 
 // labelKey is UI copy (translated) - prompt is sent to the AI model as an
 // English instruction fragment and deliberately stays English in every
@@ -69,7 +70,7 @@ export function CreateContentForm({
 
   function addFiles(fileList: FileList | null) {
     if (!fileList) return;
-    setFiles((prev) => [...prev, ...Array.from(fileList)].slice(0, 4));
+    setFiles((prev) => [...prev, ...Array.from(fileList)].slice(0, REFERENCE_IMAGE_MAX_COUNT));
   }
 
   // The visible upload control is reset after each pick so users can add
@@ -121,19 +122,26 @@ export function CreateContentForm({
       <div className="flex flex-col gap-2">
         <Label>{t("addImages")}</Label>
         <p className="text-sm text-muted-foreground">{t("addImagesHint")}</p>
-        <label
-          htmlFor="referenceImages"
-          className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-input px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent/30"
-        >
-          <ImagePlus className="size-5 shrink-0" />
-          {t("clickToUpload")}
-        </label>
+        {files.length < REFERENCE_IMAGE_MAX_COUNT ? (
+          <label
+            htmlFor="referenceImages"
+            className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-input px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent/30"
+          >
+            <ImagePlus className="size-5 shrink-0" />
+            {t("clickToUpload")}
+          </label>
+        ) : (
+          <p className="rounded-lg border border-dashed border-input px-4 py-3 text-sm text-muted-foreground">
+            {t("maxImagesReached", { max: REFERENCE_IMAGE_MAX_COUNT })}
+          </p>
+        )}
         <input
           id="referenceImages"
           type="file"
           multiple
           accept="image/png,image/jpeg,image/webp"
           onChange={(e) => addFiles(e.target.files)}
+          disabled={files.length >= REFERENCE_IMAGE_MAX_COUNT}
           className="sr-only"
         />
         {files.length > 0 && (
