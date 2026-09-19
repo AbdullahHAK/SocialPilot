@@ -3,6 +3,7 @@
 import {
   ActivationCodeInvalidError,
   createOrganizationForUser,
+  deleteOrganization,
   isOrganizationMember,
   redeemActivationCode,
 } from "@socialpilot/db";
@@ -50,6 +51,7 @@ export async function addBusinessAction(
   try {
     await redeemActivationCode(code, org.id);
   } catch (error) {
+    await deleteOrganization(org.id);
     if (error instanceof ActivationCodeInvalidError) {
       return { error: t("invalidCode") };
     }

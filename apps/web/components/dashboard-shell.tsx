@@ -73,10 +73,15 @@ export function DashboardShell({
                   defaultValue={currentOrgId}
                   onChange={(e) => e.currentTarget.form?.requestSubmit()}
                   aria-label={t("switchBusiness")}
-                  className="w-full max-w-40 truncate rounded-md border-none bg-transparent text-sm font-medium outline-none"
+                  // The dropdown popup is native/OS-rendered, not styled by
+                  // Tailwind classes - without colorScheme:dark it defaults
+                  // to light (dark text on white), which the trigger's own
+                  // white text then blends invisibly into once selected.
+                  style={{ colorScheme: "dark" }}
+                  className="w-full max-w-40 truncate rounded-md border-none bg-sidebar text-sm font-medium text-sidebar-foreground outline-none"
                 >
                   {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
+                    <option key={org.id} value={org.id} className="bg-sidebar text-sidebar-foreground">
                       {org.name}
                     </option>
                   ))}

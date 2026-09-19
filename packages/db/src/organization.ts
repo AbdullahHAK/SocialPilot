@@ -6,6 +6,13 @@ export interface ListOrganizationsInput {
   limit?: number;
 }
 
+/** Rollback for addBusinessAction: an org created for a new business whose
+ * activation code turned out invalid shouldn't linger as an empty,
+ * unsubscribed entry in the owner's switcher. Cascades Membership etc. */
+export function deleteOrganization(organizationId: string) {
+  return prisma.organization.delete({ where: { id: organizationId } });
+}
+
 /** Admin-facing customer list, always scoped to YOPAPI - SocialPilot and
  * YOPAPI share one database, so this filter is the only thing keeping the
  * two brands' customers from leaking into each other's admin view. */
