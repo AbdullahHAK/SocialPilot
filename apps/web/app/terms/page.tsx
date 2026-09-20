@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { COMPANY_LEGAL_NAME, CONTACT_EMAIL } from "@/lib/company";
 
 export const metadata: Metadata = { title: "Terms of Service — YOPAPI" };
-
-const CONTACT_EMAIL = "support@yopapi.com";
 
 export default async function TermsOfServicePage() {
   const t = await getTranslations("legal");
   return (
-    <LegalPage title={t("termsTitle")} updatedDate="September 13, 2026">
+    <LegalPage title={t("termsTitle")} updatedDate="September 21, 2026">
       <p>
         These Terms of Service (&quot;Terms&quot;) govern your use of
-        YOPAPI (the &quot;Service&quot;). By creating an account, you
-        agree to these Terms.
+        YOPAPI (the &quot;Service&quot;), owned and operated by{" "}
+        {COMPANY_LEGAL_NAME}. By creating an account, you agree to these
+        Terms.
       </p>
 
       <section>
@@ -107,7 +107,8 @@ export default async function TermsOfServicePage() {
       <section>
         <h2>10. Contact us</h2>
         <p>
-          Questions about these Terms? Contact us at{" "}
+          {COMPANY_LEGAL_NAME} is the owner and operator of YOPAPI. Questions
+          about these Terms? Contact us at{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary underline-offset-4 hover:underline">
             {CONTACT_EMAIL}
           </a>

@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { COMPANY_LEGAL_NAME, CONTACT_EMAIL } from "@/lib/company";
 
 export const metadata: Metadata = { title: "Privacy Policy — YOPAPI" };
-
-const CONTACT_EMAIL = "support@yopapi.com";
 
 export default async function PrivacyPolicyPage() {
   const t = await getTranslations("legal");
   return (
-    <LegalPage title={t("privacyTitle")} updatedDate="September 13, 2026">
+    <LegalPage title={t("privacyTitle")} updatedDate="September 21, 2026">
       <p>
         This Privacy Policy explains what information YOPAPI (&quot;we&quot;,
-        &quot;us&quot;) collects when you use our website and dashboard (the
-        &quot;Service&quot;), how we use it, and the choices you have.
+        &quot;us&quot;), owned and operated by {COMPANY_LEGAL_NAME}, collects
+        when you use our website and dashboard (the &quot;Service&quot;), how
+        we use it, and the choices you have.
       </p>
 
       <section>
@@ -118,7 +118,8 @@ export default async function PrivacyPolicyPage() {
       <section>
         <h2>8. Contact us</h2>
         <p>
-          Questions about this Privacy Policy? Contact us at{" "}
+          {COMPANY_LEGAL_NAME} is the owner and operator of YOPAPI. Questions
+          about this Privacy Policy? Contact us at{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary underline-offset-4 hover:underline">
             {CONTACT_EMAIL}
           </a>

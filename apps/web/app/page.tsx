@@ -10,6 +10,7 @@ import { VisualShowcase } from "@/components/landing/visual-showcase";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { COMPANY_LEGAL_NAME, CONTACT_EMAIL } from "@/lib/company";
 
 export default async function Home() {
   const t = await getTranslations("landing");
@@ -50,10 +51,14 @@ export default async function Home() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <Logo />
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} YOPAPI. {t("footer.rights")}
+          <p className="text-center text-sm text-muted-foreground">
+            © {new Date().getFullYear()} YOPAPI — {COMPANY_LEGAL_NAME}.{" "}
+            {t("footer.rights")}
           </p>
-          <nav className="flex gap-4 text-sm text-muted-foreground">
+          <nav className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-foreground hover:underline">
+              {CONTACT_EMAIL}
+            </a>
             <Link href="/privacy" className="hover:text-foreground hover:underline">
               {t("footer.privacy")}
             </Link>

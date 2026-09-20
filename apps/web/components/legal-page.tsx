@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
+import { COMPANY_LEGAL_NAME, CONTACT_EMAIL } from "@/lib/company";
 
 // The surrounding chrome (nav, dates, footer) is fully translated - the
 // legal body text itself (passed as children by each page) deliberately
@@ -49,11 +50,15 @@ export async function LegalPage({
       </main>
 
       <footer className="border-t border-border/60">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-6 text-xs text-muted-foreground sm:px-6">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-4 py-6 text-xs text-muted-foreground sm:px-6">
           <span>
-            © {new Date().getFullYear()} YOPAPI. {tFooter("rights")}
+            © {new Date().getFullYear()} YOPAPI — {COMPANY_LEGAL_NAME}.{" "}
+            {tFooter("rights")}
           </span>
-          <nav className="flex gap-4">
+          <nav className="flex flex-wrap gap-4">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-foreground hover:underline">
+              {CONTACT_EMAIL}
+            </a>
             <Link href="/privacy" className="hover:text-foreground hover:underline">
               {tFooter("privacy")}
             </Link>
