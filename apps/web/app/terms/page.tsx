@@ -20,9 +20,9 @@ export default async function TermsOfServicePage() {
         <h2>1. The Service</h2>
         <p>
           YOPAPI generates AI-based social media content on your behalf
-          and publishes it to the Instagram and/or Facebook accounts you
-          connect, on a schedule you configure, for the duration of your
-          subscription.
+          and publishes it, as feed posts and Stories, to the Instagram
+          and/or Facebook accounts you connect, on a schedule you configure,
+          for the duration of your subscription.
         </p>
       </section>
 

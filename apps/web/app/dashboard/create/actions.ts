@@ -22,7 +22,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { safeReturnTo } from "@/lib/safe-return-to";
 import { getSession } from "@/lib/session";
-import { REFERENCE_IMAGE_MAX_COUNT } from "@/lib/validation";
+import { PROMPT_MAX_LENGTH, REFERENCE_IMAGE_MAX_COUNT } from "@/lib/validation";
 
 // Once a style is approved, "now go set posting times" is the natural
 // next step - the whole point of this pipeline is that content generates
@@ -32,7 +32,6 @@ const DEFAULT_RETURN_TO = "/dashboard/schedule";
 export interface CreateContentFormState {
   error?: string;
 }
-
 
 // The client's explicit cost-control request: one image per generation
 // request, not several to choose from.
@@ -90,8 +89,8 @@ export async function generateConceptsAction(
   if (!prompt) {
     return { error: t("describeWhatToCreate") };
   }
-  if (prompt.length > 1000) {
-    return { error: t("descriptionTooLong") };
+  if (prompt.length > PROMPT_MAX_LENGTH) {
+    return { error: t("descriptionTooLong", { max: PROMPT_MAX_LENGTH }) };
   }
 
   const quotaError = await checkBrandStyleQuota(session.organizationId);
@@ -99,10 +98,10 @@ export async function generateConceptsAction(
     return { error: quotaError };
   }
 
-  // Already uploaded straight to R2 by the client (see
-  // getReferenceImageUploadTargetsAction) - only the resulting public URLs
-  // travel through this request, so it stays far under Vercel's platform
-  // body-size limit regardless of how large the original photos were.
+  // Already uploaded straight to Vercel Blob by the browser (see
+  // app/api/reference-image-upload) - only the resulting public URLs travel
+  // through this request, so it stays far under Vercel's platform body-size
+  // limit regardless of how large the original photos were.
   const referenceImageUrls = formData
     .getAll("referenceImageUrls")
     .filter((value): value is string => typeof value === "string" && value.length > 0);

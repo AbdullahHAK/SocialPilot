@@ -250,6 +250,10 @@ export type ContentJobWithAccounts = ContentJob & {
   organization: {
     socialAccounts: import("@prisma/client").SocialAccount[];
     status: import("@prisma/client").OrganizationStatus;
+    publishingSchedule: {
+      publishMode: import("@prisma/client").PublishMode;
+      includeCaption: boolean;
+    } | null;
   };
 };
 
@@ -278,7 +282,12 @@ export async function listPublishCandidates(
     },
     include: {
       publications: true,
-      organization: { include: { socialAccounts: true } },
+      organization: {
+        include: {
+          socialAccounts: true,
+          publishingSchedule: { select: { publishMode: true, includeCaption: true } },
+        },
+      },
     },
     orderBy: { scheduledFor: "asc" },
     take: limit,
@@ -323,6 +332,8 @@ export async function findMasterImageForDay(
       organizationId,
       scheduledFor: { gte: dayStart, lt: dayEnd },
       masterImageUrl: { not: null },
+      // A deleted file can't be reused - see findExpiredJobImages.
+      imagesDeletedAt: null,
     },
     orderBy: { createdAt: "asc" },
     select: { masterImageUrl: true, storyImageUrl: true },
@@ -461,9 +472,11 @@ export function recordContentPublicationExternalId(
   });
 }
 
+/** `externalPostId` is null for a Story-only publish - there's no feed post
+ * to point at, the Story's own id lives in `externalStoryId`. */
 export function markContentPublicationPublished(
   publicationId: string,
-  externalPostId: string,
+  externalPostId: string | null,
 ): Promise<ContentPublication> {
   return prisma.contentPublication.update({
     where: { id: publicationId },
@@ -645,4 +658,121 @@ export async function getNextScheduledContentJob(
     orderBy: { scheduledFor: "asc" },
   });
   return job ? { platform: job.platforms[0]!, scheduledFor: job.scheduledFor } : null;
+}
+
+// --- Daily post/Story image expiry ---
+
+/** How long a job's images stay in storage after its post went out. The
+ * client's explicit rule: published images must not pile up in storage,
+ * but nothing may be deleted early - the same day's image is shared by
+ * every platform's post that day (and by the Story), so it only goes once
+ * the whole day's posts are done with it. */
+export const JOB_IMAGE_TTL_MS = 24 * 60 * 60 * 1000;
+
+const TERMINAL_JOB_STATUSES: ContentJobStatus[] = ["PUBLISHED", "FAILED", "CANCELLED"];
+
+export interface ExpiredJobImages {
+  organizationId: string;
+  /** Every job (across the shared same-day image) to flag once the files are gone. */
+  jobIds: string[];
+  /** Files safe to delete from storage - never a logo or Brand Style image. */
+  imageUrls: string[];
+}
+
+/** Finds daily-post/Story image files that are past their 24 hours and no
+ * longer needed. An image is only returned once EVERY job sharing it (same-day
+ * reuse copies one image onto several jobs) is finished - published, failed,
+ * or cancelled - and old enough by both its scheduled and generated time, so
+ * nothing still waiting to publish or retry ever loses its image. Logos,
+ * Brand Style images and concept images are filtered out as a second
+ * safeguard: a job's own image should never equal one of those, but deleting
+ * one of them is unrecoverable, so it's checked rather than assumed. */
+export async function findExpiredJobImages(
+  now: Date,
+  limit: number,
+): Promise<ExpiredJobImages[]> {
+  const cutoff = new Date(now.getTime() - JOB_IMAGE_TTL_MS);
+  type Timed = { status: ContentJobStatus; scheduledFor: Date; generatedAt: Date | null };
+  const isFinishedAndOld = (job: Timed) =>
+    TERMINAL_JOB_STATUSES.includes(job.status) &&
+    job.scheduledFor < cutoff &&
+    (job.generatedAt === null || job.generatedAt < cutoff);
+
+  const candidates = await prisma.contentJob.findMany({
+    where: {
+      imagesDeletedAt: null,
+      masterImageUrl: { not: null },
+      status: { in: TERMINAL_JOB_STATUSES },
+      scheduledFor: { lt: cutoff },
+      OR: [{ generatedAt: null }, { generatedAt: { lt: cutoff } }],
+    },
+    orderBy: { scheduledFor: "asc" },
+    take: limit,
+    select: { organizationId: true, masterImageUrl: true },
+  });
+
+  const groups = new Map<string, { organizationId: string; masterImageUrl: string }>();
+  for (const job of candidates) {
+    groups.set(`${job.organizationId}|${job.masterImageUrl}`, {
+      organizationId: job.organizationId,
+      masterImageUrl: job.masterImageUrl!,
+    });
+  }
+
+  const protectedByOrg = new Map<string, Set<string>>();
+  async function protectedUrls(organizationId: string): Promise<Set<string>> {
+    const cached = protectedByOrg.get(organizationId);
+    if (cached) return cached;
+    const [brand, creative, concepts] = await Promise.all([
+      prisma.brandProfile.findUnique({ where: { organizationId }, select: { logoUrl: true } }),
+      prisma.brandCreativeProfile.findUnique({
+        where: { organizationId },
+        select: { referenceImageUrls: true },
+      }),
+      prisma.creativeConcept.findMany({ where: { organizationId }, select: { imageUrls: true } }),
+    ]);
+    const urls = new Set<string>();
+    if (brand?.logoUrl) urls.add(brand.logoUrl);
+    creative?.referenceImageUrls.forEach((url) => urls.add(url));
+    concepts.forEach((concept) => concept.imageUrls.forEach((url) => urls.add(url)));
+    protectedByOrg.set(organizationId, urls);
+    return urls;
+  }
+
+  const result: ExpiredJobImages[] = [];
+  for (const { organizationId, masterImageUrl } of groups.values()) {
+    const sharing = await prisma.contentJob.findMany({
+      where: { organizationId, masterImageUrl },
+      select: {
+        id: true,
+        status: true,
+        scheduledFor: true,
+        generatedAt: true,
+        imagesDeletedAt: true,
+        storyImageUrl: true,
+      },
+    });
+    if (!sharing.every((job) => job.imagesDeletedAt !== null || isFinishedAndOld(job))) continue;
+
+    const guarded = await protectedUrls(organizationId);
+    const urls = new Set<string>([masterImageUrl]);
+    sharing.forEach((job) => job.storyImageUrl && urls.add(job.storyImageUrl));
+
+    result.push({
+      organizationId,
+      jobIds: sharing.filter((job) => job.imagesDeletedAt === null).map((job) => job.id),
+      imageUrls: [...urls].filter((url) => !guarded.has(url)),
+    });
+  }
+  return result;
+}
+
+/** Flags jobs whose image files were deleted, so the calendar shows an
+ * "image removed" placeholder. The URLs themselves stay on the row (see
+ * ContentJob.imagesDeletedAt). */
+export function markContentJobsImagesDeleted(jobIds: string[], now: Date = new Date()) {
+  return prisma.contentJob.updateMany({
+    where: { id: { in: jobIds } },
+    data: { imagesDeletedAt: now },
+  });
 }

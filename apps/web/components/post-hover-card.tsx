@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Loader2, Pencil, Trash2, X } from "lucide-react";
+import { Download, ImageOff, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { PointerEvent, ReactNode } from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -110,6 +110,37 @@ function ImageZoomPreview({ imageUrl }: { imageUrl: string }) {
   );
 }
 
+/** Shown where the post's image used to be once its file was deleted from
+ * storage (24 hours after posting - see findExpiredJobImages). Same footprint
+ * as the thumbnail so the card doesn't shift, plus a plain-language note so
+ * it reads as intentional rather than a broken image. */
+function ImageRemovedTile() {
+  const t = useTranslations("dashboard.postHoverCard");
+  return (
+    <div
+      role="img"
+      aria-label={t("imageRemovedTitle")}
+      title={t("imageRemovedTitle")}
+      className="flex size-16 shrink-0 items-center justify-center rounded-md border border-dashed border-border bg-muted/50 text-muted-foreground"
+    >
+      <ImageOff className="size-6" />
+    </div>
+  );
+}
+
+function ImageRemovedNote() {
+  const t = useTranslations("dashboard.postHoverCard");
+  return (
+    <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5">
+      <ImageOff className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        <span className="block font-medium text-foreground">{t("imageRemovedTitle")}</span>
+        {t("imageRemovedHint")}
+      </p>
+    </div>
+  );
+}
+
 // A card's status is derived (in calendar/page.tsx) from its ContentJob and
 // ContentPublication together, not read off a single field. QUEUED means
 // the job hasn't reached its generation lead-time window yet (nothing is
@@ -138,6 +169,9 @@ export interface CalendarPost {
    * ever been manually (re)generated - see EditPostDialog. */
   captionInstruction: string | null;
   imageUrls: string[];
+  /** The post's image file was deleted from storage after its 24 hours -
+   * imageUrls is empty and a placeholder shows instead. */
+  imageRemoved: boolean;
   scheduledFor: string;
 }
 
@@ -233,7 +267,11 @@ export function PostHoverCard({
       </HoverCardTrigger>
       <HoverCardContent ref={contentRef}>
         <div className="flex gap-3">
-          {post.imageUrls[0] && <ImageZoomPreview imageUrl={post.imageUrls[0]} />}
+          {post.imageUrls[0] ? (
+            <ImageZoomPreview imageUrl={post.imageUrls[0]} />
+          ) : post.imageRemoved ? (
+            <ImageRemovedTile />
+          ) : null}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               {post.platform === "INSTAGRAM" ? (
@@ -248,6 +286,8 @@ export function PostHoverCard({
             <p className="mt-1 text-xs text-muted-foreground">{formattedTime}</p>
           </div>
         </div>
+
+        {post.imageRemoved && <ImageRemovedNote />}
 
         <p className="mt-3 max-h-24 overflow-y-auto text-sm whitespace-pre-wrap">
           {post.caption || t("noCaption")}

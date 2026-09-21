@@ -88,7 +88,7 @@
     "bestValue": "Meilleure offre",
     "features": [
       "2 designers IA + 1 gestionnaire de publication IA",
-      "Publication automatique sur Instagram et Facebook",
+      "Publication automatique de publications et de Stories sur Instagram et Facebook",
       "Créneaux de publication hebdomadaires illimités",
       "Calendrier de contenu complet et historique"
     ]
@@ -244,7 +244,7 @@
         "totalCapReached": "Vous avez atteint votre limite d'images pour ce mois-ci ({cap}). Elle se réinitialise le mois prochain.",
         "brandStyleCapReached": "Vous avez utilisé vos {cap} révisions de style de marque ce mois-ci. Cela se réinitialise le mois prochain.",
         "describeWhatToCreate": "Décrivez ce que vous voulez créer.",
-        "descriptionTooLong": "Limitez la description à 1000 caractères.",
+        "descriptionTooLong": "Limitez la description à {max} caractères.",
         "tooManyImages": "Téléversez au maximum {max} images.",
         "imageTooLarge": "Chaque image doit faire 8 Mo maximum.",
         "invalidImageType": "Les images doivent être au format PNG, JPEG ou WebP.",
@@ -343,7 +343,25 @@
       "facebook": "Facebook",
       "enabled": "Activé",
       "disabled": "Désactivé",
-      "removeSlot": "Supprimer le créneau"
+      "removeSlot": "Supprimer le créneau",
+      "publishOptions": {
+        "title": "Que publier",
+        "description": "Choisissez ce qui est publié à chaque horaire. Cela s'applique à toutes les publications qui ne sont pas encore parties.",
+        "postAndStory": "Publication + Story",
+        "postAndStoryHint": "Publie la publication, et la même image en Story.",
+        "storyOnly": "Story uniquement",
+        "storyOnlyHint": "Publie uniquement la Story, sans publication dans le fil.",
+        "postOnly": "Publication uniquement",
+        "postOnlyHint": "Publie uniquement la publication dans le fil, sans Story.",
+        "captionLabel": "Inclure la légende avec la publication",
+        "captionHint": "Sur Non, la publication est publiée avec l'image seule.",
+        "captionNotForStories": "Les Stories n'ont pas de légende : ce réglage ne s'applique pas à « Story uniquement ».",
+        "yes": "Oui",
+        "no": "Non",
+        "save": "Enregistrer",
+        "saved": "Enregistré",
+        "saveFailed": "Impossible d'enregistrer vos options. Veuillez réessayer."
+      }
     },
     "addSlotDialog": {
       "pickOneDay": "Choisissez au moins un jour.",
@@ -396,6 +414,8 @@
     },
     "postHoverCard": {
       "closePreview": "Fermer l'aperçu",
+      "imageRemovedTitle": "Image supprimée",
+      "imageRemovedHint": "Les images sont supprimées 24 heures après la publication pour libérer de l'espace. Votre publication reste en ligne sur Instagram et Facebook.",
       "download": "Télécharger",
       "noCaption": "(pas de légende)",
       "edit": "Modifier",
@@ -517,7 +537,7 @@
         },
         {
           "title": "Gestionnaire de publication IA",
-          "description": "Programme et publie votre contenu automatiquement, chaque semaine, sans que vous leviez le petit doigt."
+          "description": "Programme et publie vos publications et vos Stories automatiquement, chaque semaine, sans que vous leviez le petit doigt."
         }
       ],
       "closing": "Trois rôles IA. Un seul abonnement simple. Moins de 0,50 $/jour."
@@ -540,7 +560,7 @@
         },
         {
           "title": "Définissez votre calendrier de publication",
-          "description": "Choisissez les jours et heures de publication. YOPAPI publie selon ce calendrier, chaque semaine."
+          "description": "Choisissez les jours et heures de publication. YOPAPI publie vos publications et vos Stories selon ce calendrier, chaque semaine."
         }
       ],
       "closing": "C'est tout. YOPAPI s'occupe du reste."

@@ -71,7 +71,8 @@ export default async function CalendarPage({
       status: displayStatus(job.status, publication.status),
       caption: job.caption,
       captionInstruction: job.captionInstruction,
-      imageUrls: job.masterImageUrl ? [job.masterImageUrl] : [],
+      imageUrls: job.masterImageUrl && !job.imagesDeletedAt ? [job.masterImageUrl] : [],
+      imageRemoved: job.imagesDeletedAt !== null,
       scheduledFor: (publication.publishedAt ?? job.scheduledFor).toISOString(),
     })),
   );

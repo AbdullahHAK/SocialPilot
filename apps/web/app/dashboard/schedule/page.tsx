@@ -13,6 +13,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddScheduleSlotDialog } from "@/components/add-schedule-slot-dialog";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
+import { PublishOptionsCard } from "@/components/publish-options-card";
 import { PublishingStatusCard } from "@/components/publishing-status-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   addScheduleSlotAction,
   removeScheduleSlotAction,
   toggleScheduleSlotAction,
+  updatePublishOptionsAction,
 } from "./actions";
 
 const DAY_ORDER = [
@@ -102,6 +104,12 @@ export default async function SchedulePage() {
       </div>
 
       <PublishingStatusCard lastPublished={lastPublished} nextScheduled={nextScheduled} />
+
+      <PublishOptionsCard
+        action={updatePublishOptionsAction}
+        initialMode={schedule.publishMode}
+        initialIncludeCaption={schedule.includeCaption}
+      />
 
       {slotsByDay.length === 0 ? (
         <Card>

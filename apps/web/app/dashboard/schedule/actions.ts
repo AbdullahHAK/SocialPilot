@@ -8,6 +8,7 @@ import {
   getBrandProfile,
   listSocialAccounts,
   materializeContentJob,
+  setPublishOptions,
   updateScheduleSlot,
   zonedTimeToUtc,
   type Platform,
@@ -179,4 +180,39 @@ export async function removeScheduleSlotAction(formData: FormData) {
 
   await deleteScheduleSlot(session.organizationId, slotId);
   revalidatePath("/dashboard/schedule");
+}
+
+export interface PublishOptionsState {
+  saved?: boolean;
+  error?: boolean;
+}
+
+/** Saves the per-business "what to publish" setting. Read by the worker at
+ * publish time, so it applies to every post that hasn't gone out yet. */
+export async function updatePublishOptionsAction(
+  _prevState: PublishOptionsState,
+  formData: FormData,
+): Promise<PublishOptionsState> {
+  const session = await getSession();
+  if (!session) return { error: true };
+
+  const publishMode = formData.get("publishMode");
+  if (
+    publishMode !== "POST_AND_STORY" &&
+    publishMode !== "STORY_ONLY" &&
+    publishMode !== "POST_ONLY"
+  ) {
+    return { error: true };
+  }
+  const includeCaption = formData.get("includeCaption") === "true";
+
+  try {
+    await setPublishOptions(session.organizationId, { publishMode, includeCaption });
+  } catch (error) {
+    console.error("Saving publish options failed", error);
+    return { error: true };
+  }
+
+  revalidatePath("/dashboard/schedule");
+  return { saved: true };
 }

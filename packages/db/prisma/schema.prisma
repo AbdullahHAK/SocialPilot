@@ -300,12 +300,24 @@ model BrandCreativeProfile {
   @@map("brand_creative_profiles")
 }
 
+// What goes out at each scheduled time - the client's explicit per-business
+// setting. Captions don't exist on Stories at all (neither Instagram nor
+// Facebook Stories carry one), so includeCaption only ever applies to the
+// feed post and is moot for STORY_ONLY.
+enum PublishMode {
+  POST_AND_STORY
+  STORY_ONLY
+  POST_ONLY
+}
+
 model PublishingSchedule {
-  id             String   @id @default(cuid())
-  organizationId String   @unique
-  timezone       String   @default("UTC")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id             String      @id @default(cuid())
+  organizationId String      @unique
+  timezone       String      @default("UTC")
+  publishMode    PublishMode @default(POST_AND_STORY)
+  includeCaption Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   slots        ScheduleSlot[]
@@ -403,6 +415,12 @@ model ContentJob {
   // row's creation time, to attribute cost to the right calendar month.
   // Left null on a same-day-reused job (no fresh generation happened).
   generatedAt    DateTime?
+  // Set once masterImageUrl/storyImageUrl's files were deleted from storage
+  // (24 hours after the day's post went out - see findExpiredJobImages).
+  // The URLs are deliberately left in place: monthly usage accounting and
+  // same-day image reuse read them, and the calendar uses this timestamp
+  // to show an "image removed" placeholder instead of a broken image.
+  imagesDeletedAt DateTime?
   // Generation attempts only (not publish attempts - those live on
   // ContentPublication, independently per platform).
   attempts       Int              @default(0)

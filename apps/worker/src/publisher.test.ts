@@ -469,4 +469,113 @@ describe("runPublishCycle", () => {
       expect(publication.externalStoryId).toBe("page_1_story_1");
     });
   });
+  describe("publishing options (per-business setting)", () => {
+    type Mode = "POST_AND_STORY" | "STORY_ONLY" | "POST_ONLY";
+
+    async function setup(mode: Mode, includeCaption: boolean, storyImageUrl?: string) {
+      const { org, job } = await createReadyJob({ platforms: ["INSTAGRAM"], storyImageUrl });
+      await prisma.publishingSchedule.create({
+        data: { organizationId: org.id, publishMode: mode, includeCaption },
+      });
+      await upsertSocialAccount({
+        organizationId: org.id,
+        provider: "INSTAGRAM",
+        externalId: "ig-1",
+        accessToken: "raw-page-token",
+      });
+      return { job };
+    }
+
+    const json = (body: object) => new Response(JSON.stringify(body), { status: 200 });
+
+    it("post only: publishes the feed post and never a Story, even when a Story image exists", async () => {
+      const { job } = await setup("POST_ONLY", true, "https://example.com/a-story.png");
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(json({ id: "creation-1" }))
+        .mockResolvedValueOnce(json({ status_code: "FINISHED" }))
+        .mockResolvedValueOnce(json({ id: "ig-post-1" }))
+        .mockResolvedValueOnce(json({ id: "ig-post-1" }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      const publication = await prisma.contentPublication.findFirstOrThrow({
+        where: { contentJobId: job.id },
+      });
+      expect(publication.status).toBe("PUBLISHED");
+      expect(publication.externalPostId).toBe("ig-post-1");
+      expect(publication.externalStoryId).toBeNull();
+    });
+
+    it("story only: publishes just the Story - no feed post - and marks the job PUBLISHED", async () => {
+      const { job } = await setup("STORY_ONLY", true, "https://example.com/a-story.png");
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(json({ id: "story-creation-1" }))
+        .mockResolvedValueOnce(json({ status_code: "FINISHED" }))
+        .mockResolvedValueOnce(json({ id: "ig-story-1" }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      const publication = await prisma.contentPublication.findFirstOrThrow({
+        where: { contentJobId: job.id },
+      });
+      expect(publication.status).toBe("PUBLISHED");
+      expect(publication.externalPostId).toBeNull();
+      expect(publication.externalStoryId).toBe("ig-story-1");
+      const updatedJob = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
+      expect(updatedJob.status).toBe("PUBLISHED");
+    });
+
+    it("story only with no Story image fails permanently without calling Meta", async () => {
+      const { job } = await setup("STORY_ONLY", true);
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      const publication = await prisma.contentPublication.findFirstOrThrow({
+        where: { contentJobId: job.id },
+      });
+      expect(publication.status).toBe("FAILED");
+      expect(publication.errorMessage).toMatch(/no Story image/i);
+    });
+
+    it("caption off: the post goes out with an empty caption", async () => {
+      await setup("POST_ONLY", false);
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(json({ id: "creation-1" }))
+        .mockResolvedValueOnce(json({ status_code: "FINISHED" }))
+        .mockResolvedValueOnce(json({ id: "ig-post-1" }))
+        .mockResolvedValueOnce(json({ id: "ig-post-1" }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      const containerUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+      expect(containerUrl.searchParams.get("caption")).toBe("");
+    });
+
+    it("caption on (default): the caption and hashtags are included", async () => {
+      await setup("POST_ONLY", true);
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(json({ id: "creation-1" }))
+        .mockResolvedValueOnce(json({ status_code: "FINISHED" }))
+        .mockResolvedValueOnce(json({ id: "ig-post-1" }))
+        .mockResolvedValueOnce(json({ id: "ig-post-1" }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      const containerUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+      expect(containerUrl.searchParams.get("caption")).toBe("Weekend special!\n\n#offer");
+    });
+  });
 });

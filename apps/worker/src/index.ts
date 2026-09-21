@@ -1,5 +1,6 @@
 import { runConceptCleanupCycle } from "./concept-cleanup";
 import { runGenerationCycle } from "./generator";
+import { runJobImageCleanupCycle } from "./job-image-cleanup";
 import { runMaterializeCycle } from "./materializer";
 import { runPublishCycle } from "./publisher";
 
@@ -12,6 +13,8 @@ const GENERATE_POLL_INTERVAL_MS = 60_000;
 const PUBLISH_POLL_INTERVAL_MS = 60_000;
 // A 10-hour expiry doesn't need anything close to minute-level precision.
 const CONCEPT_CLEANUP_POLL_INTERVAL_MS = 30 * 60_000;
+// Same reasoning for the 24-hour post/Story image expiry.
+const JOB_IMAGE_CLEANUP_POLL_INTERVAL_MS = 30 * 60_000;
 
 /** Recursive setTimeout (await, then schedule the next tick) rather than
  * setInterval - setInterval doesn't wait for the previous call to finish,
@@ -41,6 +44,7 @@ function main() {
   loop("generate", GENERATE_POLL_INTERVAL_MS, () => runGenerationCycle());
   loop("publish", PUBLISH_POLL_INTERVAL_MS, () => runPublishCycle());
   loop("concept-cleanup", CONCEPT_CLEANUP_POLL_INTERVAL_MS, () => runConceptCleanupCycle());
+  loop("job-image-cleanup", JOB_IMAGE_CLEANUP_POLL_INTERVAL_MS, () => runJobImageCleanupCycle());
 }
 
 if (process.env.VITEST === undefined) {

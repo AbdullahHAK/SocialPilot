@@ -65,6 +65,11 @@ export const LOGO_ALLOWED_TYPES = [
   "image/svg+xml",
 ];
 
+// The Brand Style prompt: raised from 1000 at the client's request so a
+// detailed, multi-paragraph brief fits. Same ceiling the caption
+// instruction already uses - generous, not a real practical constraint.
+export const PROMPT_MAX_LENGTH = 5000;
+
 export const REFERENCE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 export const REFERENCE_IMAGE_MAX_COUNT = 5;
 export const REFERENCE_IMAGE_ALLOWED_TYPES = [

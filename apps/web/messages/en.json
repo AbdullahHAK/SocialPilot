@@ -88,7 +88,7 @@
     "bestValue": "Best value",
     "features": [
       "2 AI image designers + 1 AI publishing manager",
-      "Automatic publishing to Instagram & Facebook",
+      "Automatic publishing of posts and Stories to Instagram & Facebook",
       "Unlimited weekly publishing slots",
       "Full content calendar & history"
     ]
@@ -244,7 +244,7 @@
         "totalCapReached": "You've reached this month's image limit ({cap}). It resets next month.",
         "brandStyleCapReached": "You've used all {cap} Brand Style revisions this month. This resets next month.",
         "describeWhatToCreate": "Describe what you want to create.",
-        "descriptionTooLong": "Keep the description under 1000 characters.",
+        "descriptionTooLong": "Keep the description under {max} characters.",
         "tooManyImages": "Upload at most {max} images.",
         "imageTooLarge": "Each image must be 8MB or smaller.",
         "invalidImageType": "Images must be PNG, JPEG, or WebP.",
@@ -343,7 +343,25 @@
       "facebook": "Facebook",
       "enabled": "Enabled",
       "disabled": "Disabled",
-      "removeSlot": "Remove slot"
+      "removeSlot": "Remove slot",
+      "publishOptions": {
+        "title": "What to publish",
+        "description": "Choose what goes out at each posting time. This applies to every post that hasn't been published yet.",
+        "postAndStory": "Post + Story",
+        "postAndStoryHint": "Publish the post, and the same image as a Story.",
+        "storyOnly": "Story only",
+        "storyOnlyHint": "Publish just the Story - no feed post.",
+        "postOnly": "Post only",
+        "postOnlyHint": "Publish just the feed post - no Story.",
+        "captionLabel": "Include the caption with the post",
+        "captionHint": "When set to No, the post goes out with the image only.",
+        "captionNotForStories": "Stories don't have captions, so this doesn't apply to Story only.",
+        "yes": "Yes",
+        "no": "No",
+        "save": "Save options",
+        "saved": "Saved",
+        "saveFailed": "Couldn't save your options. Please try again."
+      }
     },
     "addSlotDialog": {
       "pickOneDay": "Pick at least one day.",
@@ -396,6 +414,8 @@
     },
     "postHoverCard": {
       "closePreview": "Close preview",
+      "imageRemovedTitle": "Image removed",
+      "imageRemovedHint": "Images are deleted 24 hours after posting to save space. Your post stays live on Instagram and Facebook.",
       "download": "Download",
       "noCaption": "(no caption)",
       "edit": "Edit",
@@ -517,7 +537,7 @@
         },
         {
           "title": "AI Publishing Manager",
-          "description": "Schedules and publishes your content automatically, every week, without you lifting a finger."
+          "description": "Schedules and publishes your posts and Stories automatically, every week, without you lifting a finger."
         }
       ],
       "closing": "Three AI roles. One simple subscription. Less than $0.50/day."
@@ -540,7 +560,7 @@
         },
         {
           "title": "Set your publishing schedule",
-          "description": "Pick the days and times you want to post. YOPAPI publishes on that schedule, every week."
+          "description": "Pick the days and times you want to post. YOPAPI publishes your posts and Stories on that schedule, every week."
         }
       ],
       "closing": "That's it. YOPAPI takes care of the rest."

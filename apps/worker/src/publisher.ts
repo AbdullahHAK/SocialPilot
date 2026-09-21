@@ -80,6 +80,44 @@ async function publishStoryBestEffort(
   }
 }
 
+// Businesses that never opened the publishing options keep the original
+// behavior: a feed post plus a Story, caption included.
+const DEFAULT_PUBLISH_OPTIONS = { publishMode: "POST_AND_STORY", includeCaption: true } as const;
+
+/** "Story only" mode: the Story IS the publication, so unlike
+ * publishStoryBestEffort a failure here must fail (and retry) the platform
+ * rather than be swallowed - otherwise nothing would ever have gone out. */
+async function publishStoryOnly(
+  publication: ContentPublication,
+  job: ContentJobWithAccounts,
+  accountExternalId: string,
+  accessToken: string,
+): Promise<void> {
+  if (!publication.externalStoryId) {
+    if (!job.storyImageUrl) {
+      throw new PermanentPublishError("Job has no Story image to publish");
+    }
+    const externalStoryId =
+      publication.platform === "INSTAGRAM"
+        ? await publishInstagramStory({
+            pageAccessToken: accessToken,
+            accountId: accountExternalId,
+            imageUrl: job.storyImageUrl,
+          })
+        : await publishFacebookStory({
+            pageAccessToken: accessToken,
+            accountId: accountExternalId,
+            imageUrl: job.storyImageUrl,
+          });
+    // Recorded before marking published so a crash in between can't lose
+    // the proof this platform already published.
+    await markContentPublicationStoryPublished(publication.id, externalStoryId);
+  }
+
+  await markContentPublicationPublished(publication.id, null);
+  console.log(`Published Story-only job ${job.id} -> ${publication.platform}`);
+}
+
 /** Publishes one platform's ContentPublication, verifying the result
  * actually exists on Meta's side rather than just trusting the API call
  * didn't throw. If a prior attempt already recorded an externalPostId
@@ -122,20 +160,30 @@ async function publishOnePlatform(
   }
 
   const accessToken = decryptToken(account.accessToken);
+  const options = job.organization.publishingSchedule ?? DEFAULT_PUBLISH_OPTIONS;
+  const wantsPost = options.publishMode !== "STORY_ONLY";
+  const wantsStory = options.publishMode !== "POST_ONLY";
 
   try {
+    if (!wantsPost) {
+      await publishStoryOnly(publication, job, account.externalId, accessToken);
+      return;
+    }
+
     if (publication.externalPostId) {
       const alreadyPublished = await verifyGraphObjectExists(publication.externalPostId, accessToken);
       if (alreadyPublished) {
         await markContentPublicationPublished(publication.id, publication.externalPostId);
-        await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+        if (wantsStory) {
+          await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+        }
         return;
       }
       // The stored id never actually resolved to a live post - fall through
       // and publish fresh, same as if nothing had been recorded yet.
     }
 
-    const caption = buildCaption(job.caption, job.hashtags);
+    const caption = options.includeCaption ? buildCaption(job.caption, job.hashtags) : "";
     const externalPostId =
       publication.platform === "INSTAGRAM"
         ? await publishToInstagram({
@@ -164,7 +212,9 @@ async function publishOnePlatform(
     await markContentPublicationPublished(publication.id, externalPostId);
     console.log(`Published job ${job.id} -> ${publication.platform} (${externalPostId})`);
 
-    await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+    if (wantsStory) {
+      await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+    }
   } catch (error) {
     if (error instanceof MetaAuthError) {
       await markSocialAccountExpired(account.id);

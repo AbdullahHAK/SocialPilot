@@ -1,5 +1,25 @@
-import type { DayOfWeek, Platform } from "@prisma/client";
+import type { DayOfWeek, Platform, PublishMode } from "@prisma/client";
 import { prisma } from "./index";
+
+export interface PublishOptions {
+  publishMode: PublishMode;
+  includeCaption: boolean;
+}
+
+/** Read at publish time (not baked into a job when it's created), so a
+ * change here applies to every post that hasn't gone out yet. */
+export function setPublishOptions(organizationId: string, options: PublishOptions) {
+  return prisma.publishingSchedule.update({
+    where: { organizationId },
+    data: {
+      publishMode: options.publishMode,
+      // Stories carry no caption on either platform, so the flag means
+      // nothing for STORY_ONLY - stored as-is rather than forced, so
+      // switching back to a mode with posts remembers the earlier choice.
+      includeCaption: options.includeCaption,
+    },
+  });
+}
 
 export function getPublishingSchedule(organizationId: string) {
   return prisma.publishingSchedule.findUniqueOrThrow({
