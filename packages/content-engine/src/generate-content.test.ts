@@ -110,26 +110,29 @@ describe("generateContentForJob", () => {
     expect(await getBrandCreativeProfile(org.id)).not.toBeNull();
   });
 
-  it("uses the first theme for an org's very first generated job", async () => {
+  it("picks a valid theme for an org's very first generated job", async () => {
     const org = await setUpReadyOrg();
     const job = await makeJob(org.id, new Date());
 
     await generateContentForJob(job);
 
     const prompt = String(generateImageMock.mock.calls[0]![0].prompt);
-    expect(prompt).toContain(CONTENT_THEMES[0]);
+    expect(CONTENT_THEMES.some((theme) => prompt.includes(theme))).toBe(true);
   });
 
-  it("picks a different theme based on how many jobs have already been generated", async () => {
+  it("never repeats the immediately preceding job's theme (no API-level randomness exists, so this has to)", async () => {
     const org = await setUpReadyOrg();
     const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"));
     await generateContentForJob(jobA);
+    const themeA = (
+      await prisma.contentJob.findUniqueOrThrow({ where: { id: jobA.id } })
+    ).creativeMetadata as Record<string, string>;
     const jobB = await makeJob(org.id, new Date("2026-09-16T09:00:00Z"));
 
     await generateContentForJob(jobB);
 
     const prompt = String(generateImageMock.mock.calls[1]![0].prompt);
-    expect(prompt).toContain(CONTENT_THEMES[1]);
+    expect(prompt).not.toContain(themeA.contentTheme);
   });
 
   it("doesn't request a specific size, so the post goes out exactly as the model made it, uncropped", async () => {
@@ -181,9 +184,9 @@ describe("generateContentForJob", () => {
       const updated = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
       const metadata = updated.creativeMetadata as Record<string, string> | null;
       expect(metadata).not.toBeNull();
-      expect(metadata!.subject).toBe(SUBJECTS[0]);
-      expect(metadata!.cameraAngle).toBe(CAMERA_ANGLES[0]);
-      expect(metadata!.environment).toBe(ENVIRONMENTS[0]);
+      expect(SUBJECTS).toContain(metadata!.subject);
+      expect(CAMERA_ANGLES).toContain(metadata!.cameraAngle);
+      expect(ENVIRONMENTS).toContain(metadata!.environment);
       expect(metadata!.language).toBe("en");
     });
 
@@ -218,13 +221,16 @@ describe("generateContentForJob", () => {
       const org = await setUpReadyOrg();
       const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"));
       await generateContentForJob(jobA);
+      const metadataA = (
+        await prisma.contentJob.findUniqueOrThrow({ where: { id: jobA.id } })
+      ).creativeMetadata as Record<string, string>;
       const jobB = await makeJob(org.id, new Date("2026-09-16T09:00:00Z"));
 
       await generateContentForJob(jobB);
 
       const secondPrompt = String(generateImageMock.mock.calls[1]![0].prompt);
       expect(secondPrompt).toContain("Do not repeat");
-      expect(secondPrompt).toContain(SUBJECTS[0]);
+      expect(secondPrompt).toContain(metadataA.subject);
     });
   });
 

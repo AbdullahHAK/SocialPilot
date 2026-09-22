@@ -1,5 +1,4 @@
 import {
-  countGeneratedContentJobs,
   findMasterImageForDay,
   getBrandCreativeProfile,
   getBrandProfile,
@@ -20,10 +19,8 @@ import { generateCaption, generateImage, type BrandStyleProfile } from "./openai
 import { createStoryImage } from "./story-image";
 import { uploadGeneratedImage } from "./storage";
 
-// Seven independent variety axes, each cycled by the same ever-increasing
-// job index but with pairwise-distinct array lengths (4,5,6,7,8,9,11) so
-// no two axes stay "locked" to the same relative position and the full
-// combination doesn't repeat for thousands of posts. Per the client's
+// Seven independent variety axes, each picked at random by resolveVariation
+// excluding recently-used values. Per the client's
 // explicit request for much finer-grained, deliberate variation across
 // subject, camera angle, camera distance, composition, environment, and
 // lighting - not just a different caption angle on a similar-looking photo.
@@ -98,17 +95,34 @@ export const LIGHTING_STYLES = [
   "Backlit, with a glowing rim of light.",
 ] as const;
 
-export function resolveVariation(index: number): CreativeVariation {
-  // Non-null: index % array.length is always a valid in-bounds index into
-  // that same array.
+function pickExcluding(list: readonly string[], recentlyUsed: Set<string>): string {
+  const candidates = list.filter((value) => !recentlyUsed.has(value));
+  // Once every option in a short axis (e.g. SUBJECTS' 6 entries) has been
+  // used recently, fall back to the full list rather than get stuck.
+  const pool = candidates.length > 0 ? candidates : list;
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
+
+/** Picks each axis independently at random, excluding whatever value that
+ * same axis used in `recentMetadata` - cycling by a fixed index (the old
+ * approach) guaranteed a predictable pattern regardless (e.g. the same
+ * subject every 6th post, since SUBJECTS has 6 entries), which is exactly
+ * what customers noticed as "the images all look similar." OpenAI's image
+ * API has no seed/diversity parameter of its own - variety has to be
+ * injected here, in what the prompt actually says. */
+export function resolveVariation(recentMetadata: object[]): CreativeVariation {
+  const recent = recentMetadata as Partial<Record<keyof CreativeVariation, unknown>>[];
+  const usedFor = (key: keyof CreativeVariation): Set<string> =>
+    new Set(recent.map((m) => m[key]).filter((v): v is string => typeof v === "string"));
+
   return {
-    contentTheme: CONTENT_THEMES[index % CONTENT_THEMES.length]!,
-    subject: SUBJECTS[index % SUBJECTS.length]!,
-    cameraAngle: CAMERA_ANGLES[index % CAMERA_ANGLES.length]!,
-    cameraDistance: CAMERA_DISTANCES[index % CAMERA_DISTANCES.length]!,
-    composition: COMPOSITIONS[index % COMPOSITIONS.length]!,
-    environment: ENVIRONMENTS[index % ENVIRONMENTS.length]!,
-    lighting: LIGHTING_STYLES[index % LIGHTING_STYLES.length]!,
+    contentTheme: pickExcluding(CONTENT_THEMES, usedFor("contentTheme")),
+    subject: pickExcluding(SUBJECTS, usedFor("subject")),
+    cameraAngle: pickExcluding(CAMERA_ANGLES, usedFor("cameraAngle")),
+    cameraDistance: pickExcluding(CAMERA_DISTANCES, usedFor("cameraDistance")),
+    composition: pickExcluding(COMPOSITIONS, usedFor("composition")),
+    environment: pickExcluding(ENVIRONMENTS, usedFor("environment")),
+    lighting: pickExcluding(LIGHTING_STYLES, usedFor("lighting")),
   };
 }
 
@@ -169,8 +183,10 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
   }
 
   const brief = creativeProfile!.promptTemplateAdditions ?? "on-brand social media content";
-  const resolvedIndex = await countGeneratedContentJobs(job.organizationId);
-  const variation = resolveVariation(resolvedIndex);
+  // 10 (not just the last 2-3) so a short axis like SUBJECTS (6 options)
+  // doesn't start repeating within a week of daily posts.
+  const recentMetadata = await getRecentJobCreativeMetadata(job.organizationId, 10);
+  const variation = resolveVariation(recentMetadata);
   const theme = variation.contentTheme;
 
   const { caption, hashtags } = await generateCaption({
@@ -243,7 +259,6 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
       : [];
 
     const styleProfile = parseStyleProfile(creativeProfile!.styleDescriptors);
-    const recentMetadata = await getRecentJobCreativeMetadata(job.organizationId, 3);
 
     // Square (1:1) - safely inside Instagram's accepted post aspect ratio
     // range as-is, so the post goes out exactly as the model made it, with
