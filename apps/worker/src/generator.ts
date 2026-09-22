@@ -9,6 +9,7 @@ import {
   listSocialAccounts,
   markContentJobCancelled,
   markContentJobGenerationFailed,
+  releaseStuckGeneratingJobs,
   type ContentJob,
   type SubscriptionStatus,
 } from "@socialpilot/db";
@@ -28,6 +29,12 @@ export const GENERATION_LEAD_MINUTES = 5;
 // of generating for a time that's already long gone.
 export const GENERATION_STALE_CUTOFF_HOURS = 24;
 export const MAX_GENERATION_ATTEMPTS = 3;
+// A generation takes seconds to a couple of minutes, so a job still
+// GENERATING after this long was abandoned (crash, deploy restart, ...).
+export const STUCK_GENERATION_MINUTES = 15;
+// An abandoned job is retried only if its slot is at most this late -
+// beyond that it is cancelled, never published hours after its time.
+export const STUCK_RECOVERY_MAX_LATE_MINUTES = 60;
 const GENERATION_BATCH_SIZE = 10;
 
 // Billing enforcement isn't actually wired up anywhere else in this
@@ -95,6 +102,24 @@ async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok
  * moves on, exactly the race-condition protection the client asked for.
  */
 export async function runGenerationCycle(now: Date = new Date()): Promise<void> {
+  // First, free any job a crashed or restarted worker left claimed - a
+  // stranded GENERATING job is otherwise never touched again. Never allowed
+  // to block this cycle's real work.
+  try {
+    const released = await releaseStuckGeneratingJobs(now, {
+      stuckAfterMinutes: STUCK_GENERATION_MINUTES,
+      maxLateMinutes: STUCK_RECOVERY_MAX_LATE_MINUTES,
+      maxAttempts: MAX_GENERATION_ATTEMPTS,
+    });
+    if (released.retried + released.failed + released.cancelled > 0) {
+      console.warn(
+        `Released stuck generating jobs: ${released.retried} retried, ${released.failed} failed, ${released.cancelled} cancelled`,
+      );
+    }
+  } catch (error) {
+    console.error("Releasing stuck generating jobs failed", error);
+  }
+
   await cancelStaleContentJobs(now, GENERATION_STALE_CUTOFF_HOURS);
 
   const candidates = await listGenerationCandidates(now, {
@@ -107,26 +132,42 @@ export async function runGenerationCycle(now: Date = new Date()): Promise<void> 
     const claimed = await claimContentJobForGeneration(candidate.id, now);
     if (!claimed) continue; // another tick/process already won this job
 
-    const eligible = await verifyStillEligible(claimed);
-    if (!eligible.ok) {
-      await markContentJobCancelled(claimed.id, eligible.reason);
-      continue;
-    }
-
+    // Everything after the claim is inside this try: the eligibility check
+    // used to sit outside it, so any error there (a database hiccup, a
+    // schema mismatch) left the job stranded in GENERATING and aborted the
+    // whole cycle for every job queued behind it.
     try {
+      const eligible = await verifyStillEligible(claimed);
+      if (!eligible.ok) {
+        await markContentJobCancelled(claimed.id, eligible.reason);
+        continue;
+      }
+
       await generateContentForJob(claimed);
       console.log(`Generated content job ${claimed.id} for org ${claimed.organizationId}`);
     } catch (error) {
-      if (error instanceof MonthlyImageCapReachedError) {
-        // Won't lift again until next month - retrying on the usual 60s
-        // cadence would just waste attempts, so cancel outright instead
-        // of the normal retry path.
-        await markContentJobCancelled(claimed.id, error.message);
-        continue;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`Generating content job ${claimed.id} failed: ${message}`);
-      await markContentJobGenerationFailed(claimed.id, message, MAX_GENERATION_ATTEMPTS);
+      await recordGenerationFailure(claimed.id, error);
     }
+  }
+}
+
+/** Files a failed attempt against the job (retry ladder, or cancelled for a
+ * month-long cap). Never throws: if even recording the failure fails (e.g.
+ * the database is unreachable), the rest of the cycle must still run, and
+ * the stuck-job sweep at the top of a later cycle releases this job. */
+async function recordGenerationFailure(jobId: string, error: unknown): Promise<void> {
+  try {
+    if (error instanceof MonthlyImageCapReachedError) {
+      // Won't lift again until next month - retrying on the usual 60s
+      // cadence would just waste attempts, so cancel outright instead of
+      // the normal retry path.
+      await markContentJobCancelled(jobId, error.message);
+      return;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Generating content job ${jobId} failed: ${message}`);
+    await markContentJobGenerationFailed(jobId, message, MAX_GENERATION_ATTEMPTS);
+  } catch (recordError) {
+    console.error(`Could not record the failure of content job ${jobId}`, recordError);
   }
 }

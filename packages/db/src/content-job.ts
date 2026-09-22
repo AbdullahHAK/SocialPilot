@@ -776,3 +776,83 @@ export function markContentJobsImagesDeleted(jobIds: string[], now: Date = new D
     data: { imagesDeletedAt: now },
   });
 }
+
+// --- Stuck-generation safety net ---
+
+export interface ReleaseStuckGeneratingOptions {
+  /** A job claimed for generation this long ago and still GENERATING was
+   * abandoned (a generation takes seconds to a couple of minutes). */
+  stuckAfterMinutes: number;
+  /** A stranded job is retried only if its scheduled time is at most this
+   * far in the past; later than that it is cancelled instead - a post
+   * hours late is not what the schedule promised. */
+  maxLateMinutes: number;
+  maxAttempts: number;
+}
+
+export interface ReleasedStuckJobs {
+  retried: number;
+  failed: number;
+  cancelled: number;
+}
+
+/** A job is claimed (PENDING/RETRYING -> GENERATING) before any work starts,
+ * so if the worker dies mid-generation - a crash, a deploy restart, an
+ * unexpected error - the job stays GENERATING forever: nothing else ever
+ * picks up a GENERATING job, and the calendar shows "generating" for a post
+ * that will never go out. This releases those. Each one is updated only if
+ * it is still GENERATING with the same lastAttemptAt it was read with, so a
+ * generation that finishes at the last moment is never overwritten.
+ * Retries bump `attempts` (so a job that keeps killing the worker ends up
+ * FAILED instead of looping); a job whose scheduled time is already well
+ * past is cancelled rather than published late. */
+export async function releaseStuckGeneratingJobs(
+  now: Date,
+  options: ReleaseStuckGeneratingOptions,
+): Promise<ReleasedStuckJobs> {
+  const stuckBefore = new Date(now.getTime() - options.stuckAfterMinutes * 60_000);
+  const retryableAfter = new Date(now.getTime() - options.maxLateMinutes * 60_000);
+
+  const stuck = await prisma.contentJob.findMany({
+    where: {
+      status: "GENERATING",
+      OR: [{ lastAttemptAt: null }, { lastAttemptAt: { lt: stuckBefore } }],
+    },
+    select: { id: true, attempts: true, scheduledFor: true, lastAttemptAt: true },
+    take: 200,
+  });
+
+  const released: ReleasedStuckJobs = { retried: 0, failed: 0, cancelled: 0 };
+  for (const job of stuck) {
+    let outcome: keyof ReleasedStuckJobs;
+    let data: Prisma.ContentJobUpdateManyMutationInput;
+    if (job.scheduledFor < retryableAfter) {
+      outcome = "cancelled";
+      data = {
+        status: "CANCELLED",
+        errorMessage: "Cancelled: generation was interrupted and the scheduled time had already passed",
+      };
+    } else if (job.attempts + 1 >= options.maxAttempts) {
+      outcome = "failed";
+      data = {
+        status: "FAILED",
+        attempts: { increment: 1 },
+        errorMessage: "Generation was interrupted repeatedly",
+      };
+    } else {
+      outcome = "retried";
+      data = {
+        status: "RETRYING",
+        attempts: { increment: 1 },
+        errorMessage: "Generation was interrupted - retrying",
+      };
+    }
+
+    const result = await prisma.contentJob.updateMany({
+      where: { id: job.id, status: "GENERATING", lastAttemptAt: job.lastAttemptAt },
+      data,
+    });
+    if (result.count > 0) released[outcome]++;
+  }
+  return released;
+}

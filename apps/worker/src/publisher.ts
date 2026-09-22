@@ -244,29 +244,38 @@ export async function runPublishCycle(now: Date = new Date()): Promise<void> {
       continue;
     }
 
-    // Best-effort status flip for display - the actual publish gate is
-    // the per-publication claim below, not this.
-    await claimContentJobForPublishing(job.id);
-
-    const claimedPublication = await claimContentPublicationForPublishing(publication.id, now);
-    if (!claimedPublication) continue;
-
+    // One candidate's unexpected failure (e.g. a database error while
+    // recording a result) must not abort the rest of the batch.
     try {
-      await publishOnePlatform(claimedPublication, job);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`Publishing job ${job.id} -> ${publication.platform} failed: ${message}`);
-      await markContentPublicationFailed(claimedPublication.id, message, {
-        // A dead connection - or one that was never there - won't fix
-        // itself on the next attempt, no point burning the usual retry
-        // ladder before giving up.
-        permanent:
-          error instanceof MetaAuthError ||
-          error instanceof PermanentPublishError ||
-          claimedPublication.attempts + 1 >= MAX_PUBLISH_ATTEMPTS,
-      });
-    }
+      // Best-effort status flip for display - the actual publish gate is
+      // the per-publication claim below, not this.
+      await claimContentJobForPublishing(job.id);
 
-    await rollupContentJobStatus(job.id);
+      const claimedPublication = await claimContentPublicationForPublishing(publication.id, now);
+      if (!claimedPublication) continue;
+
+      try {
+        await publishOnePlatform(claimedPublication, job);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`Publishing job ${job.id} -> ${publication.platform} failed: ${message}`);
+        await markContentPublicationFailed(claimedPublication.id, message, {
+          // A dead connection - or one that was never there - won't fix
+          // itself on the next attempt, no point burning the usual retry
+          // ladder before giving up.
+          permanent:
+            error instanceof MetaAuthError ||
+            error instanceof PermanentPublishError ||
+            claimedPublication.attempts + 1 >= MAX_PUBLISH_ATTEMPTS,
+        });
+      }
+
+      await rollupContentJobStatus(job.id);
+    } catch (error) {
+      console.error(
+        `Publish cycle: handling job ${job.id} -> ${publication.platform} failed unexpectedly`,
+        error,
+      );
+    }
   }
 }

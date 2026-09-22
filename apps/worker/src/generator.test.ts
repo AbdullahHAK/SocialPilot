@@ -1,7 +1,29 @@
 import { prisma, upsertBrandProfile, upsertSocialAccount } from "@socialpilot/db";
 import { MonthlyImageCapReachedError } from "@socialpilot/content-engine";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GENERATION_LEAD_MINUTES, MAX_GENERATION_ATTEMPTS, runGenerationCycle } from "./generator";
+import {
+  GENERATION_LEAD_MINUTES,
+  MAX_GENERATION_ATTEMPTS,
+  runGenerationCycle,
+  STUCK_GENERATION_MINUTES,
+} from "./generator";
+
+// Only used by the one test that needs verifyStillEligible (an unexported
+// internal of generator.ts) to genuinely throw, rather than just report
+// "ineligible" - everything else is the real implementation.
+let brokenOrgId: string | null = null;
+vi.mock("@socialpilot/db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@socialpilot/db")>();
+  return {
+    ...actual,
+    getBrandProfile: (organizationId: string) => {
+      if (organizationId === brokenOrgId) {
+        throw new Error("simulated database error");
+      }
+      return actual.getBrandProfile(organizationId);
+    },
+  };
+});
 
 const generateContentForJobMock = vi.fn().mockResolvedValue(undefined);
 vi.mock("@socialpilot/content-engine", async (importOriginal) => {
@@ -16,6 +38,7 @@ afterEach(async () => {
   await prisma.organization.deleteMany();
   generateContentForJobMock.mockClear();
   generateContentForJobMock.mockResolvedValue(undefined);
+  brokenOrgId = null;
 });
 
 async function setUpReadyOrg(name = "Acme") {
@@ -33,10 +56,12 @@ async function setUpReadyOrg(name = "Acme") {
   // createJob defaults to platforms: ["INSTAGRAM"] - without a connected
   // account for it, verifyStillEligible would cancel every job here before
   // these tests ever get to what they're actually checking.
+  // externalId is unique per (provider, externalId) - keyed off the org id
+  // so tests that set up more than one ready org at once don't collide.
   await upsertSocialAccount({
     organizationId: org.id,
     provider: "INSTAGRAM",
-    externalId: "ig-1",
+    externalId: `ig-${org.id}`,
     accessToken: "raw-page-token",
   });
   return org;
@@ -239,6 +264,95 @@ describe("runGenerationCycle", () => {
     expect(generateContentForJobMock).not.toHaveBeenCalled();
     const updated = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
     expect(updated.status).toBe("CANCELLED");
+  });
+
+  describe("stuck-generation recovery (real production incident: a worker crash/redeploy left jobs GENERATING forever)", () => {
+    it("retries a job a prior crashed run left stuck in GENERATING", async () => {
+      const org = await setUpReadyOrg();
+      const now = new Date("2026-09-15T12:00:00Z");
+      const job = await prisma.contentJob.create({
+        data: {
+          organizationId: org.id,
+          scheduledFor: new Date(now.getTime() - 10 * 60_000),
+          platforms: ["INSTAGRAM"],
+          status: "GENERATING",
+          lastAttemptAt: new Date(now.getTime() - (STUCK_GENERATION_MINUTES + 1) * 60_000),
+          publications: { create: [{ platform: "INSTAGRAM" }] },
+        },
+      });
+
+      await runGenerationCycle(now);
+
+      // Released to RETRYING and, since listGenerationCandidates also
+      // matches RETRYING, picked back up in this very same cycle.
+      expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+      expect(generateContentForJobMock.mock.calls[0]![0].id).toBe(job.id);
+    });
+
+    it("does not touch a job that's still actively generating", async () => {
+      const org = await setUpReadyOrg();
+      const now = new Date("2026-09-15T12:00:00Z");
+      await prisma.contentJob.create({
+        data: {
+          organizationId: org.id,
+          scheduledFor: new Date(now.getTime() - 60_000),
+          platforms: ["INSTAGRAM"],
+          status: "GENERATING",
+          lastAttemptAt: new Date(now.getTime() - 60_000),
+          publications: { create: [{ platform: "INSTAGRAM" }] },
+        },
+      });
+
+      await runGenerationCycle(now);
+
+      expect(generateContentForJobMock).not.toHaveBeenCalled();
+    });
+
+    it("an exception thrown by the eligibility check itself no longer aborts the whole cycle", async () => {
+      // The actual production bug: verifyStillEligible used to run OUTSIDE
+      // any try/catch, so an exception there (a genuine error, not just an
+      // "ineligible" verdict) propagated straight out of the for-loop and
+      // killed the entire cycle - stranding this job in GENERATING forever
+      // and leaving every other business's queued job untouched.
+      const brokenOrg = await setUpReadyOrg("Broken");
+      const healthyOrg = await setUpReadyOrg("Healthy");
+      brokenOrgId = brokenOrg.id;
+      const now = new Date("2026-09-15T12:00:00Z");
+      const brokenJob = await createJob(brokenOrg.id, new Date(now.getTime() + 60_000));
+      const healthyJob = await createJob(healthyOrg.id, new Date(now.getTime() + 60_000));
+
+      await runGenerationCycle(now);
+
+      expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+      expect(generateContentForJobMock.mock.calls[0]![0].id).toBe(healthyJob.id);
+      const updatedBroken = await prisma.contentJob.findUniqueOrThrow({ where: { id: brokenJob.id } });
+      expect(updatedBroken.status).toBe("RETRYING");
+    });
+
+    it("one job throwing an unexpected error does not stop the next job in the same cycle", async () => {
+      // The eligibility check used to sit outside this try/catch entirely,
+      // so any exception there (not just a normal "ineligible" result)
+      // killed the whole cycle and left every job still queued behind it -
+      // including other businesses' - untouched until the next tick. Now
+      // everything after the claim is inside the try, so one job's
+      // unexpected failure can never take the rest of the batch with it.
+      const orgA = await setUpReadyOrg("Org A");
+      const orgB = await setUpReadyOrg("Org B");
+      const now = new Date("2026-09-15T12:00:00Z");
+      const jobA = await createJob(orgA.id, new Date(now.getTime() + 60_000));
+      const jobB = await createJob(orgB.id, new Date(now.getTime() + 60_000));
+      generateContentForJobMock.mockImplementation((job: { id: string }) =>
+        job.id === jobA.id ? Promise.reject(new Error("boom")) : Promise.resolve(undefined),
+      );
+
+      await runGenerationCycle(now);
+
+      expect(generateContentForJobMock).toHaveBeenCalledTimes(2);
+      const updatedA = await prisma.contentJob.findUniqueOrThrow({ where: { id: jobA.id } });
+      expect(updatedA.status).toBe("RETRYING");
+      const updatedB = await prisma.contentJob.findUniqueOrThrow({ where: { id: jobB.id } });
+      expect(updatedB.status).toBe("GENERATING");
+    });
   });
 
   describe("race-condition protection", () => {
