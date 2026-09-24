@@ -12,118 +12,57 @@ import {
   type ContentJob,
 } from "@socialpilot/db";
 import { asStringArray } from "./brand-fields";
-import { buildContentPrompt, type CreativeVariation } from "./brand-prompt";
+import { buildContentPrompt } from "./brand-prompt";
 import { isBrandSetupComplete } from "./brand-setup";
 import { fetchImageBuffer } from "./fetch-image";
-import { generateCaption, generateImage, type BrandStyleProfile } from "./openai";
+import {
+  generateCaption,
+  generateImage,
+  planCreativeConcept,
+  type BrandStyleProfile,
+  type StoryArchetype,
+} from "./openai";
 import { createStoryImage } from "./story-image";
 import { uploadGeneratedImage } from "./storage";
 
-// Seven independent variety axes, each picked at random by resolveVariation
-// excluding recently-used values. Per the client's
-// explicit request for much finer-grained, deliberate variation across
-// subject, camera angle, camera distance, composition, environment, and
-// lighting - not just a different caption angle on a similar-looking photo.
-export const CONTENT_THEMES = [
-  "Focus on the standout quality and craftsmanship of the product.",
-  "Highlight the business's most popular, best-selling item.",
-  "Focus on general brand awareness - what makes this business memorable, not a specific product.",
-  "Showcase how the product is presented and served, an appetizing close-up.",
-  "Highlight a special offer or promotion in broad terms, without inventing a specific price.",
-  "Center the content on the customer experience and enjoyment of the brand.",
-  "Focus on the brand's atmosphere and personality rather than one specific product.",
+// Universal story categories, not tied to any one business type - the
+// client's explicit request was real creative variety (a different scene
+// and story each time, not just a different camera angle on the same kind
+// of shot), adapted per business automatically rather than a maintained
+// list of prompts per industry. This list only guarantees the *category*
+// of story doesn't repeat too soon (see resolveStoryArchetype) - the
+// actual business-specific scene within it is invented by
+// planCreativeConcept (openai.ts), which is where the real creativity and
+// industry-awareness comes from.
+export const STORY_ARCHETYPES: readonly StoryArchetype[] = [
+  { key: "social", label: "A social gathering - friends, family, or coworkers sharing the moment together." },
+  { key: "solo", label: "A solo, close-up moment - one person genuinely enjoying or using it." },
+  { key: "process", label: "Behind-the-scenes or the making/preparation process." },
+  { key: "service", label: "A delivery, service, or hands-on moment of the business in action." },
+  { key: "location", label: "An outdoor, distinctive, or unexpected location setting." },
+  { key: "celebration", label: "A celebration or milestone moment." },
+  { key: "testimonial", label: "A customer-testimonial style close-up, as if someone is sharing why they love it." },
+  { key: "unexpected", label: "An unexpected, playful, or humorous take." },
+  { key: "community", label: "A community or local-life moment connected to the business." },
+  { key: "dayInLife", label: "A day-in-the-life moment showing it naturally fitting into someone's day." },
 ] as const;
 
-export const SUBJECTS = [
-  "The product itself as the clear hero of the shot.",
-  "A person actively using, holding, or enjoying the product.",
-  "The making or preparation process, mid-action.",
-  "The storefront, workspace, or business environment itself.",
-  "A close, textural detail of the product or material.",
-  "Multiple items or a display arranged together.",
-] as const;
-
-export const CAMERA_ANGLES = [
-  "Eye-level, shot straight-on.",
-  "Low angle, looking upward.",
-  "High angle, looking downward.",
-  "Three-quarter angle from the side.",
-  "Over-the-shoulder viewpoint.",
-] as const;
-
-export const CAMERA_DISTANCES = [
-  "Extreme close-up on fine detail.",
-  "Close-up framing.",
-  "Medium shot with some surroundings visible.",
-  "Wide shot establishing the full scene.",
-] as const;
-
-export const COMPOSITIONS = [
-  "Centered, symmetrical framing.",
-  "Rule-of-thirds, subject off-center.",
-  "Overhead flat-lay composition.",
-  "Framed through foreground elements.",
-  "Generous negative space around the subject.",
-  "Dynamic diagonal composition.",
-  "Layered composition with visible depth.",
-  "Tightly cropped, filling the frame.",
-  "Repeating pattern or grid-like arrangement.",
-] as const;
-
-export const ENVIRONMENTS = [
-  "Inside the business's own space.",
-  "Outdoors in natural surroundings.",
-  "Clean, minimal studio background.",
-  "A lifestyle setting where it's being used or enjoyed.",
-  "A styled tabletop or surface setting.",
-  "An urban street or city backdrop.",
-  "A cozy, homey indoor setting.",
-  "A rustic, natural-materials setting.",
-  "A bright, airy open space.",
-  "A bustling, energetic environment with people.",
-  "A quiet, intimate, close environment.",
-] as const;
-
-export const LIGHTING_STYLES = [
-  "Bright, natural daylight.",
-  "Warm, golden-hour light.",
-  "Moody, dramatic shadows.",
-  "Soft, diffused studio light.",
-  "High-contrast, direct light.",
-  "Ambient, warm interior lighting.",
-  "Cool-toned, crisp lighting.",
-  "Backlit, with a glowing rim of light.",
-] as const;
-
-function pickExcluding(list: readonly string[], recentlyUsed: Set<string>): string {
-  const candidates = list.filter((value) => !recentlyUsed.has(value));
-  // Once every option in a short axis (e.g. SUBJECTS' 6 entries) has been
-  // used recently, fall back to the full list rather than get stuck.
-  const pool = candidates.length > 0 ? candidates : list;
+/** Picks the next story category at random, excluding whichever ones
+ * `recentMetadata` shows were used recently - the same guaranteed-rotation
+ * mechanism the old per-axis system used (see git history), now aimed at
+ * the story itself rather than just camera-technical details, which is
+ * what customers actually meant by "the images all look similar." */
+export function resolveStoryArchetype(recentMetadata: object[]): StoryArchetype {
+  const recentKeys = new Set(
+    (recentMetadata as Partial<{ archetype: string }>[])
+      .map((m) => m.archetype)
+      .filter((v): v is string => typeof v === "string"),
+  );
+  const candidates = STORY_ARCHETYPES.filter((a) => !recentKeys.has(a.key));
+  // Once every category has been used recently, fall back to the full
+  // list rather than get stuck.
+  const pool = candidates.length > 0 ? candidates : STORY_ARCHETYPES;
   return pool[Math.floor(Math.random() * pool.length)]!;
-}
-
-/** Picks each axis independently at random, excluding whatever value that
- * same axis used in `recentMetadata` - cycling by a fixed index (the old
- * approach) guaranteed a predictable pattern regardless (e.g. the same
- * subject every 6th post, since SUBJECTS has 6 entries), which is exactly
- * what customers noticed as "the images all look similar." OpenAI's image
- * API has no seed/diversity parameter of its own - variety has to be
- * injected here, in what the prompt actually says. */
-export function resolveVariation(recentMetadata: object[]): CreativeVariation {
-  const recent = recentMetadata as Partial<Record<keyof CreativeVariation, unknown>>[];
-  const usedFor = (key: keyof CreativeVariation): Set<string> =>
-    new Set(recent.map((m) => m[key]).filter((v): v is string => typeof v === "string"));
-
-  return {
-    contentTheme: pickExcluding(CONTENT_THEMES, usedFor("contentTheme")),
-    subject: pickExcluding(SUBJECTS, usedFor("subject")),
-    cameraAngle: pickExcluding(CAMERA_ANGLES, usedFor("cameraAngle")),
-    cameraDistance: pickExcluding(CAMERA_DISTANCES, usedFor("cameraDistance")),
-    composition: pickExcluding(COMPOSITIONS, usedFor("composition")),
-    environment: pickExcluding(ENVIRONMENTS, usedFor("environment")),
-    lighting: pickExcluding(LIGHTING_STYLES, usedFor("lighting")),
-  };
 }
 
 /** Thrown when a fresh generation would exceed the org's monthly image
@@ -183,18 +122,6 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
   }
 
   const brief = creativeProfile!.promptTemplateAdditions ?? "on-brand social media content";
-  // 10 (not just the last 2-3) so a short axis like SUBJECTS (6 options)
-  // doesn't start repeating within a week of daily posts.
-  const recentMetadata = await getRecentJobCreativeMetadata(job.organizationId, 10);
-  const variation = resolveVariation(recentMetadata);
-  const theme = variation.contentTheme;
-
-  const { caption, hashtags } = await generateCaption({
-    businessName: brandProfile.businessName,
-    tone: brandProfile.tone ?? undefined,
-    brief: `${brief} ${theme}`,
-  });
-
   const { start, end } = getLocalDayBoundsUtc(job.scheduledFor, schedule.timezone);
 
   // The whole "does today already have an image? if not, make one" check
@@ -210,6 +137,13 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
   await withDayImageLock(job.organizationId, start.toISOString(), async (db) => {
     const existingDayImage = await findMasterImageForDay(job.organizationId, start, end, db);
     if (existingDayImage) {
+      // A reused image needs no new creative concept - it's the same
+      // picture again - just a fresh caption, same as always.
+      const { caption, hashtags } = await generateCaption({
+        businessName: brandProfile.businessName,
+        tone: brandProfile.tone ?? undefined,
+        brief,
+      });
       // Written inside the same locked transaction that read it, so this
       // reuse decision and the write it's based on stay consistent even
       // under concurrent same-day jobs.
@@ -241,6 +175,35 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
       description: brandProfile.description,
       colors: asStringArray(brandProfile.colors),
     };
+    const styleProfile = parseStyleProfile(creativeProfile!.styleDescriptors);
+
+    // 10 (not just the last 2-3) so a short list like STORY_ARCHETYPES
+    // (10 categories) doesn't start repeating within two weeks of daily
+    // posts, and so the creative director has real recent scenes to
+    // avoid, not just a category label.
+    const recentMetadata = await getRecentJobCreativeMetadata(job.organizationId, 10);
+    const archetype = resolveStoryArchetype(recentMetadata);
+    const recentScenes = (recentMetadata as Partial<{ scene: string }>[])
+      .map((m) => m.scene)
+      .filter((s): s is string => typeof s === "string" && s.length > 0);
+
+    const concept = await planCreativeConcept({
+      businessName: brandContext.businessName,
+      category: brandContext.category,
+      description: brandContext.description,
+      tone: brandContext.tone,
+      colors: brandContext.colors ?? undefined,
+      styleProfile,
+      archetype,
+      brief,
+      recentScenes,
+    });
+
+    const { caption, hashtags } = await generateCaption({
+      businessName: brandProfile.businessName,
+      tone: brandProfile.tone ?? undefined,
+      brief: `${brief} ${concept.storyIdea}`,
+    });
 
     // Only the logo goes in as an image reference - the approved concept
     // photo is deliberately NOT included. Passing it as an edit reference
@@ -258,17 +221,15 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
         })()
       : [];
 
-    const styleProfile = parseStyleProfile(creativeProfile!.styleDescriptors);
-
     // Square (1:1) - safely inside Instagram's accepted post aspect ratio
     // range as-is, so the post goes out exactly as the model made it, with
     // no cropping that could cut into text, a logo, or the subject itself.
     const masterImage = await generateImage({
-      prompt: buildContentPrompt(brief, brandContext, styleProfile, variation, recentMetadata),
+      prompt: buildContentPrompt(brief, brandContext, styleProfile, concept),
       referenceImages,
     });
     const masterImageUrl = await uploadGeneratedImage(job.organizationId, masterImage);
-    const creativeMetadata = { ...variation, language: brandProfile.language };
+    const creativeMetadata = { archetype: archetype.key, ...concept, language: brandProfile.language };
 
     // Best-effort: a Story-format failure shouldn't block the main
     // creative - it just means this job won't also have a Story crop.

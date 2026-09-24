@@ -224,6 +224,113 @@ export async function analyzeBrandDescription(
   };
 }
 
+export interface StoryArchetype {
+  key: string;
+  label: string;
+}
+
+export interface CreativeConceptInput {
+  businessName: string;
+  category?: string | null;
+  description?: string | null;
+  tone?: string | null;
+  colors?: string[];
+  styleProfile: BrandStyleProfile | null;
+  /** The story category this post must fall into - decided in code (see
+   * resolveStoryArchetype), not left to the model, so category-level
+   * variety is a guarantee rather than a hope. */
+  archetype: StoryArchetype;
+  brief: string;
+  /** Actual scene descriptions from recent posts (not just category labels)
+   * so the model avoids reusing a specific idea even within a different
+   * archetype next time. */
+  recentScenes: string[];
+}
+
+export interface CreativeConcept {
+  scene: string;
+  subjects: string;
+  setting: string;
+  composition: string;
+  cameraAngle: string;
+  lighting: string;
+  storyIdea: string;
+}
+
+const CREATIVE_DIRECTOR_SYSTEM_PROMPT =
+  "You are an award-winning creative director for social media marketing photography. Given a business and a required story category, invent ONE specific, realistic, vivid scene for THIS business's next post - never a generic template. " +
+  "Think like a real photographer planning a real shoot: who is actually in this scene, where realistically is it happening, what are they doing and why, what's the mood. Adapt your thinking to the business's real industry - a restaurant, a gym, a flower shop, a repair shop, a law firm all call for completely different, authentic situations; imagine how real customers actually interact with or benefit from this specific kind of business. " +
+  "Be bold and specific, not safe or generic - avoid the most obvious default idea. If scenes already used recently are listed, your scene must be clearly, meaningfully different from every one of them, not a small variation on one. " +
+  "Keep the business's brand identity (colors, personality, visual style) recognizable, but the scene itself - people, setting, activity, story - must be fresh. " +
+  'Respond ONLY with JSON matching {"scene": string, "subjects": string, "setting": string, "composition": string, "cameraAngle": string, "lighting": string, "storyIdea": string}. "scene" is a one-to-two sentence vivid description of the whole shot. "subjects" is who/what is in frame. "setting" is the location. "composition" and "cameraAngle" are brief photography-direction notes. "lighting" is the lighting mood. "storyIdea" is one short sentence capturing the feeling/narrative, usable as inspiration for a caption.';
+
+/** The creative-director step: turns a required story category into a
+ * specific, business-aware scene. Replaces the old fixed-list variation
+ * system - instead of cycling through generic camera-technical phrases,
+ * an LLM call that actually knows what a restaurant/gym/flower shop/law
+ * firm looks like invents the scene, informed by the brand's real details
+ * and what's already been used recently. See generate-content.ts's
+ * resolveStoryArchetype for the category-rotation guarantee this pairs
+ * with. */
+export async function planCreativeConcept(input: CreativeConceptInput): Promise<CreativeConcept> {
+  const apiKey = requireEnv("OPENAI_API_KEY");
+
+  const contextLines = [
+    `Business: ${input.businessName}${input.category ? ` (${input.category})` : ""}.`,
+    input.description ? `About the business: ${input.description}.` : null,
+    input.tone ? `Tone: ${input.tone}.` : null,
+    input.colors && input.colors.length > 0 ? `Brand colors: ${input.colors.join(", ")}.` : null,
+    input.styleProfile?.photographyStyle ? `Photography style: ${input.styleProfile.photographyStyle}` : null,
+    input.styleProfile?.brandPersonality ? `Brand personality: ${input.styleProfile.brandPersonality}` : null,
+    input.styleProfile?.designAesthetic ? `Design aesthetic: ${input.styleProfile.designAesthetic}` : null,
+    `Required story category for this post: ${input.archetype.label}`,
+    `What this post should be about: ${input.brief}`,
+    input.recentScenes.length > 0
+      ? `Scenes already used recently - invent something genuinely different from every one of these: ${input.recentScenes.join(" | ")}`
+      : null,
+  ].filter((line): line is string => Boolean(line));
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: TEXT_MODEL,
+      messages: [
+        { role: "system", content: CREATIVE_DIRECTOR_SYSTEM_PROMPT },
+        { role: "user", content: contextLines.join(" ") },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`OpenAI creative concept planning failed (${res.status}): ${body}`);
+  }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("OpenAI creative concept planning: no content returned");
+  }
+
+  const parsed = JSON.parse(content) as Partial<CreativeConcept>;
+  return {
+    scene: parsed.scene ?? "",
+    subjects: parsed.subjects ?? "",
+    setting: parsed.setting ?? "",
+    composition: parsed.composition ?? "",
+    cameraAngle: parsed.cameraAngle ?? "",
+    lighting: parsed.lighting ?? "",
+    storyIdea: parsed.storyIdea ?? "",
+  };
+}
+
 export interface BrandStyleProfile {
   colors: string[];
   typographyDirection: string;

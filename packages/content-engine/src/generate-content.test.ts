@@ -6,12 +6,10 @@ import {
 } from "@socialpilot/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  CAMERA_ANGLES,
-  CONTENT_THEMES,
-  ENVIRONMENTS,
   generateContentForJob,
   MonthlyImageCapReachedError,
-  SUBJECTS,
+  resolveStoryArchetype,
+  STORY_ARCHETYPES,
 } from "./generate-content";
 
 // A real (if trivial) 1x1 PNG so createStoryImage can actually process it,
@@ -43,16 +41,34 @@ const generateImageMock = vi.fn().mockResolvedValue(TINY_PNG);
 const generateCaptionMock = vi
   .fn()
   .mockResolvedValue({ caption: "Hello!", hashtags: ["promo"] });
+// Each call returns a distinct scene (call count baked in), like
+// uploadGeneratedImageMock's unique URLs above - lets tests tell "job A's
+// concept" apart from "job B's concept" without needing a real OpenAI call.
+const planCreativeConceptMock = vi
+  .fn()
+  .mockImplementation((input: { archetype: { key: string } }) =>
+    Promise.resolve({
+      scene: `Scene for ${input.archetype.key}, take ${planCreativeConceptMock.mock.calls.length}.`,
+      subjects: "Sample subjects.",
+      setting: "Sample setting.",
+      composition: "Sample composition.",
+      cameraAngle: "Sample camera angle.",
+      lighting: "Sample lighting.",
+      storyIdea: "Sample story idea.",
+    }),
+  );
 
 vi.mock("./openai", () => ({
   generateImage: (...args: unknown[]) => generateImageMock(...args),
   generateCaption: (...args: unknown[]) => generateCaptionMock(...args),
+  planCreativeConcept: (...args: unknown[]) => planCreativeConceptMock(...args),
 }));
 
 afterEach(async () => {
   await prisma.organization.deleteMany();
   generateImageMock.mockClear();
   generateCaptionMock.mockClear();
+  planCreativeConceptMock.mockClear();
   uploadGeneratedImageMock.mockClear();
   fetchImageBufferMock.mockClear();
 });
@@ -110,29 +126,28 @@ describe("generateContentForJob", () => {
     expect(await getBrandCreativeProfile(org.id)).not.toBeNull();
   });
 
-  it("picks a valid theme for an org's very first generated job", async () => {
+  it("picks a valid story archetype for an org's very first generated job", async () => {
     const org = await setUpReadyOrg();
     const job = await makeJob(org.id, new Date());
 
     await generateContentForJob(job);
 
-    const prompt = String(generateImageMock.mock.calls[0]![0].prompt);
-    expect(CONTENT_THEMES.some((theme) => prompt.includes(theme))).toBe(true);
+    expect(planCreativeConceptMock).toHaveBeenCalledTimes(1);
+    const archetype = planCreativeConceptMock.mock.calls[0]![0].archetype;
+    expect(STORY_ARCHETYPES.map((a) => a.key)).toContain(archetype.key);
   });
 
-  it("never repeats the immediately preceding job's theme (no API-level randomness exists, so this has to)", async () => {
+  it("never repeats the immediately preceding job's story archetype (guaranteed rotation, not left to chance)", async () => {
     const org = await setUpReadyOrg();
     const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"));
     await generateContentForJob(jobA);
-    const themeA = (
-      await prisma.contentJob.findUniqueOrThrow({ where: { id: jobA.id } })
-    ).creativeMetadata as Record<string, string>;
+    const archetypeA = planCreativeConceptMock.mock.calls[0]![0].archetype.key;
     const jobB = await makeJob(org.id, new Date("2026-09-16T09:00:00Z"));
 
     await generateContentForJob(jobB);
 
-    const prompt = String(generateImageMock.mock.calls[1]![0].prompt);
-    expect(prompt).not.toContain(themeA.contentTheme);
+    const archetypeB = planCreativeConceptMock.mock.calls[1]![0].archetype.key;
+    expect(archetypeB).not.toBe(archetypeA);
   });
 
   it("doesn't request a specific size, so the post goes out exactly as the model made it, uncropped", async () => {
@@ -175,7 +190,7 @@ describe("generateContentForJob", () => {
       expect(referenceImages).toHaveLength(1);
     });
 
-    it("stores creative metadata describing the resolved variation for a freshly generated image", async () => {
+    it("stores creative metadata describing the resolved concept for a freshly generated image", async () => {
       const org = await setUpReadyOrg();
       const job = await makeJob(org.id, new Date());
 
@@ -184,9 +199,9 @@ describe("generateContentForJob", () => {
       const updated = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
       const metadata = updated.creativeMetadata as Record<string, string> | null;
       expect(metadata).not.toBeNull();
-      expect(SUBJECTS).toContain(metadata!.subject);
-      expect(CAMERA_ANGLES).toContain(metadata!.cameraAngle);
-      expect(ENVIRONMENTS).toContain(metadata!.environment);
+      expect(STORY_ARCHETYPES.map((a) => a.key)).toContain(metadata!.archetype);
+      expect(metadata!.scene).toMatch(/^Scene for/);
+      expect(metadata!.storyIdea).toBe("Sample story idea.");
       expect(metadata!.language).toBe("en");
     });
 
@@ -217,7 +232,7 @@ describe("generateContentForJob", () => {
       expect(prompt).toContain("completely new visual concept");
     });
 
-    it("tells the model not to repeat the most recent jobs' actual creative choices", async () => {
+    it("passes the most recent jobs' actual scenes to the creative director, so it knows what not to repeat", async () => {
       const org = await setUpReadyOrg();
       const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"));
       await generateContentForJob(jobA);
@@ -228,9 +243,8 @@ describe("generateContentForJob", () => {
 
       await generateContentForJob(jobB);
 
-      const secondPrompt = String(generateImageMock.mock.calls[1]![0].prompt);
-      expect(secondPrompt).toContain("Do not repeat");
-      expect(secondPrompt).toContain(metadataA.subject);
+      const secondCallInput = planCreativeConceptMock.mock.calls[1]![0];
+      expect(secondCallInput.recentScenes).toContain(metadataA.scene);
     });
   });
 
@@ -252,6 +266,9 @@ describe("generateContentForJob", () => {
       expect(a.storyImageUrl).toBe(b.storyImageUrl);
       // Captions can still differ - only the image is shared.
       expect(generateCaptionMock).toHaveBeenCalledTimes(2);
+      // A reused image needs no new creative concept - that call is only
+      // worth paying for when a fresh image is actually being made.
+      expect(planCreativeConceptMock).toHaveBeenCalledTimes(1);
     });
 
     it("does not generate twice when two jobs for the same day race each other (production incident, re-scoped to jobs)", async () => {
@@ -401,5 +418,28 @@ describe("generateContentForJob", () => {
       await generateContentForJob(jobB); // must not throw despite being at the cap
       expect(generateImageMock).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("resolveStoryArchetype", () => {
+  it("picks a valid archetype when there's no history", () => {
+    const result = resolveStoryArchetype([]);
+    expect(STORY_ARCHETYPES.map((a) => a.key)).toContain(result.key);
+  });
+
+  it("never returns an archetype used in the last N posts, as long as another option exists", () => {
+    const allButOne = STORY_ARCHETYPES.slice(1).map((a) => ({ archetype: a.key }));
+
+    const result = resolveStoryArchetype(allButOne);
+
+    expect(result.key).toBe(STORY_ARCHETYPES[0]!.key);
+  });
+
+  it("falls back to the full list once every archetype has been used recently, rather than getting stuck", () => {
+    const everyArchetype = STORY_ARCHETYPES.map((a) => ({ archetype: a.key }));
+
+    const result = resolveStoryArchetype(everyArchetype);
+
+    expect(STORY_ARCHETYPES.map((a) => a.key)).toContain(result.key);
   });
 });

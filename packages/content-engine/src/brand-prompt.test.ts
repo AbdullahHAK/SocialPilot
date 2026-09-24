@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { buildContentPrompt, buildImagePrompt, buildLogoPrompt, type CreativeVariation } from "./brand-prompt";
+import { buildContentPrompt, buildImagePrompt, buildLogoPrompt } from "./brand-prompt";
+import type { CreativeConcept } from "./openai";
 
-const SAMPLE_VARIATION: CreativeVariation = {
-  contentTheme: "Highlight the best-seller.",
-  subject: "The product itself as the hero.",
+const SAMPLE_CONCEPT: CreativeConcept = {
+  scene: "Two friends splitting a pastry box on a sunny bakery patio.",
+  subjects: "Two friends, mid-laugh, sharing a box of pastries.",
+  setting: "The bakery's outdoor patio seating.",
+  composition: "Rule-of-thirds, subjects off-center.",
   cameraAngle: "Low angle, looking upward.",
-  cameraDistance: "Close-up framing.",
-  composition: "Rule-of-thirds, subject off-center.",
-  environment: "Outdoors in natural surroundings.",
   lighting: "Warm, golden-hour light.",
+  storyIdea: "Good company makes the treats even better.",
 };
 
 describe("buildImagePrompt", () => {
@@ -52,17 +53,17 @@ describe("buildContentPrompt", () => {
     colors: ["#7a4a2b"],
   };
 
-  it("includes the brief, brand context, and every variation axis", () => {
-    const result = buildContentPrompt("On-brand content", brand, null, SAMPLE_VARIATION, []);
+  it("includes the brief, brand context, and every field of the creative concept", () => {
+    const result = buildContentPrompt("On-brand content", brand, null, SAMPLE_CONCEPT);
 
     expect(result).toContain("On-brand content");
     expect(result).toContain("Acme Bakery (Bakery)");
-    expect(result).toContain(SAMPLE_VARIATION.subject);
-    expect(result).toContain(SAMPLE_VARIATION.cameraAngle);
-    expect(result).toContain(SAMPLE_VARIATION.cameraDistance);
-    expect(result).toContain(SAMPLE_VARIATION.composition);
-    expect(result).toContain(SAMPLE_VARIATION.environment);
-    expect(result).toContain(SAMPLE_VARIATION.lighting);
+    expect(result).toContain(SAMPLE_CONCEPT.scene);
+    expect(result).toContain(SAMPLE_CONCEPT.subjects);
+    expect(result).toContain(SAMPLE_CONCEPT.setting);
+    expect(result).toContain(SAMPLE_CONCEPT.composition);
+    expect(result).toContain(SAMPLE_CONCEPT.cameraAngle);
+    expect(result).toContain(SAMPLE_CONCEPT.lighting);
   });
 
   it("renders the style profile as text guidance and says this must be a new concept, not a copy", () => {
@@ -79,8 +80,7 @@ describe("buildContentPrompt", () => {
         brandPersonality: "cozy and inviting",
         designAesthetic: "",
       },
-      SAMPLE_VARIATION,
-      [],
+      SAMPLE_CONCEPT,
     );
 
     expect(result).toContain("warm, rustic food photography");
@@ -90,21 +90,6 @@ describe("buildContentPrompt", () => {
     // image similar to the approved one" both need to be present.
     expect(result).toMatch(/completely new visual concept/i);
     expect(result).toMatch(/not another image similar/i);
-  });
-
-  it("lists recent posts' choices as combinations not to repeat", () => {
-    const result = buildContentPrompt("On-brand content", brand, null, SAMPLE_VARIATION, [
-      { subject: "A person enjoying it.", cameraAngle: "Eye-level, straight-on." },
-    ]);
-
-    expect(result).toMatch(/do not repeat/i);
-    expect(result).toContain("A person enjoying it.");
-    expect(result).toContain("Eye-level, straight-on.");
-  });
-
-  it("says nothing about avoiding repeats when there's no prior history", () => {
-    const result = buildContentPrompt("On-brand content", brand, null, SAMPLE_VARIATION, []);
-    expect(result).not.toMatch(/do not repeat/i);
   });
 });
 

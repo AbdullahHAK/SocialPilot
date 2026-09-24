@@ -1,4 +1,4 @@
-import type { BrandStyleProfile } from "./openai";
+import type { BrandStyleProfile, CreativeConcept } from "./openai";
 
 export interface BrandContext {
   businessName: string;
@@ -55,16 +55,6 @@ export function buildImagePrompt(
   return parts.join(" ");
 }
 
-export interface CreativeVariation {
-  contentTheme: string;
-  subject: string;
-  cameraAngle: string;
-  cameraDistance: string;
-  composition: string;
-  environment: string;
-  lighting: string;
-}
-
 function styleProfileText(profile: BrandStyleProfile): string {
   const parts: string[] = [];
   if (profile.colors.length > 0) parts.push(`Brand colors: ${profile.colors.join(", ")}.`);
@@ -77,31 +67,21 @@ function styleProfileText(profile: BrandStyleProfile): string {
   return parts.join(" ");
 }
 
-function describeMetadata(metadata: Record<string, unknown>): string {
-  const fields = ["subject", "cameraAngle", "cameraDistance", "composition", "environment", "lighting"];
-  return fields
-    .map((f) => metadata[f])
-    .filter((v): v is string => typeof v === "string" && v.length > 0)
-    .join(", ");
-}
-
 /**
  * Builds the prompt for the recurring daily-content pipeline - distinct
  * from buildImagePrompt (used for the initial concept proposals and their
  * feedback-driven regeneration, where staying close to prior images is the
- * point). This is the client's explicit fix for posts looking repetitive:
- * the approved concept is described in words (styleProfile) rather than
- * handed to the model as an image to redraw, and each call is assigned a
- * different combination of subject/angle/distance/composition/environment/
- * lighting, with recent posts' actual choices spelled out as what NOT to
- * repeat.
+ * point). The client's fix for repetitive posts happens one step upstream
+ * now: planCreativeConcept (openai.ts) already invented a specific,
+ * business-aware scene, distinct from recent posts' actual scenes - this
+ * just turns that concept into the final image prompt, it doesn't do any
+ * variety-picking itself.
  */
 export function buildContentPrompt(
   brief: string,
   brand: BrandContext,
   styleProfile: BrandStyleProfile | null,
-  variation: CreativeVariation,
-  recentMetadata: object[],
+  concept: CreativeConcept,
 ): string {
   const parts = [brief];
   parts.push(
@@ -121,19 +101,11 @@ export function buildContentPrompt(
   }
 
   parts.push(
-    `This specific post: ${variation.contentTheme} Subject: ${variation.subject} Camera angle: ${variation.cameraAngle} Camera distance: ${variation.cameraDistance} Composition: ${variation.composition} Environment: ${variation.environment} Lighting: ${variation.lighting}`,
+    `Scene: ${concept.scene} Subjects: ${concept.subjects} Setting: ${concept.setting} Composition: ${concept.composition} Camera angle: ${concept.cameraAngle} Lighting: ${concept.lighting}`,
   );
 
-  const avoidList = recentMetadata
-    .map((m) => describeMetadata(m as Record<string, unknown>))
-    .filter((s) => s.length > 0);
-  if (avoidList.length > 0) {
-    parts.push(
-      `Do not repeat these exact combinations used in recent posts: ${avoidList.join(" | ")}.`,
-    );
-  }
-
   parts.push(BRAND_BUILDING_GUIDANCE);
+  parts.push(VARIETY_GUIDANCE);
   parts.push(QUALITY_GUIDANCE);
   parts.push("Square, social-media-ready composition, professional photography quality.");
   return parts.join(" ");

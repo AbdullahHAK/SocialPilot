@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { analyzeBrandDescription, analyzeBrandStyle, generateCaption, generateImage } from "./openai";
+import {
+  analyzeBrandDescription,
+  analyzeBrandStyle,
+  generateCaption,
+  generateImage,
+  planCreativeConcept,
+} from "./openai";
 
 beforeEach(() => {
   vi.stubEnv("OPENAI_API_KEY", "test-key");
@@ -211,6 +217,170 @@ describe("analyzeBrandDescription", () => {
       productsServices: [],
       language: null,
     });
+  });
+});
+
+describe("planCreativeConcept", () => {
+  function mockConceptResponse(overrides: Partial<Record<string, string>> = {}) {
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                scene: "Two friends splitting a pastry box on the patio.",
+                subjects: "Two friends, mid-laugh.",
+                setting: "Outdoor patio seating.",
+                composition: "Rule-of-thirds.",
+                cameraAngle: "Low angle.",
+                lighting: "Golden-hour light.",
+                storyIdea: "Good company makes it better.",
+                ...overrides,
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200 },
+    );
+  }
+
+  it("parses the creative concept from the model response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockConceptResponse()));
+
+    const result = await planCreativeConcept({
+      businessName: "Acme Bakery",
+      styleProfile: null,
+      archetype: { key: "social", label: "A social gathering." },
+      brief: "on-brand content",
+      recentScenes: [],
+    });
+
+    expect(result).toEqual({
+      scene: "Two friends splitting a pastry box on the patio.",
+      subjects: "Two friends, mid-laugh.",
+      setting: "Outdoor patio seating.",
+      composition: "Rule-of-thirds.",
+      cameraAngle: "Low angle.",
+      lighting: "Golden-hour light.",
+      storyIdea: "Good company makes it better.",
+    });
+  });
+
+  it("sends the business context, required archetype, and style profile to the model", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockConceptResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await planCreativeConcept({
+      businessName: "Acme Bakery",
+      category: "Bakery",
+      description: "A cozy neighborhood bakery.",
+      tone: "Warm and friendly",
+      colors: ["#7a4a2b"],
+      styleProfile: {
+        colors: ["deep red"],
+        typographyDirection: "",
+        logoUsage: "",
+        photographyStyle: "warm, rustic food photography",
+        lightingStyle: "",
+        visualQuality: "",
+        brandPersonality: "cozy and inviting",
+        designAesthetic: "",
+      },
+      archetype: { key: "social", label: "A social gathering - friends sharing the moment." },
+      brief: "on-brand content",
+      recentScenes: [],
+    });
+
+    const [, options] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(options.body as string);
+    const userMessage = body.messages[1].content as string;
+    expect(userMessage).toContain("Acme Bakery (Bakery)");
+    expect(userMessage).toContain("A cozy neighborhood bakery.");
+    expect(userMessage).toContain("Warm and friendly");
+    expect(userMessage).toContain("#7a4a2b");
+    expect(userMessage).toContain("warm, rustic food photography");
+    expect(userMessage).toContain("cozy and inviting");
+    expect(userMessage).toContain("A social gathering - friends sharing the moment.");
+  });
+
+  it("tells the model exactly which recent scenes to avoid repeating", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockConceptResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await planCreativeConcept({
+      businessName: "Acme Bakery",
+      styleProfile: null,
+      archetype: { key: "solo", label: "A solo moment." },
+      brief: "on-brand content",
+      recentScenes: ["A rider delivering a box.", "A close-up of the pastry case."],
+    });
+
+    const [, options] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(options.body as string);
+    const userMessage = body.messages[1].content as string;
+    expect(userMessage).toMatch(/genuinely different/i);
+    expect(userMessage).toContain("A rider delivering a box.");
+    expect(userMessage).toContain("A close-up of the pastry case.");
+  });
+
+  it("says nothing about avoiding repeats when there's no prior history", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockConceptResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await planCreativeConcept({
+      businessName: "Acme Bakery",
+      styleProfile: null,
+      archetype: { key: "solo", label: "A solo moment." },
+      brief: "on-brand content",
+      recentScenes: [],
+    });
+
+    const [, options] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(options.body as string);
+    const userMessage = body.messages[1].content as string;
+    expect(userMessage).not.toMatch(/already used recently/i);
+  });
+
+  it("defaults missing fields to empty strings", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }), { status: 200 }),
+      ),
+    );
+
+    const result = await planCreativeConcept({
+      businessName: "Acme Bakery",
+      styleProfile: null,
+      archetype: { key: "solo", label: "A solo moment." },
+      brief: "on-brand content",
+      recentScenes: [],
+    });
+
+    expect(result).toEqual({
+      scene: "",
+      subjects: "",
+      setting: "",
+      composition: "",
+      cameraAngle: "",
+      lighting: "",
+      storyIdea: "",
+    });
+  });
+
+  it("throws with the response body on a non-ok response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("rate limited", { status: 429 })));
+
+    await expect(
+      planCreativeConcept({
+        businessName: "Acme Bakery",
+        styleProfile: null,
+        archetype: { key: "solo", label: "A solo moment." },
+        brief: "on-brand content",
+        recentScenes: [],
+      }),
+    ).rejects.toThrow(/rate limited/);
   });
 });
 
