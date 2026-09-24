@@ -1,4 +1,4 @@
-import type { SocialProvider } from "@prisma/client";
+import type { SocialAuthMethod, SocialProvider } from "@prisma/client";
 import { decryptToken, encryptToken } from "./crypto";
 import { prisma } from "./index";
 
@@ -29,6 +29,10 @@ export interface UpsertSocialAccountInput {
   profilePictureUrl?: string;
   accessToken: string;
   tokenExpiresAt?: Date;
+  /** Which Meta login path connected this - defaults to FACEBOOK_LOGIN,
+   * the original (and only) path until Instagram API with Instagram Login
+   * was added. Always FACEBOOK_LOGIN for a FACEBOOK-provider row. */
+  authMethod?: SocialAuthMethod;
 }
 
 /**
@@ -69,6 +73,7 @@ export async function upsertSocialAccount(input: UpsertSocialAccountInput) {
     accessToken: encryptToken(input.accessToken),
     tokenExpiresAt: input.tokenExpiresAt,
     status: "ACTIVE" as const,
+    authMethod: input.authMethod ?? ("FACEBOOK_LOGIN" as const),
   };
 
   return prisma.socialAccount.upsert({

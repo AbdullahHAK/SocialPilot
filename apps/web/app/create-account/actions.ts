@@ -95,6 +95,7 @@ export async function createAccountAction(
       tokenExpiresAt: page.tokenExpiresAt
         ? new Date(page.tokenExpiresAt)
         : undefined,
+      authMethod: page.authMethod,
     });
   }
 

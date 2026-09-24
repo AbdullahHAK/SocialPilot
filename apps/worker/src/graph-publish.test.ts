@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  INSTAGRAM_DIRECT_API_BASE,
   publishFacebookStory,
   publishInstagramStory,
   publishToFacebook,
@@ -41,6 +42,17 @@ describe("verifyGraphObjectExists", () => {
 
     expect(await verifyGraphObjectExists("post-1", "token")).toBe(false);
   });
+
+  it("checks against the given apiBase instead of the default graph.facebook.com host", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "post-1" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await verifyGraphObjectExists("post-1", "token", INSTAGRAM_DIRECT_API_BASE);
+
+    expect(String(fetchMock.mock.calls[0]![0])).toMatch(/^https:\/\/graph\.instagram\.com\//);
+  });
 });
 
 describe("publishToInstagram", () => {
@@ -72,6 +84,48 @@ describe("publishToInstagram", () => {
     expect(String(fetchMock.mock.calls[1]![0])).toContain("fields=status_code");
     expect(String(fetchMock.mock.calls[2]![0])).toContain("/ig-1/media_publish?");
     expect(String(fetchMock.mock.calls[2]![0])).toContain("creation_id=creation-123");
+  });
+
+  it("publishes through graph.instagram.com instead when apiBase is INSTAGRAM_DIRECT_API_BASE (an account connected with no Facebook Page)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "creation-123" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "post-456" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await publishToInstagram({
+      pageAccessToken: "token",
+      igUserId: "ig-1",
+      imageUrl: "https://example.com/a.png",
+      caption: "Hello world",
+      apiBase: INSTAGRAM_DIRECT_API_BASE,
+    });
+
+    for (const call of fetchMock.mock.calls) {
+      expect(String(call[0])).toMatch(/^https:\/\/graph\.instagram\.com\//);
+      expect(String(call[0])).not.toContain("graph.facebook.com");
+    }
+  });
+
+  it("defaults to graph.facebook.com when apiBase is omitted (a Facebook-Login-connected account)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "creation-123" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "post-456" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await publishToInstagram({
+      pageAccessToken: "token",
+      igUserId: "ig-1",
+      imageUrl: "https://example.com/a.png",
+      caption: "Hello world",
+    });
+
+    for (const call of fetchMock.mock.calls) {
+      expect(String(call[0])).toMatch(/^https:\/\/graph\.facebook\.com\//);
+    }
   });
 
   it("polls until the container reports FINISHED, not just on the first check", async () => {

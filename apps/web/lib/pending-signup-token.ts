@@ -1,5 +1,5 @@
 import { jwtVerify, SignJWT } from "jose";
-import type { SocialProvider } from "@socialpilot/db";
+import type { SocialAuthMethod, SocialProvider } from "@socialpilot/db";
 
 export const PENDING_SIGNUP_COOKIE_NAME = "sp_pending_signup";
 const PENDING_SIGNUP_DURATION = "1h";
@@ -11,6 +11,9 @@ export interface PendingMetaPage {
   profilePictureUrl?: string;
   encryptedAccessToken: string;
   tokenExpiresAt?: string;
+  /** Defaults to FACEBOOK_LOGIN when committed if omitted - only ever set
+   * to INSTAGRAM_LOGIN by the Instagram-direct connect flow. */
+  authMethod?: SocialAuthMethod;
 }
 
 export interface PendingSignupPayload {

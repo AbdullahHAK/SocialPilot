@@ -206,7 +206,20 @@
       "active": "Actif",
       "expired": "Reconnexion nécessaire",
       "reconnect": "Reconnecter",
-      "disconnect": "Déconnecter"
+      "disconnect": "Déconnecter",
+      "connectDialog": {
+        "openButton": "Connecter Instagram / Facebook",
+        "title": "Connectez votre compte",
+        "description": "Choisissez comment vous connecter, selon ce que vous avez.",
+        "withFacebook": {
+          "title": "Page Facebook + Instagram",
+          "description": "Recommandé si votre Instagram a une Page Facebook liée - connecte les deux ensemble."
+        },
+        "instagramOnly": {
+          "title": "Instagram uniquement",
+          "description": "Pas de Page Facebook ? Connectez directement votre compte Instagram professionnel."
+        }
+      }
     },
     "brandForm": {
       "businessBasics": "L'essentiel de l'entreprise",

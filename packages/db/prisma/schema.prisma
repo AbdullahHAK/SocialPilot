@@ -58,6 +58,19 @@ enum SocialProvider {
   FACEBOOK
 }
 
+// Meta has two entirely separate ways to connect an Instagram account: via
+// a Facebook Page (the original path - requires the Instagram account to
+// have a linked Facebook Page) or directly via "Instagram API with
+// Instagram Login" (no Facebook Page needed at all). A FACEBOOK-provider
+// row is always FACEBOOK_LOGIN. Which one an INSTAGRAM-provider row used
+// determines which Graph API host/token the worker publishes through
+// (graph.facebook.com vs graph.instagram.com) - see apps/worker's
+// graph-publish.ts.
+enum SocialAuthMethod {
+  FACEBOOK_LOGIN
+  INSTAGRAM_LOGIN
+}
+
 enum SocialAccountStatus {
   ACTIVE
   EXPIRED
@@ -254,6 +267,7 @@ model SocialAccount {
   accessToken       String
   tokenExpiresAt    DateTime?
   status            SocialAccountStatus @default(ACTIVE)
+  authMethod        SocialAuthMethod    @default(FACEBOOK_LOGIN)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 

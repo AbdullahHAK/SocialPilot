@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ConnectMetaDialog } from "@/components/connect-meta-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -76,9 +77,13 @@ export default async function ConnectPage({
               </Button>
             </>
           ) : (
-            <Button asChild size="lg">
-              <a href="/api/meta/connect">{tAccounts("connect")}</a>
-            </Button>
+            <ConnectMetaDialog
+              trigger={
+                <Button size="lg" className="w-full">
+                  {tAccounts("connect")}
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>

@@ -13,6 +13,7 @@ import {
   type ContentPublication,
 } from "@socialpilot/db";
 import {
+  INSTAGRAM_DIRECT_API_BASE,
   MetaAuthError,
   publishFacebookStory,
   publishInstagramStory,
@@ -55,6 +56,7 @@ async function publishStoryBestEffort(
   job: ContentJobWithAccounts,
   accountExternalId: string,
   accessToken: string,
+  apiBase: string | undefined,
 ): Promise<void> {
   if (!job.storyImageUrl || publication.externalStoryId) return;
 
@@ -65,6 +67,7 @@ async function publishStoryBestEffort(
             pageAccessToken: accessToken,
             accountId: accountExternalId,
             imageUrl: job.storyImageUrl,
+            apiBase,
           })
         : await publishFacebookStory({
             pageAccessToken: accessToken,
@@ -92,6 +95,7 @@ async function publishStoryOnly(
   job: ContentJobWithAccounts,
   accountExternalId: string,
   accessToken: string,
+  apiBase: string | undefined,
 ): Promise<void> {
   if (!publication.externalStoryId) {
     if (!job.storyImageUrl) {
@@ -103,6 +107,7 @@ async function publishStoryOnly(
             pageAccessToken: accessToken,
             accountId: accountExternalId,
             imageUrl: job.storyImageUrl,
+            apiBase,
           })
         : await publishFacebookStory({
             pageAccessToken: accessToken,
@@ -163,19 +168,32 @@ async function publishOnePlatform(
   const options = job.organization.publishingSchedule ?? DEFAULT_PUBLISH_OPTIONS;
   const wantsPost = options.publishMode !== "STORY_ONLY";
   const wantsStory = options.publishMode !== "POST_ONLY";
+  // A Facebook Page always uses the standard Graph API. An Instagram
+  // account only uses the direct-login host if that's how it was
+  // connected (see apps/web/lib/instagram.ts) - one connected via a
+  // Facebook Page still publishes through the standard host, same as
+  // always.
+  const apiBase =
+    publication.platform === "INSTAGRAM" && account.authMethod === "INSTAGRAM_LOGIN"
+      ? INSTAGRAM_DIRECT_API_BASE
+      : undefined;
 
   try {
     if (!wantsPost) {
-      await publishStoryOnly(publication, job, account.externalId, accessToken);
+      await publishStoryOnly(publication, job, account.externalId, accessToken, apiBase);
       return;
     }
 
     if (publication.externalPostId) {
-      const alreadyPublished = await verifyGraphObjectExists(publication.externalPostId, accessToken);
+      const alreadyPublished = await verifyGraphObjectExists(
+        publication.externalPostId,
+        accessToken,
+        apiBase,
+      );
       if (alreadyPublished) {
         await markContentPublicationPublished(publication.id, publication.externalPostId);
         if (wantsStory) {
-          await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+          await publishStoryBestEffort(publication, job, account.externalId, accessToken, apiBase);
         }
         return;
       }
@@ -191,6 +209,7 @@ async function publishOnePlatform(
             igUserId: account.externalId,
             imageUrl: job.masterImageUrl,
             caption,
+            apiBase,
           })
         : await publishToFacebook({
             pageAccessToken: accessToken,
@@ -204,7 +223,7 @@ async function publishOnePlatform(
     // retry from ever calling the publish endpoint again for this platform.
     await recordContentPublicationExternalId(publication.id, externalPostId);
 
-    const verified = await verifyGraphObjectExists(externalPostId, accessToken);
+    const verified = await verifyGraphObjectExists(externalPostId, accessToken, apiBase);
     if (!verified) {
       throw new Error(`Published ${publication.platform} post did not verify (${externalPostId})`);
     }
@@ -213,7 +232,7 @@ async function publishOnePlatform(
     console.log(`Published job ${job.id} -> ${publication.platform} (${externalPostId})`);
 
     if (wantsStory) {
-      await publishStoryBestEffort(publication, job, account.externalId, accessToken);
+      await publishStoryBestEffort(publication, job, account.externalId, accessToken, apiBase);
     }
   } catch (error) {
     if (error instanceof MetaAuthError) {

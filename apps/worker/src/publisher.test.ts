@@ -469,6 +469,83 @@ describe("runPublishCycle", () => {
       expect(publication.externalStoryId).toBe("page_1_story_1");
     });
   });
+  describe("Instagram Direct Login (account connected with no Facebook Page)", () => {
+    it("publishes through graph.instagram.com when the account's authMethod is INSTAGRAM_LOGIN", async () => {
+      const { org, job } = await createReadyJob({
+        platforms: ["INSTAGRAM"],
+        storyImageUrl: "https://example.com/a-story.png",
+      });
+      await upsertSocialAccount({
+        organizationId: org.id,
+        provider: "INSTAGRAM",
+        externalId: "ig-1",
+        accessToken: "raw-page-token",
+        authMethod: "INSTAGRAM_LOGIN",
+      });
+
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "creation-1" }), { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "ig-post-1" }), { status: 200 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "ig-post-1" }), { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ id: "story-creation-1" }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "ig-story-1" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      expect(fetchMock).toHaveBeenCalledTimes(7);
+      for (const call of fetchMock.mock.calls) {
+        expect(String(call[0])).toMatch(/^https:\/\/graph\.instagram\.com\//);
+      }
+      const publication = await prisma.contentPublication.findFirstOrThrow({
+        where: { contentJobId: job.id },
+      });
+      expect(publication.status).toBe("PUBLISHED");
+      expect(publication.externalPostId).toBe("ig-post-1");
+      expect(publication.externalStoryId).toBe("ig-story-1");
+    });
+
+    it("publishes through graph.facebook.com for an Instagram account connected the normal way (via a Facebook Page)", async () => {
+      const { org, job } = await createReadyJob({ platforms: ["INSTAGRAM"] });
+      // No authMethod passed - defaults to FACEBOOK_LOGIN.
+      await upsertSocialAccount({
+        organizationId: org.id,
+        provider: "INSTAGRAM",
+        externalId: "ig-1",
+        accessToken: "raw-page-token",
+      });
+
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "creation-1" }), { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status_code: "FINISHED" }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "ig-post-1" }), { status: 200 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: "ig-post-1" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      for (const call of fetchMock.mock.calls) {
+        expect(String(call[0])).toMatch(/^https:\/\/graph\.facebook\.com\//);
+      }
+      const publication = await prisma.contentPublication.findFirstOrThrow({
+        where: { contentJobId: job.id },
+      });
+      expect(publication.status).toBe("PUBLISHED");
+    });
+  });
+
   describe("publishing options (per-business setting)", () => {
     type Mode = "POST_AND_STORY" | "STORY_ONLY" | "POST_ONLY";
 

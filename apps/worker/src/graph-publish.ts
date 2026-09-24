@@ -5,6 +5,12 @@
 
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+// An account connected via "Instagram API with Instagram Login" (no
+// Facebook Page - see apps/web/lib/instagram.ts) publishes through this
+// host instead. Facebook Pages, and Instagram accounts connected via
+// Facebook Login, always use GRAPH_API_BASE above - only an
+// INSTAGRAM_LOGIN-authenticated Instagram account uses this one.
+export const INSTAGRAM_DIRECT_API_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 
 /** Thrown specifically for Meta's error code 190 (OAuthException) - an
  * invalid, expired, or revoked token, regardless of the exact subcode
@@ -40,6 +46,10 @@ export interface PublishToInstagramInput {
   igUserId: string;
   imageUrl: string;
   caption: string;
+  /** GRAPH_API_BASE unless this account was connected via Instagram API
+   * with Instagram Login, in which case the caller passes
+   * INSTAGRAM_DIRECT_API_BASE. */
+  apiBase?: string;
 }
 
 interface MediaContainerStatus {
@@ -54,7 +64,7 @@ interface MediaContainerStatus {
 async function waitForContainerReady(
   creationId: string,
   accessToken: string,
-  { pollIntervalMs = 1500, timeoutMs = 60_000 } = {},
+  { pollIntervalMs = 1500, timeoutMs = 60_000, apiBase = GRAPH_API_BASE } = {},
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
@@ -62,7 +72,7 @@ async function waitForContainerReady(
       fields: "status_code",
       access_token: accessToken,
     });
-    const res = await fetch(`${GRAPH_API_BASE}/${creationId}?${params}`);
+    const res = await fetch(`${apiBase}/${creationId}?${params}`);
     const { status_code } = await parseGraphResponse<MediaContainerStatus>(
       res,
       "Instagram media container status check",
@@ -85,13 +95,14 @@ export async function publishToInstagram(
   input: PublishToInstagramInput,
   pollOptions?: { pollIntervalMs?: number; timeoutMs?: number },
 ): Promise<string> {
+  const apiBase = input.apiBase ?? GRAPH_API_BASE;
   const createParams = new URLSearchParams({
     image_url: input.imageUrl,
     caption: input.caption,
     access_token: input.pageAccessToken,
   });
   const createRes = await fetch(
-    `${GRAPH_API_BASE}/${input.igUserId}/media?${createParams}`,
+    `${apiBase}/${input.igUserId}/media?${createParams}`,
     { method: "POST" },
   );
   const { id: creationId } = await parseGraphResponse<{ id: string }>(
@@ -99,14 +110,14 @@ export async function publishToInstagram(
     "Instagram media container creation",
   );
 
-  await waitForContainerReady(creationId, input.pageAccessToken, pollOptions);
+  await waitForContainerReady(creationId, input.pageAccessToken, { ...pollOptions, apiBase });
 
   const publishParams = new URLSearchParams({
     creation_id: creationId,
     access_token: input.pageAccessToken,
   });
   const publishRes = await fetch(
-    `${GRAPH_API_BASE}/${input.igUserId}/media_publish?${publishParams}`,
+    `${apiBase}/${input.igUserId}/media_publish?${publishParams}`,
     { method: "POST" },
   );
   const { id: postId } = await parseGraphResponse<{ id: string }>(
@@ -158,10 +169,11 @@ export async function publishToFacebook(
 export async function verifyGraphObjectExists(
   objectId: string,
   accessToken: string,
+  apiBase: string = GRAPH_API_BASE,
 ): Promise<boolean> {
   const params = new URLSearchParams({ fields: "id", access_token: accessToken });
   try {
-    const res = await fetch(`${GRAPH_API_BASE}/${objectId}?${params}`);
+    const res = await fetch(`${apiBase}/${objectId}?${params}`);
     if (!res.ok) return false;
     const body = (await res.json()) as { id?: string };
     return typeof body.id === "string" && body.id.length > 0;
@@ -175,6 +187,10 @@ export interface PublishStoryInput {
   /** The IG Business account id for Instagram, the Page id for Facebook. */
   accountId: string;
   imageUrl: string;
+  /** GRAPH_API_BASE unless this account was connected via Instagram API
+   * with Instagram Login, in which case the caller passes
+   * INSTAGRAM_DIRECT_API_BASE. Meaningless for a Facebook Story. */
+  apiBase?: string;
 }
 
 /** Instagram Stories go through the same container flow as a feed post,
@@ -184,13 +200,14 @@ export async function publishInstagramStory(
   input: PublishStoryInput,
   pollOptions?: { pollIntervalMs?: number; timeoutMs?: number },
 ): Promise<string> {
+  const apiBase = input.apiBase ?? GRAPH_API_BASE;
   const createParams = new URLSearchParams({
     image_url: input.imageUrl,
     media_type: "STORIES",
     access_token: input.pageAccessToken,
   });
   const createRes = await fetch(
-    `${GRAPH_API_BASE}/${input.accountId}/media?${createParams}`,
+    `${apiBase}/${input.accountId}/media?${createParams}`,
     { method: "POST" },
   );
   const { id: creationId } = await parseGraphResponse<{ id: string }>(
@@ -198,14 +215,14 @@ export async function publishInstagramStory(
     "Instagram Story container creation",
   );
 
-  await waitForContainerReady(creationId, input.pageAccessToken, pollOptions);
+  await waitForContainerReady(creationId, input.pageAccessToken, { ...pollOptions, apiBase });
 
   const publishParams = new URLSearchParams({
     creation_id: creationId,
     access_token: input.pageAccessToken,
   });
   const publishRes = await fetch(
-    `${GRAPH_API_BASE}/${input.accountId}/media_publish?${publishParams}`,
+    `${apiBase}/${input.accountId}/media_publish?${publishParams}`,
     { method: "POST" },
   );
   const { id: storyId } = await parseGraphResponse<{ id: string }>(

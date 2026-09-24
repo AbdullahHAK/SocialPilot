@@ -2,6 +2,7 @@ import { listSocialAccounts } from "@socialpilot/db";
 import { AlertCircle, CheckCircle2, Share2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
+import { ConnectMetaDialog } from "@/components/connect-meta-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,9 +29,7 @@ export default async function AccountsPage({
           <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="mt-1 text-muted-foreground">{t("description")}</p>
         </div>
-        <Button asChild>
-          <a href="/api/meta/connect">{t("connect")}</a>
-        </Button>
+        <ConnectMetaDialog triggerLabel={t("connect")} />
       </div>
 
       {typeof error === "string" && (
@@ -86,7 +85,15 @@ export default async function AccountsPage({
                 <div className="flex items-center gap-1">
                   {account.status !== "ACTIVE" && (
                     <Button asChild size="sm">
-                      <a href="/api/meta/connect">{t("reconnect")}</a>
+                      <a
+                        href={
+                          account.authMethod === "INSTAGRAM_LOGIN"
+                            ? "/api/instagram/connect"
+                            : "/api/meta/connect"
+                        }
+                      >
+                        {t("reconnect")}
+                      </a>
                     </Button>
                   )}
                   <form action={disconnectAccountAction}>
