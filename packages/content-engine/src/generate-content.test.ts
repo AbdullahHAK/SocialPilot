@@ -205,6 +205,39 @@ describe("generateContentForJob", () => {
       expect(metadata!.language).toBe("en");
     });
 
+    it("tells generateCaption the brand's chosen language by name, for a fresh generation (client's report: captions randomly switching language)", async () => {
+      const org = await setUpReadyOrg();
+      await upsertBrandProfile({
+        organizationId: org.id,
+        businessName: "Acme",
+        language: "ar",
+        logoUrl: "https://example.com/logo.png",
+      });
+      const job = await makeJob(org.id, new Date());
+
+      await generateContentForJob(job);
+
+      expect(generateCaptionMock.mock.calls[0]![0].language).toBe("Arabic");
+    });
+
+    it("tells generateCaption the brand's chosen language by name on a same-day reuse too", async () => {
+      const org = await setUpReadyOrg();
+      await upsertBrandProfile({
+        organizationId: org.id,
+        businessName: "Acme",
+        language: "fr",
+        logoUrl: "https://example.com/logo.png",
+      });
+      const jobA = await makeJob(org.id, new Date("2026-09-15T09:00:00Z"), ["INSTAGRAM"]);
+      const jobB = await makeJob(org.id, new Date("2026-09-15T18:00:00Z"), ["FACEBOOK"]);
+
+      await generateContentForJob(jobA);
+      await generateContentForJob(jobB);
+
+      expect(generateCaptionMock.mock.calls[0]![0].language).toBe("French");
+      expect(generateCaptionMock.mock.calls[1]![0].language).toBe("French");
+    });
+
     it("includes the approved style profile as text guidance, not the image itself", async () => {
       const org = await setUpReadyOrg();
       await prisma.brandCreativeProfile.update({

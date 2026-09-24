@@ -79,6 +79,26 @@ export class MonthlyImageCapReachedError extends Error {
   }
 }
 
+// Matches the locale codes offered in apps/web's onboarding language
+// picker (BrandProfile.language stores the raw code, e.g. "en") - mapped
+// to a full name here because that's what generateCaption's prompt
+// instruction expects, and "Write the caption in en." is a far weaker
+// signal to the model than "Write the caption in English."
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  ur: "Urdu",
+  ar: "Arabic",
+  es: "Spanish",
+  fr: "French",
+  hi: "Hindi",
+  pt: "Portuguese",
+  de: "German",
+};
+
+function resolveLanguageName(code: string): string {
+  return LANGUAGE_NAMES[code] ?? code;
+}
+
 export function parseStyleProfile(value: unknown): BrandStyleProfile | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Partial<BrandStyleProfile>;
@@ -142,6 +162,7 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
       const { caption, hashtags } = await generateCaption({
         businessName: brandProfile.businessName,
         tone: brandProfile.tone ?? undefined,
+        language: resolveLanguageName(brandProfile.language),
         brief,
       });
       // Written inside the same locked transaction that read it, so this
@@ -202,6 +223,7 @@ export async function generateContentForJob(job: ContentJob): Promise<void> {
     const { caption, hashtags } = await generateCaption({
       businessName: brandProfile.businessName,
       tone: brandProfile.tone ?? undefined,
+      language: resolveLanguageName(brandProfile.language),
       brief: `${brief} ${concept.storyIdea}`,
     });
 
