@@ -11,6 +11,7 @@ import {
   exchangeCodeForToken,
   exchangeForLongLivedToken,
   getInstagramAccountInfo,
+  getInstagramCallbackUrl,
 } from "@/lib/instagram";
 import {
   getPendingSignup,
@@ -62,10 +63,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const redirectUri = new URL(
-      "/api/instagram/callback",
-      request.url,
-    ).toString();
+    const redirectUri = getInstagramCallbackUrl(request.url);
     const shortLivedToken = await exchangeCodeForToken(code, redirectUri);
     const { accessToken: longLivedToken, expiresInSeconds } =
       await exchangeForLongLivedToken(shortLivedToken);

@@ -13,9 +13,32 @@
 // unit-tested directly and only ever imported from Route Handlers under
 // app/api/instagram/**.
 
+import { SITE_ORIGIN } from "./company";
+
 const IG_OAUTH_BASE = "https://api.instagram.com";
 const GRAPH_API_VERSION = "v21.0";
 const IG_GRAPH_API_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
+
+/** Instagram rejects any redirect_uri that isn't an exact match for one
+ * registered in the Meta App Dashboard. Registering both yopapi.com and
+ * www.yopapi.com there turned out unreliable in practice - production
+ * logs showed every /api/instagram/connect hit on www.yopapi.com failing
+ * at Instagram's own authorize page (never even reaching our callback),
+ * while every yopapi.com hit succeeded, despite both looking registered.
+ * Forcing the one already-working canonical origin in production removes
+ * the need to keep every domain variant correctly registered forever -
+ * Instagram still lands the user back correctly even if they started on
+ * a different hostname (e.g. www.yopapi.com), since it's our server, not
+ * the browser, that decides this redirect_uri. Preview/local deployments
+ * have no fixed domain, so they still derive it from the real request.
+ * connect/route.ts and callback/route.ts both call this so they always
+ * compute the identical value the OAuth spec requires. */
+export function getInstagramCallbackUrl(requestUrl: string): string {
+  if (process.env.VERCEL_ENV === "production") {
+    return `${SITE_ORIGIN}/api/instagram/callback`;
+  }
+  return new URL("/api/instagram/callback", requestUrl).toString();
+}
 
 // Read access to the account's own identity, plus permission to publish
 // media - the minimum needed for this app's daily-post pipeline.

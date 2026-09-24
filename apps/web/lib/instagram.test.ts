@@ -3,6 +3,7 @@ import {
   exchangeCodeForToken,
   exchangeForLongLivedToken,
   getInstagramAccountInfo,
+  getInstagramCallbackUrl,
   getInstagramOAuthUrl,
 } from "./instagram";
 
@@ -14,6 +15,27 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+});
+
+describe("getInstagramCallbackUrl", () => {
+  it("forces the canonical yopapi.com origin in production, regardless of which hostname the request came in on (fixes: www.yopapi.com connect attempts failing at Instagram's authorize page)", () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+
+    expect(getInstagramCallbackUrl("https://www.yopapi.com/api/instagram/connect")).toBe(
+      "https://yopapi.com/api/instagram/callback",
+    );
+    expect(getInstagramCallbackUrl("https://yopapi.com/api/instagram/connect")).toBe(
+      "https://yopapi.com/api/instagram/callback",
+    );
+  });
+
+  it("derives it from the actual request outside production, since preview/local deployments have no fixed domain", () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+
+    expect(getInstagramCallbackUrl("https://yopapi-git-feature-abc.vercel.app/api/instagram/connect")).toBe(
+      "https://yopapi-git-feature-abc.vercel.app/api/instagram/callback",
+    );
+  });
 });
 
 describe("getInstagramOAuthUrl", () => {

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { getInstagramOAuthUrl } from "@/lib/instagram";
+import { getInstagramCallbackUrl, getInstagramOAuthUrl } from "@/lib/instagram";
 import { getPendingSignup } from "@/lib/pending-signup";
 import { getSession } from "@/lib/session";
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
 
   const state = randomBytes(16).toString("hex");
-  const redirectUri = new URL("/api/instagram/callback", request.url).toString();
+  const redirectUri = getInstagramCallbackUrl(request.url);
 
   const response = NextResponse.redirect(getInstagramOAuthUrl(redirectUri, state));
   response.cookies.set(INSTAGRAM_OAUTH_STATE_COOKIE, state, {
