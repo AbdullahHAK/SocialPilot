@@ -8,6 +8,7 @@ import {
   getBrandProfile,
   listSocialAccounts,
   materializeContentJob,
+  setPublishingScheduleTimezone,
   setPublishOptions,
   updateScheduleSlot,
   zonedTimeToUtc,
@@ -210,6 +211,39 @@ export async function updatePublishOptionsAction(
     await setPublishOptions(session.organizationId, { publishMode, includeCaption });
   } catch (error) {
     console.error("Saving publish options failed", error);
+    return { error: true };
+  }
+
+  revalidatePath("/dashboard/schedule");
+  return { saved: true };
+}
+
+export interface TimezoneState {
+  saved?: boolean;
+  error?: boolean;
+}
+
+/** The client's explicit request: an optional, user-chosen timezone (like
+ * the language setting) that the whole publishing schedule follows,
+ * rather than only ever the browser's auto-detected one. Deliberately
+ * calls setPublishingScheduleTimezone (an unconditional set), not
+ * ensurePublishingScheduleTimezone (which only fires once, while the
+ * value is still the schema default) - this is an explicit override and
+ * must always take effect, no matter what the org's timezone was before. */
+export async function setTimezoneAction(
+  _prevState: TimezoneState,
+  formData: FormData,
+): Promise<TimezoneState> {
+  const session = await getSession();
+  if (!session) return { error: true };
+
+  const parsed = createTimezoneSchema((key) => key).safeParse(formData.get("timezone"));
+  if (!parsed.success) return { error: true };
+
+  try {
+    await setPublishingScheduleTimezone(session.organizationId, parsed.data);
+  } catch (error) {
+    console.error("Saving timezone failed", error);
     return { error: true };
   }
 

@@ -15,6 +15,7 @@ import { AddScheduleSlotDialog } from "@/components/add-schedule-slot-dialog";
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
 import { PublishOptionsCard } from "@/components/publish-options-card";
 import { PublishingStatusCard } from "@/components/publishing-status-card";
+import { TimezoneCard } from "@/components/timezone-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ import {
   addOneTimePostAction,
   addScheduleSlotAction,
   removeScheduleSlotAction,
+  setTimezoneAction,
   toggleScheduleSlotAction,
   updatePublishOptionsAction,
 } from "./actions";
@@ -104,6 +106,17 @@ export default async function SchedulePage() {
       </div>
 
       <PublishingStatusCard lastPublished={lastPublished} nextScheduled={nextScheduled} />
+
+      {/* schedule.timezone defaults to the literal "UTC" sentinel until
+          someone explicitly sets it (see ensurePublishingScheduleTimezone
+          in packages/db) - "Etc/UTC" is what's actually offered in this
+          list (see lib/timezones.ts for why), so this only normalizes
+          which option shows as pre-selected; it never writes anything
+          back unless the person actually clicks Save. */}
+      <TimezoneCard
+        action={setTimezoneAction}
+        initialTimezone={schedule.timezone === "UTC" ? "Etc/UTC" : schedule.timezone}
+      />
 
       <PublishOptionsCard
         action={updatePublishOptionsAction}
