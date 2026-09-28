@@ -91,12 +91,14 @@ describe("runGenerationCycle", () => {
     expect(generateContentForJobMock.mock.calls[0]![0].id).toBe(job.id);
   });
 
-  it("still generates when the org has no subscription row at all (billing isn't enforced yet - real production incident)", async () => {
-    // Confirmed in production: every real account, including the paying
-    // client's, has no Subscription row (never run through Stripe
-    // checkout) - nothing else in the app gates on subscription status
-    // either, so requiring an ACTIVE/TRIALING row here cancelled every
-    // real customer's scheduled content the first time this shipped.
+  it("cancels rather than generates when the org has no subscription row at all (client's explicit, urgent fix - a never-activated account must not generate for free)", async () => {
+    // Prior behavior (see git history) allowed this, because at the time
+    // no real customer had ever been manually activated or run through
+    // Stripe - requiring a row would have cancelled every paying
+    // customer's content. The admin panel's manual activation now gives
+    // every real activated customer a proper row (confirmed against
+    // production data before tightening this), so a missing row now
+    // unambiguously means "never activated."
     const org = await prisma.organization.create({ data: { name: "Acme", publishingSchedule: { create: {} } } });
     await upsertBrandProfile({
       organizationId: org.id,
@@ -118,13 +120,25 @@ describe("runGenerationCycle", () => {
 
     await runGenerationCycle(now);
 
-    expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+    expect(generateContentForJobMock).not.toHaveBeenCalled();
     const updated = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
-    expect(updated.status).not.toBe("CANCELLED");
+    expect(updated.status).toBe("CANCELLED");
+    expect(updated.errorMessage).toMatch(/subscription/i);
   });
 
-  it.each(["INCOMPLETE", "PAST_DUE", "TRIALING"] as const)(
-    "still generates when the subscription status is %s (only an explicit CANCELED blocks)",
+  it("still generates when the subscription status is TRIALING", async () => {
+    const org = await setUpReadyOrg();
+    await prisma.subscription.update({ where: { organizationId: org.id }, data: { status: "TRIALING" } });
+    const now = new Date("2026-09-15T12:00:00Z");
+    await createJob(org.id, new Date(now.getTime() + 60_000));
+
+    await runGenerationCycle(now);
+
+    expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["INCOMPLETE", "PAST_DUE"] as const)(
+    "cancels rather than generates when the subscription status is %s - only ACTIVE/TRIALING count now",
     async (status) => {
       const org = await setUpReadyOrg();
       await prisma.subscription.update({ where: { organizationId: org.id }, data: { status } });
@@ -133,9 +147,23 @@ describe("runGenerationCycle", () => {
 
       await runGenerationCycle(now);
 
-      expect(generateContentForJobMock).toHaveBeenCalledTimes(1);
+      expect(generateContentForJobMock).not.toHaveBeenCalled();
     },
   );
+
+  it("cancels rather than generates when the subscription's currentPeriodEnd has already passed, even though status is still ACTIVE (nothing else expires it automatically)", async () => {
+    const org = await setUpReadyOrg();
+    await prisma.subscription.update({
+      where: { organizationId: org.id },
+      data: { currentPeriodEnd: new Date("2026-09-14T00:00:00Z") },
+    });
+    const now = new Date("2026-09-15T12:00:00Z");
+    await createJob(org.id, new Date(now.getTime() + 60_000));
+
+    await runGenerationCycle(now);
+
+    expect(generateContentForJobMock).not.toHaveBeenCalled();
+  });
 
   it("does not generate a job that's still days away", async () => {
     const org = await setUpReadyOrg();

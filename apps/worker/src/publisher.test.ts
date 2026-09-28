@@ -14,7 +14,14 @@ async function createReadyJob(overrides: {
   scheduledFor?: Date;
   storyImageUrl?: string;
 } = {}) {
-  const org = await prisma.organization.create({ data: { name: "Acme" } });
+  // Every test in this file is exercising *publishing* mechanics, not
+  // subscription gating - defaulting to an active subscription here (like
+  // generator.test.ts's setUpReadyOrg) keeps them all passing exactly as
+  // before. The subscription-gating behavior itself has its own dedicated
+  // tests below.
+  const org = await prisma.organization.create({
+    data: { name: "Acme", subscription: { create: { status: "ACTIVE" } } },
+  });
   const platforms = overrides.platforms ?? (["INSTAGRAM"] as Platform[]);
   const job = await prisma.contentJob.create({
     data: {
@@ -66,6 +73,65 @@ describe("runPublishCycle", () => {
     expect(publication.publishedAt).not.toBeNull();
     const updatedJob = await prisma.contentJob.findUniqueOrThrow({ where: { id: job.id } });
     expect(updatedJob.status).toBe("PUBLISHED");
+  });
+
+  describe("subscription gating (client's explicit, urgent fix: no active subscription must never publish)", () => {
+    it("retries (not permanently fails) rather than publishes when the org has no subscription row at all", async () => {
+      const org = await prisma.organization.create({ data: { name: "Acme" } });
+      const job = await prisma.contentJob.create({
+        data: {
+          organizationId: org.id,
+          scheduledFor: new Date(Date.now() - 60_000),
+          platforms: ["INSTAGRAM"],
+          status: "READY",
+          masterImageUrl: "https://example.com/a.png",
+          caption: "Weekend special!",
+          hashtags: ["#offer"],
+          publications: { create: [{ platform: "INSTAGRAM" }] },
+        },
+      });
+      await upsertSocialAccount({
+        organizationId: org.id,
+        provider: "INSTAGRAM",
+        externalId: "ig-1",
+        accessToken: "raw-page-token",
+      });
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      const publication = await prisma.contentPublication.findFirstOrThrow({
+        where: { contentJobId: job.id },
+      });
+      expect(publication.status).toBe("RETRYING");
+      expect(publication.errorMessage).toMatch(/no active subscription/i);
+    });
+
+    it("does not publish when the subscription's currentPeriodEnd has already passed, even though status is still ACTIVE", async () => {
+      const { org, job } = await createReadyJob();
+      await prisma.subscription.update({
+        where: { organizationId: org.id },
+        data: { currentPeriodEnd: new Date(Date.now() - 60_000) },
+      });
+      await upsertSocialAccount({
+        organizationId: org.id,
+        provider: "INSTAGRAM",
+        externalId: "ig-1",
+        accessToken: "raw-page-token",
+      });
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      await runPublishCycle();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      const publication = await prisma.contentPublication.findFirstOrThrow({
+        where: { contentJobId: job.id },
+      });
+      expect(publication.status).toBe("RETRYING");
+    });
   });
 
   it("retries (not permanently fails) when no matching social account is connected", async () => {

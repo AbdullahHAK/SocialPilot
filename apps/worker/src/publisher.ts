@@ -2,6 +2,7 @@ import {
   claimContentJobForPublishing,
   claimContentPublicationForPublishing,
   decryptToken,
+  isSubscriptionActive,
   listPublishCandidates,
   markContentPublicationFailed,
   markContentPublicationPublished,
@@ -137,6 +138,14 @@ async function publishOnePlatform(
 ): Promise<void> {
   if (job.organization.status !== "ACTIVE") {
     throw new Error(`Organization is ${job.organization.status.toLowerCase()}`);
+  }
+  // The client's explicit, urgent fix: an account without an active
+  // subscription must not publish under any circumstances. Deliberately
+  // retryable (not permanent), same reasoning as the missing-account case
+  // below - a customer who activates mid-retry-ladder should still have
+  // their already-scheduled post go out rather than need to reschedule it.
+  if (!isSubscriptionActive(job.organization.subscription)) {
+    throw new Error("No active subscription");
   }
 
   const account = job.organization.socialAccounts.find(

@@ -5,13 +5,13 @@ import {
   getBrandProfile,
   getOrganizationStatus,
   getSubscription,
+  isSubscriptionActive,
   listGenerationCandidates,
   listSocialAccounts,
   markContentJobCancelled,
   markContentJobGenerationFailed,
   releaseStuckGeneratingJobs,
   type ContentJob,
-  type SubscriptionStatus,
 } from "@socialpilot/db";
 import {
   generateContentForJob,
@@ -37,31 +37,23 @@ export const STUCK_GENERATION_MINUTES = 15;
 export const STUCK_RECOVERY_MAX_LATE_MINUTES = 60;
 const GENERATION_BATCH_SIZE = 10;
 
-// Billing enforcement isn't actually wired up anywhere else in this
-// product yet (apps/web/app/dashboard/subscription/page.tsx only ever
-// *displays* isSubscriptionActive - nothing gates on it) - confirmed live
-// in production, every real account (including the paying client's) has
-// no Subscription row at all, since they were never run through Stripe
-// checkout. Blocking generation on "no ACTIVE/TRIALING row" therefore
-// cancelled every real customer's scheduled content the first time this
-// shipped. CANCELED is the one unambiguous "this customer is gone"
-// signal the client's spec actually needs guarded against; treat every
-// other state - no row, INCOMPLETE (Stripe checkout never finished),
-// PAST_DUE (a grace period, not a cancellation), TRIALING, ACTIVE - as
-// still eligible, so this stays consistent with how the rest of the app
-// already treats subscription status until real billing enforcement
-// exists. PAUSED is an admin-only manual state added alongside CANCELED -
-// its whole point is stopping generation, unlike the other passive states.
-function isEligibleToGenerate(subscription: { status: SubscriptionStatus } | null): boolean {
-  return subscription?.status !== "CANCELED" && subscription?.status !== "PAUSED";
-}
-
 /** Re-checks everything that could have changed since this job was
- * materialized: the org must not be admin-suspended/blocked, must not have
- * explicitly cancelled or paused its subscription, and its brand/creative
+ * materialized: the org must not be admin-suspended/blocked, must currently
+ * have an active (and unexpired) subscription, and its brand/creative
  * setup must still be complete (a business could delete its logo, or the
  * slot that produced this job could have been removed out from under it in
- * a narrow window between materialize cycles). */
+ * a narrow window between materialize cycles).
+ *
+ * This used to allow every subscription state except CANCELED/PAUSED,
+ * because at the time no real customer had ever been run through Stripe or
+ * the (not-yet-built) manual activation flow - requiring an ACTIVE row
+ * would have cancelled every paying customer's content. That's no longer
+ * true: the admin panel's manual activation and activation-code redemption
+ * now give every real activated customer a proper ACTIVE Subscription row
+ * with a real currentPeriodEnd (confirmed against production data before
+ * this change - every currently-active real account already has one).
+ * The client's explicit, urgent request is that an account without one
+ * must not generate or publish under any circumstances. */
 async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok: false; reason: string }> {
   const [orgStatus, subscription, brandProfile, creativeProfile, socialAccounts] = await Promise.all([
     getOrganizationStatus(job.organizationId),
@@ -74,8 +66,8 @@ async function verifyStillEligible(job: ContentJob): Promise<{ ok: true } | { ok
   if (orgStatus && orgStatus !== "ACTIVE") {
     return { ok: false, reason: `Organization is ${orgStatus.toLowerCase()}` };
   }
-  if (!isEligibleToGenerate(subscription)) {
-    return { ok: false, reason: "Subscription was cancelled" };
+  if (!isSubscriptionActive(subscription)) {
+    return { ok: false, reason: "No active subscription" };
   }
   if (!isBrandSetupComplete(brandProfile, creativeProfile)) {
     return { ok: false, reason: "Brand setup is no longer complete" };

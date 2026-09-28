@@ -6,6 +6,8 @@ import {
   getBrandProfile,
   getCreativeConcept,
   getMonthlyImageUsage,
+  getSubscription,
+  isSubscriptionActive,
   MONTHLY_BRAND_STYLE_CAP,
   MONTHLY_TOTAL_IMAGE_CAP,
 } from "@socialpilot/db";
@@ -40,11 +42,22 @@ const CONCEPT_COUNT = 1;
 /** Checked before every Brand Style generation/regeneration - the client's
  * explicit monthly caps (10 Brand Style revisions, contributing to a 40
  * images/month total per org shared with scheduled content and logo
- * generation). Returns a user-facing error string, or null if still
- * allowed. */
+ * generation), plus the client's explicit, urgent fix that an unpaid
+ * signup could otherwise spend real OpenAI money here indefinitely
+ * (confirmed live - no such check existed at all previously). The
+ * subscription check runs first so a never-activated account gets the
+ * actionable "activate your subscription" message rather than a cap error
+ * it could never resolve by waiting for next month. Returns a user-facing
+ * error string, or null if still allowed. */
 async function checkBrandStyleQuota(organizationId: string): Promise<string | null> {
-  const usage = await getMonthlyImageUsage(organizationId);
   const t = await getTranslations("dashboard.create.errors");
+
+  const subscription = await getSubscription(organizationId);
+  if (!isSubscriptionActive(subscription)) {
+    return t("subscriptionRequired");
+  }
+
+  const usage = await getMonthlyImageUsage(organizationId);
   if (usage.total >= MONTHLY_TOTAL_IMAGE_CAP) {
     return t("totalCapReached", { cap: MONTHLY_TOTAL_IMAGE_CAP });
   }

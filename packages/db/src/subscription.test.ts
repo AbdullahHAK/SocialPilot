@@ -122,4 +122,18 @@ describe("isSubscriptionActive", () => {
     expect(isSubscriptionActive({ status: "INCOMPLETE" })).toBe(false);
     expect(isSubscriptionActive(null)).toBe(false);
   });
+
+  it("treats an ACTIVE status past its currentPeriodEnd as no longer active (nothing else expires it automatically)", () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    expect(isSubscriptionActive({ status: "ACTIVE", currentPeriodEnd: yesterday })).toBe(false);
+  });
+
+  it("treats an ACTIVE status before its currentPeriodEnd as active", () => {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    expect(isSubscriptionActive({ status: "ACTIVE", currentPeriodEnd: tomorrow })).toBe(true);
+  });
+
+  it("treats a missing currentPeriodEnd as no expiry, not as expired", () => {
+    expect(isSubscriptionActive({ status: "ACTIVE", currentPeriodEnd: null })).toBe(true);
+  });
 });

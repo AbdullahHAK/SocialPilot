@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/company";
 import { getSession } from "@/lib/session";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
 import {
@@ -84,6 +85,20 @@ export default async function SubscriptionPage({
               </Button>
             </form>
           </CardContent>
+        </Card>
+      )}
+
+      {/* Stripe checkout isn't fully wired up yet - the client's explicit
+          temporary solution is a manual contact path so a customer isn't
+          stuck with no way forward before it is. */}
+      {!active && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("manualActivationTitle")}</CardTitle>
+            <CardDescription>
+              {t("manualActivationDescription", { phone: CONTACT_PHONE, email: CONTACT_EMAIL })}
+            </CardDescription>
+          </CardHeader>
         </Card>
       )}
 

@@ -30,6 +30,7 @@ export function DashboardShell({
   currentOrgId,
   switchOrgAction,
   logoutAction,
+  banner,
   children,
 }: {
   orgName: string;
@@ -38,6 +39,7 @@ export function DashboardShell({
   currentOrgId: string;
   switchOrgAction: (organizationId: string) => Promise<void>;
   logoutAction: () => void;
+  banner?: ReactNode;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -178,7 +180,10 @@ export function DashboardShell({
         </div>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-8">
-          <div className="mx-auto max-w-5xl">{children}</div>
+          <div className="mx-auto max-w-5xl">
+            {banner}
+            {children}
+          </div>
         </main>
       </div>
     </div>

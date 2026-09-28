@@ -1,4 +1,11 @@
-import { listOrganizationsForUser, prisma } from "@socialpilot/db";
+import {
+  getSubscription,
+  isSubscriptionActive,
+  listOrganizationsForUser,
+  prisma,
+} from "@socialpilot/db";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -43,7 +50,33 @@ export default async function DashboardLayout({
 
   const orgName = organization?.name ?? "YOPAPI";
   const initial = orgName.trim().charAt(0).toUpperCase() || "S";
-  const organizations = await listOrganizationsForUser(session.userId);
+  const [organizations, subscription] = await Promise.all([
+    listOrganizationsForUser(session.userId),
+    getSubscription(session.organizationId),
+  ]);
+
+  // The client's explicit, urgent fix: an account with no active
+  // subscription must not be able to miss that fact - shown on every
+  // dashboard page, not just Subscription, so there's no path through the
+  // app where an unpaid account looks fully functional. The actual
+  // blocking of paid actions (logo/content generation) is enforced
+  // server-side in their own actions - this banner is the visible half of
+  // that same rule, not a substitute for it.
+  let banner: React.ReactNode = null;
+  if (!isSubscriptionActive(subscription)) {
+    const t = await getTranslations("dashboard.subscriptionGate");
+    banner = (
+      <div className="mb-4 flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-2.5">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <p className="font-medium">{t("bannerMessage")}</p>
+        </div>
+        <Button asChild size="sm" variant="destructive" className="shrink-0">
+          <Link href="/dashboard/subscription">{t("activateButton")}</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <DashboardShell
@@ -53,6 +86,7 @@ export default async function DashboardLayout({
       currentOrgId={session.organizationId}
       switchOrgAction={switchOrganizationAction}
       logoutAction={logoutAction}
+      banner={banner}
     >
       {children}
     </DashboardShell>

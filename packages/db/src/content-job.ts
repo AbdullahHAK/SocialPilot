@@ -250,6 +250,10 @@ export type ContentJobWithAccounts = ContentJob & {
   organization: {
     socialAccounts: import("@prisma/client").SocialAccount[];
     status: import("@prisma/client").OrganizationStatus;
+    subscription: {
+      status: import("@prisma/client").SubscriptionStatus;
+      currentPeriodEnd: Date | null;
+    } | null;
     publishingSchedule: {
       publishMode: import("@prisma/client").PublishMode;
       includeCaption: boolean;
@@ -285,6 +289,7 @@ export async function listPublishCandidates(
       organization: {
         include: {
           socialAccounts: true,
+          subscription: { select: { status: true, currentPeriodEnd: true } },
           publishingSchedule: { select: { publishMode: true, includeCaption: true } },
         },
       },

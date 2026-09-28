@@ -5,6 +5,8 @@ import {
   createCreativeConcept,
   getBrandProfile,
   getMonthlyImageUsage,
+  getSubscription,
+  isSubscriptionActive,
   MONTHLY_LOGO_CAP,
   MONTHLY_TOTAL_IMAGE_CAP,
   setBrandColors,
@@ -42,6 +44,17 @@ export async function generateLogoConceptsAction(
   }
   if (prompt.length > 500) {
     return { error: t("descriptionTooLong") };
+  }
+
+  // The client's explicit, urgent fix: an unpaid signup could otherwise
+  // spend real OpenAI money generating logos indefinitely (confirmed
+  // live - no check here at all previously). Checked before the usage
+  // caps below so a never-activated account gets the actionable
+  // "activate your subscription" message rather than a confusing cap
+  // error it could never resolve by waiting for next month.
+  const subscription = await getSubscription(session.organizationId);
+  if (!isSubscriptionActive(subscription)) {
+    return { error: t("subscriptionRequired") };
   }
 
   const usage = await getMonthlyImageUsage(session.organizationId);

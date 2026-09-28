@@ -52,12 +52,27 @@ export async function syncSubscriptionFromStripe(
   });
 }
 
+/** The single source of truth for "does this org currently have paid
+ * access" - used both to gate cost-incurring actions (logo/content
+ * generation, publishing) and to decide what the subscription page shows.
+ * currentPeriodEnd matters because nothing else in this product expires a
+ * subscription automatically: manuallyActivateSubscription and activation
+ * code redemption both set status ACTIVE up front with a real expiry date,
+ * so without this check here, access would silently continue forever past
+ * whatever period the customer actually paid/was activated for. A missing
+ * currentPeriodEnd is treated as "no expiry" rather than "expired" - some
+ * Stripe subscription states don't carry one. */
 export function isSubscriptionActive(
-  subscription: { status: SubscriptionStatus } | null,
+  subscription: { status: SubscriptionStatus; currentPeriodEnd?: Date | null } | null,
 ): boolean {
-  return (
-    subscription?.status === "ACTIVE" || subscription?.status === "TRIALING"
-  );
+  if (!subscription) return false;
+  if (subscription.status !== "ACTIVE" && subscription.status !== "TRIALING") {
+    return false;
+  }
+  if (subscription.currentPeriodEnd && subscription.currentPeriodEnd < new Date()) {
+    return false;
+  }
+  return true;
 }
 
 /** Extends (positive) or reduces (negative) a subscription's expiration by

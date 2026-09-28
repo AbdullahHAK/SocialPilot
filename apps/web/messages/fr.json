@@ -194,6 +194,10 @@
       "description": "Votre compte a été suspendu ou bloqué. Contactez le support si vous pensez qu'il s'agit d'une erreur.",
       "signOut": "Se déconnecter"
     },
+    "subscriptionGate": {
+      "bannerMessage": "Votre compte n'a pas d'abonnement actif, vous ne pouvez donc pas publier de contenu. Veuillez activer votre abonnement pour continuer.",
+      "activateButton": "Activer l'abonnement"
+    },
     "accounts": {
       "title": "Comptes connectés",
       "description": "Connectez votre Page Facebook et son compte Instagram professionnel associé pour commencer à publier.",
@@ -254,6 +258,7 @@
       "title": "D'abord, configurons votre logo",
       "description": "YOPAPI a besoin de votre logo pour garder chaque image fidèle à votre marque. Téléversez votre propre fichier ou générez-en un avec l'IA ci-dessous.",
       "errors": {
+        "subscriptionRequired": "Activez votre abonnement pour générer des images.",
         "totalCapReached": "Vous avez atteint votre limite d'images pour ce mois-ci ({cap}). Elle se réinitialise le mois prochain.",
         "brandStyleCapReached": "Vous avez utilisé vos {cap} révisions de style de marque ce mois-ci. Cela se réinitialise le mois prochain.",
         "describeWhatToCreate": "Décrivez ce que vous voulez créer.",
@@ -329,6 +334,7 @@
       "currentLogoAlt": "Logo actuel",
       "haveDifferentLogo": "Vous voulez le changer ? Téléversez un autre fichier ou générez un nouveau concept IA ci-dessous.",
       "errors": {
+        "subscriptionRequired": "Activez votre abonnement pour générer un logo.",
         "describeLogo": "Décrivez le logo que vous voulez.",
         "descriptionTooLong": "Limitez la description à 500 caractères.",
         "totalCapReached": "Vous avez atteint votre limite d'images pour ce mois-ci ({cap}). Elle se réinitialise le mois prochain.",
@@ -504,7 +510,9 @@
       "redeemCodeTitle": "Vous avez un code d'activation ?",
       "redeemCodeDescription": "Saisissez-le ci-dessous pour activer votre abonnement instantanément - aucun paiement requis.",
       "redeemCode": "Valider",
-      "codeInvalid": "Ce code est invalide, expiré ou déjà utilisé."
+      "codeInvalid": "Ce code est invalide, expiré ou déjà utilisé.",
+      "manualActivationTitle": "Besoin d'activer maintenant ?",
+      "manualActivationDescription": "Pour activer votre abonnement, contactez-nous au {phone} ou à {email}."
     }
   },
   "validation": {

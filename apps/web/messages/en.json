@@ -194,6 +194,10 @@
       "description": "Your account has been suspended or blocked. Contact support if you think this is a mistake.",
       "signOut": "Sign out"
     },
+    "subscriptionGate": {
+      "bannerMessage": "Your account does not have an active subscription, so you cannot publish content. Please activate your subscription to continue.",
+      "activateButton": "Activate Subscription"
+    },
     "accounts": {
       "title": "Connected Accounts",
       "description": "Connect your Facebook Page and its linked Instagram Business account to start publishing.",
@@ -254,6 +258,7 @@
       "title": "First, let's set up your logo",
       "description": "YOPAPI needs your logo to keep every image on-brand. Upload your own file or generate one with AI below.",
       "errors": {
+        "subscriptionRequired": "Activate your subscription to generate images.",
         "totalCapReached": "You've reached this month's image limit ({cap}). It resets next month.",
         "brandStyleCapReached": "You've used all {cap} Brand Style revisions this month. This resets next month.",
         "describeWhatToCreate": "Describe what you want to create.",
@@ -329,6 +334,7 @@
       "currentLogoAlt": "Current logo",
       "haveDifferentLogo": "Want to change it? Upload a different file or generate a new AI concept below.",
       "errors": {
+        "subscriptionRequired": "Activate your subscription to generate a logo.",
         "describeLogo": "Describe the logo you want.",
         "descriptionTooLong": "Keep the description under 500 characters.",
         "totalCapReached": "You've reached this month's image limit ({cap}). It resets next month.",
@@ -504,7 +510,9 @@
       "redeemCodeTitle": "Have an activation code?",
       "redeemCodeDescription": "Enter it below to activate your subscription instantly - no payment needed.",
       "redeemCode": "Redeem",
-      "codeInvalid": "That code is invalid, expired, or already used."
+      "codeInvalid": "That code is invalid, expired, or already used.",
+      "manualActivationTitle": "Need to activate right now?",
+      "manualActivationDescription": "To activate your subscription, contact us at {phone} or {email}."
     }
   },
   "validation": {
