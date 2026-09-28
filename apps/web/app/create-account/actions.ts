@@ -7,6 +7,8 @@ import {
   redeemActivationCode,
   setStripeCustomer,
   signUp,
+  SocialAccountAlreadyConnectedError,
+  SocialAccountLimitError,
   syncSubscriptionFromStripe,
   upsertSocialAccount,
 } from "@socialpilot/db";
@@ -84,19 +86,41 @@ export async function createAccountAction(
     }
   }
 
+  // A stashed Page/Instagram account can turn out to already be connected
+  // to a different organization by the time signup actually commits it -
+  // e.g. the same admin-managed account reused across two customer
+  // signups, or a page picked twice across retries. Confirmed live: this
+  // was thrown uncaught, crashing the whole request with a raw 500 -
+  // since signUp() above already created a real, valid user+organization
+  // (with a working password), that crash didn't undo the signup, it just
+  // orphaned it with no session ever set and no way to see what went
+  // wrong. One page failing to attach must not lose the rest of a
+  // legitimately completed signup - skip it and let the person connect
+  // properly afterward from Connected Accounts (whose own connect flow
+  // already surfaces this same error clearly).
   for (const page of pending.metaPages ?? []) {
-    await upsertSocialAccount({
-      organizationId,
-      provider: page.provider,
-      externalId: page.externalId,
-      displayName: page.displayName,
-      profilePictureUrl: page.profilePictureUrl,
-      accessToken: decryptToken(page.encryptedAccessToken),
-      tokenExpiresAt: page.tokenExpiresAt
-        ? new Date(page.tokenExpiresAt)
-        : undefined,
-      authMethod: page.authMethod,
-    });
+    try {
+      await upsertSocialAccount({
+        organizationId,
+        provider: page.provider,
+        externalId: page.externalId,
+        displayName: page.displayName,
+        profilePictureUrl: page.profilePictureUrl,
+        accessToken: decryptToken(page.encryptedAccessToken),
+        tokenExpiresAt: page.tokenExpiresAt
+          ? new Date(page.tokenExpiresAt)
+          : undefined,
+        authMethod: page.authMethod,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof SocialAccountAlreadyConnectedError) &&
+        !(error instanceof SocialAccountLimitError)
+      ) {
+        throw error;
+      }
+      console.error(`Signup: couldn't attach a pending ${page.provider} account`, error);
+    }
   }
 
   // Optional - the account already exists at this point regardless of
