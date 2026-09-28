@@ -5,7 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
+// Shared with the mobile bottom tab bar (admin-shell.tsx) - a single list
+// of destinations so the drawer's nav and the tab bar can never drift out
+// of sync as sections get added.
+export const ADMIN_NAV_LINKS = [
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/codes", label: "Activation Codes", icon: Ticket },
 ];
@@ -15,7 +18,7 @@ export function AdminNav() {
 
   return (
     <nav className="flex flex-1 flex-col gap-0.5 p-3">
-      {LINKS.map(({ href, label, icon: Icon }) => {
+      {ADMIN_NAV_LINKS.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (
           <Link

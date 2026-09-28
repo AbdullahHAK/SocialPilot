@@ -1,8 +1,11 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { AdminNav } from "./admin-nav";
+import { cn } from "@/lib/utils";
+import { ADMIN_NAV_LINKS, AdminNav } from "./admin-nav";
 
 export function AdminShell({
   email,
@@ -16,6 +19,7 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -65,10 +69,35 @@ export function AdminShell({
             <Menu className="size-5" />
           </button>
         </div>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto p-4 pb-20 sm:p-6 lg:pb-6">
           <div className="mx-auto max-w-5xl">{children}</div>
         </main>
       </div>
+
+      {/* The drawer above covers every case (nav + account + sign out), but
+          with only two destinations, forcing a tap-to-open-drawer-then-tap
+          just to switch sections is unnecessarily heavy on a phone -
+          confirmed felt clunky for the client. A persistent bottom tab bar
+          (the standard, thumb-reachable mobile pattern) makes switching
+          between them a single tap, with no overlay to dismiss first. */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background lg:hidden">
+        {ADMIN_NAV_LINKS.map(({ href, label, icon: Icon }) => {
+          const active = pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Icon className="size-5" />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
