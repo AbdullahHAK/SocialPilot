@@ -1,7 +1,7 @@
 export const COMPANY_LEGAL_NAME = "YH DIGITAL LLC";
 export const CONTACT_EMAIL = "contact@yopapi.com";
 export const SITE_ORIGIN = "https://yopapi.com";
-// TODO: placeholder - replace with the real support/activation number
-// before this is relied on by real customers (shown on the Subscribe
-// page's manual-activation card).
-export const CONTACT_PHONE = "+1 (000) 000-0000";
+// Shown on the Subscribe page's manual-activation card - the person to
+// contact for manual subscription activation while Stripe checkout isn't
+// fully wired up yet.
+export const CONTACT_PHONE = "+212 609 362 838";
