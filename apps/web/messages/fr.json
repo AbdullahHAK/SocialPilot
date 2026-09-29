@@ -54,6 +54,7 @@
     "title": "Connectez vos comptes",
     "description": "Reliez votre Page Facebook et son compte Instagram professionnel via la connexion officielle de Meta. Nous ne voyons ni ne demandons jamais votre mot de passe.",
     "continue": "Continuer",
+    "skipForNow": "Passer pour l'instant - je me connecterai plus tard",
     "choosePage": {
       "title": "De quelle Page s'agit-il ?",
       "description": "Vous gérez {count, plural, one {# Page Facebook} other {# Pages Facebook}}. Choisissez celle de cette entreprise — vous pourrez connecter les autres plus tard depuis Comptes connectés."

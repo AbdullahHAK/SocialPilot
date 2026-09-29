@@ -54,6 +54,7 @@
     "title": "Connect your accounts",
     "description": "Link your Facebook Page and its Instagram Business account through Meta's official login. We never see or ask for your password.",
     "continue": "Continue",
+    "skipForNow": "Skip for now - I'll connect later",
     "choosePage": {
       "title": "Which Page is this?",
       "description": "You manage {count, plural, one {# Facebook Page} other {# Facebook Pages}}. Pick the one for this business — you can connect the others later from Connected Accounts."

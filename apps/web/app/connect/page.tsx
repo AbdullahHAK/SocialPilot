@@ -77,13 +77,25 @@ export default async function ConnectPage({
               </Button>
             </>
           ) : (
-            <ConnectMetaDialog
-              trigger={
-                <Button size="lg" className="w-full">
-                  {tAccounts("connect")}
-                </Button>
-              }
-            />
+            <>
+              <ConnectMetaDialog
+                trigger={
+                  <Button size="lg" className="w-full">
+                    {tAccounts("connect")}
+                  </Button>
+                }
+              />
+              {/* The client's explicit request: connecting a Page/Instagram
+                  account is the one thing that can't always happen right at
+                  signup (e.g. an agency creating the account before the
+                  customer has granted Page access yet) - create-account and
+                  everything after it already work fine with zero connected
+                  accounts (Connected Accounts has its own connect flow), so
+                  this was purely a UI dead end, not a real requirement. */}
+              <Button asChild variant="ghost" size="lg" className="w-full">
+                <Link href="/create-account">{t("skipForNow")}</Link>
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
