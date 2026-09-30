@@ -179,11 +179,17 @@ export function PostHoverCard({
   post,
   editAction,
   deleteAction,
+  timezone,
   children,
 }: {
   post: CalendarPost;
   editAction: (formData: FormData) => Promise<EditContentJobResult>;
   deleteAction: (formData: FormData) => void | Promise<void>;
+  /** The org's own configured Publishing Schedule timezone - both the
+   * scheduled time shown here and EditPostDialog need this rather than
+   * the browser's own OS/locale timezone (which can legitimately differ
+   * from the org's configured one). */
+  timezone: string;
   children: ReactNode;
 }) {
   const t = useTranslations("dashboard.postHoverCard");
@@ -230,6 +236,7 @@ export function PostHoverCard({
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: timezone,
   }).format(new Date(post.scheduledFor));
 
   function handleDeleteClick() {
@@ -301,6 +308,7 @@ export function PostHoverCard({
             status={post.status}
             platform={post.platform}
             action={editAction}
+            timezone={timezone}
             trigger={
               <Button variant="outline" size="sm" className="gap-1.5">
                 <Pencil className="size-3.5" />

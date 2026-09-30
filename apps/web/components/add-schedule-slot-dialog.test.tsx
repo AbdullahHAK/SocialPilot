@@ -1,9 +1,15 @@
+import { getZonedDateParts } from "@socialpilot/db/timezone";
 import { fireEvent, render, screen, waitFor } from "@/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dateKey, formatMonthParam, getMonthLabels } from "@/lib/calendar";
 import { AddScheduleSlotDialog } from "./add-schedule-slot-dialog";
 
 const MONTH_LABELS = getMonthLabels("en");
+// A fixed, deterministic zone (not whatever the test machine happens to be
+// in) - the org's own configured timezone, distinct from the environment's
+// default so these tests actually catch a regression back to reading the
+// browser/environment zone instead of this prop.
+const TIMEZONE = "America/New_York";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -27,7 +33,7 @@ const BOTH_CONNECTED = ["INSTAGRAM", "FACEBOOK"] as const;
 describe("AddScheduleSlotDialog - weekly mode", () => {
   it("requires at least one day before submitting", () => {
     render(
-      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -39,7 +45,7 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
   it("submits the chosen day, default time (6:00 PM -> 18:00), and platform", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
     render(
-      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -59,7 +65,7 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
   it("allows selecting both platforms at once", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
     render(
-      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -75,7 +81,7 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
 
   it("requires at least one platform", async () => {
     render(
-      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -86,10 +92,10 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
     expect(screen.getByText(/pick at least one platform/i)).toBeVisible();
   });
 
-  it("includes the browser's own timezone so the time isn't misread as UTC", async () => {
+  it("submits the org's configured timezone, not the browser's own (an agency managing an account from elsewhere must not silently override it)", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
     render(
-      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -98,13 +104,13 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     const formData = action.mock.calls[0][0] as FormData;
-    expect(formData.get("timezone")).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    expect(formData.get("timezone")).toBe(TIMEZONE);
   });
 
   it("allows selecting multiple days for one time", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
     render(
-      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={action} onceAction={noopOnce()} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -119,7 +125,7 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
 
   it("disables a platform that has no connected account", () => {
     render(
-      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={["FACEBOOK"]} />,
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={["FACEBOOK"]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -128,7 +134,7 @@ describe("AddScheduleSlotDialog - weekly mode", () => {
   });
 
   it("disables Save and shows a warning when no account is connected at all", () => {
-    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[]} />);
+    render(<AddScheduleSlotDialog action={vi.fn()} onceAction={noopOnce()} connectedPlatforms={[]} timezone={TIMEZONE} />);
     openDialog();
 
     expect(screen.getByRole("button", { name: /instagram/i })).toBeDisabled();
@@ -142,7 +148,7 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
   it("submits today's date by default and redirects to the calendar", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: true });
     render(
-      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -151,31 +157,34 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
 
     await waitFor(() => expect(onceAction).toHaveBeenCalledTimes(1));
     const formData = onceAction.mock.calls[0][0] as FormData;
-    const today = new Date();
+    // "Today" as the configured timezone reads it, not literally UTC or
+    // whatever zone the test machine happens to run in - matches exactly
+    // what the component itself now computes.
+    const todayInTz = getZonedDateParts(new Date(), TIMEZONE);
     const expectedKey = dateKey(
-      new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())),
+      new Date(Date.UTC(todayInTz.year, todayInTz.month - 1, todayInTz.day)),
     );
     expect(formData.get("date")).toBe(expectedKey);
     expect(formData.get("time")).toBe("18:00");
     expect(formData.getAll("platform")).toEqual(["INSTAGRAM"]);
 
     expect(push).toHaveBeenCalledWith(
-      `/dashboard/calendar?month=${formatMonthParam(today.getUTCFullYear(), today.getUTCMonth())}`,
+      `/dashboard/calendar?month=${formatMonthParam(todayInTz.year, todayInTz.month - 1)}`,
     );
   });
 
   it("lets you pick a date from next month via the mini calendar", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: true });
     render(
-      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
     fireEvent.click(screen.getByRole("button", { name: /one-time date/i }));
     fireEvent.click(screen.getByRole("button", { name: /next month/i }));
 
-    const today = new Date();
-    const nextMonthDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 10));
+    const todayInTz = getZonedDateParts(new Date(), TIMEZONE);
+    const nextMonthDate = new Date(Date.UTC(todayInTz.year, todayInTz.month - 1 + 1, 10));
     const nextMonthLabel = `${MONTH_LABELS[nextMonthDate.getUTCMonth()]} ${nextMonthDate.getUTCFullYear()}`;
     expect(screen.getByText(nextMonthLabel)).toBeVisible();
 
@@ -192,7 +201,7 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
   it("shows a message and keeps the dialog open when the brand isn't ready", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: false, reason: "not_ready" });
     render(
-      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 
@@ -209,7 +218,7 @@ describe("AddScheduleSlotDialog - one-time mode", () => {
   it("shows a message when the picked platform's account got disconnected", async () => {
     const onceAction = vi.fn().mockResolvedValue({ ok: false, reason: "not_connected" });
     render(
-      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} />,
+      <AddScheduleSlotDialog action={vi.fn()} onceAction={onceAction} connectedPlatforms={[...BOTH_CONNECTED]} timezone={TIMEZONE} />,
     );
     openDialog();
 

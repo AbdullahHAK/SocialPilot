@@ -179,6 +179,7 @@ export default async function CalendarPage({
                       post={post}
                       editAction={editContentJobAction}
                       deleteAction={deleteContentJobPlatformAction}
+                      timezone={schedule.timezone}
                     >
                       <button
                         type="button"
@@ -237,6 +238,7 @@ export default async function CalendarPage({
                       post={post}
                       editAction={editContentJobAction}
                       deleteAction={deleteContentJobPlatformAction}
+                      timezone={schedule.timezone}
                     >
                       <button
                         type="button"

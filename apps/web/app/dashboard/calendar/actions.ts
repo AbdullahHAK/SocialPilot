@@ -171,8 +171,14 @@ export async function editContentJobAction(
     return { ok: false };
   }
 
-  const timezone = parseTimezone(formData.get("timezone"));
-  await ensurePublishingScheduleTimezone(session.organizationId, timezone);
+  // See the matching comment in dashboard/schedule/actions.ts - the
+  // submitted value is only ever a first-time auto-detect fallback, never
+  // the source of truth for an actual conversion. Rescheduling a post
+  // must land on the org's real configured timezone, not whatever this
+  // particular browser happens to report.
+  const submittedTimezone = parseTimezone(formData.get("timezone"));
+  const schedule = await ensurePublishingScheduleTimezone(session.organizationId, submittedTimezone);
+  const timezone = schedule.timezone;
 
   const [year, month, day] = parsed.data.date.split("-").map(Number);
   const [hour, minute] = parsed.data.time.split(":").map(Number);

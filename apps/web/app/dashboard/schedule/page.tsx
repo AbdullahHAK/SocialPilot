@@ -102,6 +102,7 @@ export default async function SchedulePage() {
           action={addScheduleSlotAction}
           onceAction={addOneTimePostAction}
           connectedPlatforms={connectedPlatforms}
+          timezone={schedule.timezone}
         />
       </div>
 

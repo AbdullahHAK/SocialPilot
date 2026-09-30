@@ -129,8 +129,20 @@ export async function addOneTimePostAction(
     return { ok: false, reason: "not_ready" };
   }
 
-  const timezone = parseTimezone(formData.get("timezone"));
-  await ensurePublishingScheduleTimezone(session.organizationId, timezone);
+  // The submitted value only ever matters for auto-detecting an org's
+  // timezone the very first time anyone touches its schedule (see
+  // ensurePublishingScheduleTimezone) - the actual conversion below must
+  // use whatever the org's timezone actually resolves to, not blindly
+  // trust this specific request's value. Confirmed live as a real bug:
+  // once an org's timezone was explicitly set (e.g. via the Publishing
+  // Schedule page's Time Zone card) to something other than this
+  // browser's own detected zone - an agency managing a customer's
+  // account from elsewhere is exactly this case - a one-time post kept
+  // silently converting using the *browser's* zone instead, publishing
+  // at the wrong wall-clock time with no indication anything was wrong.
+  const submittedTimezone = parseTimezone(formData.get("timezone"));
+  const schedule = await ensurePublishingScheduleTimezone(session.organizationId, submittedTimezone);
+  const timezone = schedule.timezone;
 
   const connectedPlatforms = await getConnectedPlatforms(session.organizationId);
 

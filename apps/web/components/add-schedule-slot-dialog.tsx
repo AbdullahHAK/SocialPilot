@@ -1,6 +1,10 @@
 "use client";
 
 import type { DayOfWeek, Platform } from "@socialpilot/db";
+// The "./timezone" subpath (not the main @socialpilot/db barrel) keeps
+// this client component's bundle free of server-only Node built-ins that
+// other parts of @socialpilot/db pull in (crypto, bcrypt).
+import { getZonedDateParts } from "@socialpilot/db/timezone";
 import { Loader2, Plus } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -35,9 +39,17 @@ const DAY_VALUES: DayOfWeek[] = [
 
 type Mode = "weekly" | "once";
 
-function todayUTC(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+/** "Today" as a UTC-labeled, calendar-only Date (matching MiniDatePicker/
+ * dateKey's convention elsewhere) - as it reads in the org's own
+ * configured timezone, not literally UTC or the browser's own zone.
+ * Getting this wrong is exactly what made "today" silently mean the
+ * wrong calendar day for an org whose configured timezone differs from
+ * the browser it's being managed from (confirmed live: an agency
+ * managing a customer's account from elsewhere saw a post meant for
+ * "now" land on the wrong day). */
+function todayInTimezone(timezone: string): Date {
+  const { year, month, day } = getZonedDateParts(new Date(), timezone);
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 /** Instagram, if it's connected, same as the previous hardcoded default -
@@ -53,6 +65,7 @@ export function AddScheduleSlotDialog({
   action,
   onceAction,
   connectedPlatforms,
+  timezone,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   onceAction: (formData: FormData) => Promise<OneTimePostResult>;
@@ -60,6 +73,12 @@ export function AddScheduleSlotDialog({
    * can't be picked, since scheduling a post for a disconnected account
    * would just sit there and eventually fail. */
   connectedPlatforms: Platform[];
+  /** The org's own configured Publishing Schedule timezone - the single
+   * source of truth for "what does 6:00 PM mean" and "what day is today"
+   * in this dialog, not the browser's own OS/locale timezone (which can
+   * legitimately differ, e.g. an agency managing a customer's account
+   * from elsewhere). */
+  timezone: string;
 }) {
   const t = useTranslations("dashboard.addSlotDialog");
   const tDays = useTranslations("days");
@@ -69,7 +88,7 @@ export function AddScheduleSlotDialog({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("weekly");
   const [days, setDays] = useState<Set<DayOfWeek>>(new Set());
-  const [date, setDate] = useState<Date>(todayUTC);
+  const [date, setDate] = useState<Date>(() => todayInTimezone(timezone));
   const [hour12, setHour12] = useState(6);
   const [minute, setMinute] = useState(0);
   const [meridiem, setMeridiem] = useState<Meridiem>("PM");
@@ -98,7 +117,7 @@ export function AddScheduleSlotDialog({
   function reset() {
     setMode("weekly");
     setDays(new Set());
-    setDate(todayUTC());
+    setDate(todayInTimezone(timezone));
     setHour12(6);
     setMinute(0);
     setMeridiem("PM");
@@ -118,10 +137,6 @@ export function AddScheduleSlotDialog({
     setError(null);
 
     const time = to24Hour({ hour12, minute, meridiem });
-    // Read fresh at submit time rather than caching in state - this is
-    // what makes a picked "10:55 AM" mean 10:55 where the person actually
-    // is, instead of literally 10:55 UTC.
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     if (mode === "weekly") {
       const formData = new FormData();

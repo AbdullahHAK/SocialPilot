@@ -7,6 +7,12 @@ function openDialog() {
   fireEvent.click(screen.getByRole("button", { name: /^edit$/i }));
 }
 
+// A fixed, deterministic zone (not whatever the test machine happens to be
+// in) - the org's own configured timezone, distinct from the environment's
+// default so these tests actually catch a regression back to reading the
+// browser/environment zone instead of this prop.
+const TIMEZONE = "America/New_York";
+
 const defaultProps = {
   jobId: "job-1",
   instruction: "Promote our weekend chicken burger offer",
@@ -14,10 +20,11 @@ const defaultProps = {
   status: "SCHEDULED" as const,
   platform: "INSTAGRAM" as const,
   trigger: <button>Edit</button>,
+  timezone: TIMEZONE,
 };
 
 describe("EditPostDialog - not yet published", () => {
-  it("pre-fills the instruction and the scheduled time in the browser's local time", () => {
+  it("pre-fills the instruction and the scheduled time in the org's configured timezone", () => {
     render(<EditPostDialog {...defaultProps} action={vi.fn().mockResolvedValue({ ok: true })} />);
     openDialog();
 
@@ -39,7 +46,7 @@ describe("EditPostDialog - not yet published", () => {
     const formData = action.mock.calls[0][0] as FormData;
     expect(formData.get("jobId")).toBe("job-1");
     expect(formData.get("instruction")).toBe("Announce our new spicy wrap");
-    expect(formData.get("timezone")).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    expect(formData.get("timezone")).toBe(TIMEZONE);
 
     // Reconstruct the instant from the submitted date+time+timezone and
     // confirm it's unchanged from what was passed in, since only the

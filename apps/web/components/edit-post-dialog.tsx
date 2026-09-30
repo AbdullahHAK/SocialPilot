@@ -25,8 +25,7 @@ import { from24Hour, to24Hour, type Meridiem } from "@/lib/time-of-day";
 import { getZonedDateParts } from "@socialpilot/db/timezone";
 import type { EditContentJobResult } from "@/app/dashboard/calendar/actions";
 
-function initialStateFor(scheduledForIso: string) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+function initialStateFor(scheduledForIso: string, timezone: string) {
   const zoned = getZonedDateParts(new Date(scheduledForIso), timezone);
   const { hour12, minute, meridiem } = from24Hour(
     `${String(zoned.hour).padStart(2, "0")}:${String(zoned.minute).padStart(2, "0")}`,
@@ -47,6 +46,7 @@ export function EditPostDialog({
   platform,
   action,
   trigger,
+  timezone,
 }: {
   jobId: string;
   /** Pre-fill for the instruction textarea - the job's own
@@ -58,6 +58,11 @@ export function EditPostDialog({
   platform: "INSTAGRAM" | "FACEBOOK";
   action: (formData: FormData) => Promise<EditContentJobResult>;
   trigger: ReactNode;
+  /** The org's own configured Publishing Schedule timezone - both for
+   * showing the existing scheduled time correctly and for interpreting
+   * any edit to it, rather than the browser's own OS/locale timezone
+   * (which can legitimately differ from the org's configured one). */
+  timezone: string;
 }) {
   // A job that's already publishing/published/cancelled can't be
   // rescheduled - only its caption is still meaningfully editable, mirrors
@@ -68,14 +73,14 @@ export function EditPostDialog({
   const monthLabels = getMonthLabels(locale);
   const [open, setOpen] = useState(false);
   const [instructionText, setInstructionText] = useState(instruction);
-  const [state, setState] = useState(() => initialStateFor(scheduledForIso));
+  const [state, setState] = useState(() => initialStateFor(scheduledForIso, timezone));
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function reset() {
     setInstructionText(instruction);
-    setState(initialStateFor(scheduledForIso));
+    setState(initialStateFor(scheduledForIso, timezone));
     setError(null);
     setNote(null);
   }
@@ -92,7 +97,7 @@ export function EditPostDialog({
         "time",
         to24Hour({ hour12: state.hour12, minute: state.minute, meridiem: state.meridiem }),
       );
-      formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+      formData.set("timezone", timezone);
     }
 
     startTransition(async () => {
