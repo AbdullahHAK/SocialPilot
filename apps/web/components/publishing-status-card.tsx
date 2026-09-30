@@ -5,10 +5,30 @@ import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRelativeTime } from "@/lib/relative-time";
 
+type ContentJobStatus =
+  | "PENDING"
+  | "GENERATING"
+  | "READY"
+  | "PUBLISHING"
+  | "PUBLISHED"
+  | "FAILED"
+  | "RETRYING"
+  | "CANCELLED";
+
 export interface PublishingStatusCardProps {
   lastPublished: { platform: "INSTAGRAM" | "FACEBOOK"; publishedAt: Date | null } | null;
-  nextScheduled: { platform: "INSTAGRAM" | "FACEBOOK"; scheduledFor: Date | null } | null;
+  nextScheduled: {
+    platform: "INSTAGRAM" | "FACEBOOK";
+    scheduledFor: Date | null;
+    status: ContentJobStatus;
+  } | null;
 }
+
+// A job already being generated/published is still "next" even though its
+// scheduledFor instant has technically passed - see the matching comment
+// on getNextScheduledContentJob for why this must not fall through to
+// describing the *following* day's post instead.
+const ACTIVE_STATUSES: ContentJobStatus[] = ["GENERATING", "READY", "PUBLISHING"];
 
 export async function PublishingStatusCard({
   lastPublished,
@@ -62,7 +82,9 @@ export async function PublishingStatusCard({
                 ) : (
                   <FacebookIcon className="size-3.5 shrink-0" />
                 )}
-                {formatRelativeTime(nextScheduled.scheduledFor, locale, justNow, inAMoment)}
+                {ACTIVE_STATUSES.includes(nextScheduled.status)
+                  ? t("publishingNow")
+                  : formatRelativeTime(nextScheduled.scheduledFor, locale, justNow, inAMoment)}
               </p>
             ) : (
               <p className="text-sm font-medium text-muted-foreground">

@@ -519,7 +519,8 @@
       "nothingScheduled": "Rien de programmé —",
       "addPostingTime": "ajouter un horaire de publication",
       "justNow": "à l'instant",
-      "inAMoment": "dans un instant"
+      "inAMoment": "dans un instant",
+      "publishingNow": "publication en cours"
     },
     "brand": {
       "savedTakesEffectTomorrow": "Enregistré. L'image de contenu du jour a déjà été générée, ce changement prendra donc effet à partir de demain.",

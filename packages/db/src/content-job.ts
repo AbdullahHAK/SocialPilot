@@ -649,20 +649,37 @@ export async function getLastPublishedContentJob(
 /** The soonest still-upcoming job, for a "next post" status display -
  * mirrors content-post.ts's getNextScheduledPost shape. Reports the job's
  * first platform (a job can target more than one; the status card only
- * shows one icon, same as it always has for a single-platform post). */
+ * shows one icon, same as it always has for a single-platform post) and
+ * its status, so the caller can show "Publishing now" instead of a
+ * relative time for a job actively being handled right at its scheduled
+ * instant.
+ *
+ * A job whose scheduledFor has technically already passed by a few
+ * seconds/minutes - while the worker is busy generating or publishing it -
+ * must still count as "next", not be skipped in favor of tomorrow's:
+ * confirmed live as a real client-facing confusion (not a scheduling bug -
+ * the underlying scheduled times were correct) where the status card
+ * jumped straight from "nothing next" to describing the *following* day's
+ * post the instant today's post entered its publishing window, making a
+ * correctly-on-time post look like a 23+ hour scheduling gap. */
 export async function getNextScheduledContentJob(
   organizationId: string,
   now: Date = new Date(),
-): Promise<{ platform: Platform; scheduledFor: Date | null } | null> {
+): Promise<{ platform: Platform; scheduledFor: Date | null; status: ContentJobStatus } | null> {
   const job = await prisma.contentJob.findFirst({
     where: {
       organizationId,
-      scheduledFor: { gt: now },
       status: { notIn: ["CANCELLED"] },
+      OR: [
+        { scheduledFor: { gt: now } },
+        { status: { in: ["GENERATING", "READY", "PUBLISHING"] } },
+      ],
     },
     orderBy: { scheduledFor: "asc" },
   });
-  return job ? { platform: job.platforms[0]!, scheduledFor: job.scheduledFor } : null;
+  return job
+    ? { platform: job.platforms[0]!, scheduledFor: job.scheduledFor, status: job.status }
+    : null;
 }
 
 // --- Daily post/Story image expiry ---

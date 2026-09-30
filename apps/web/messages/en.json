@@ -519,7 +519,8 @@
       "nothingScheduled": "Nothing scheduled —",
       "addPostingTime": "add a posting time",
       "justNow": "just now",
-      "inAMoment": "in a moment"
+      "inAMoment": "in a moment",
+      "publishingNow": "publishing now"
     },
     "brand": {
       "savedTakesEffectTomorrow": "Saved. Today's content image was already generated, so this change takes effect starting tomorrow.",

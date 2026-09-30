@@ -519,7 +519,8 @@
       "nothingScheduled": "لا يوجد شيء مجدول —",
       "addPostingTime": "أضف موعد نشر",
       "justNow": "الآن",
-      "inAMoment": "بعد لحظات"
+      "inAMoment": "بعد لحظات",
+      "publishingNow": "يُنشر الآن"
     },
     "brand": {
       "savedTakesEffectTomorrow": "تم الحفظ. تم بالفعل إنشاء صورة محتوى اليوم، لذا سيبدأ سريان هذا التغيير اعتبارًا من الغد.",

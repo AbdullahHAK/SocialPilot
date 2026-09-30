@@ -596,4 +596,27 @@ describe("calendar/schedule UI helpers", () => {
     const next = await getNextScheduledContentJob(org.id);
     expect(next?.platform).toBe("FACEBOOK");
   });
+
+  it("getNextScheduledContentJob still reports a job whose scheduledFor just passed while it's actively being generated/published, instead of skipping to a later one (client-facing regression: made an on-time post look like a 23+ hour scheduling gap)", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const active = await materializeContentJob({
+      organizationId: org.id,
+      scheduledFor: new Date(Date.now() - 60_000),
+      platforms: ["INSTAGRAM"],
+      origin: "ONE_TIME",
+    });
+    await prisma.contentJob.update({ where: { id: active.id }, data: { status: "PUBLISHING" } });
+    // A day-later job exists too - it must not be reported as "next"
+    // ahead of the one actively publishing right now.
+    await materializeContentJob({
+      organizationId: org.id,
+      scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      platforms: ["FACEBOOK"],
+      origin: "ONE_TIME",
+    });
+
+    const next = await getNextScheduledContentJob(org.id);
+    expect(next?.platform).toBe("INSTAGRAM");
+    expect(next?.status).toBe("PUBLISHING");
+  });
 });
