@@ -79,7 +79,8 @@
       "payment_incomplete": "Your payment didn't complete. Please try again.",
       "missing_session": "That checkout link has expired. Please choose a plan again.",
       "unknown_plan": "We couldn't match your purchase to a plan. Please try again.",
-      "missing_customer": "Something went wrong confirming your payment. Please try again."
+      "missing_customer": "Something went wrong confirming your payment. Please try again.",
+      "checkout_session_failed": "Something went wrong starting checkout. Please try again in a moment."
     }
   },
   "plans": {

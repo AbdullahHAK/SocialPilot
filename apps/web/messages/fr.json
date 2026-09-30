@@ -79,7 +79,8 @@
       "payment_incomplete": "Votre paiement n'a pas abouti. Veuillez réessayer.",
       "missing_session": "Ce lien de paiement a expiré. Veuillez choisir une offre à nouveau.",
       "unknown_plan": "Nous n'avons pas pu associer votre achat à une offre. Veuillez réessayer.",
-      "missing_customer": "Une erreur s'est produite lors de la confirmation de votre paiement. Veuillez réessayer."
+      "missing_customer": "Une erreur s'est produite lors de la confirmation de votre paiement. Veuillez réessayer.",
+      "checkout_session_failed": "Une erreur s'est produite au démarrage du paiement. Veuillez réessayer dans un instant."
     }
   },
   "plans": {

@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import type Stripe from "stripe";
 import { setPendingSignupCookie } from "@/lib/pending-signup";
 import { getStripeClient, isStripeConfigured, STRIPE_PRICE_IDS } from "@/lib/stripe";
 
@@ -34,15 +35,28 @@ export async function startPendingCheckoutAction(formData: FormData) {
   const priceId = STRIPE_PRICE_IDS[plan]();
   const baseUrl = await getBaseUrl();
 
-  const checkoutSession = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${baseUrl}/api/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/pricing?checkout=cancelled`,
-  });
+  let checkoutSession: Stripe.Checkout.Session;
+  try {
+    checkoutSession = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${baseUrl}/api/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/pricing?checkout=cancelled`,
+    });
+  } catch (error) {
+    // A Stripe-side account misconfiguration (e.g. no payment methods
+    // activated yet for the account/currency) or a transient API error
+    // must not crash the request with a raw 500 - confirmed live the
+    // moment real billing first went live. Distinguished from the
+    // redirect() below, which Next.js implements by throwing - only a
+    // genuine Stripe error should land here.
+    console.error("Starting Stripe checkout failed", error);
+    redirect("/pricing?error=checkout_session_failed");
+  }
 
   if (!checkoutSession.url) {
-    throw new Error("Stripe did not return a checkout URL");
+    console.error("Stripe did not return a checkout URL", checkoutSession.id);
+    redirect("/pricing?error=checkout_session_failed");
   }
   redirect(checkoutSession.url);
 }
