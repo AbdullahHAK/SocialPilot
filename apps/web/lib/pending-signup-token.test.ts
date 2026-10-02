@@ -44,6 +44,26 @@ describe("pending signup token", () => {
     });
   });
 
+  it("round-trips an activation-code signup with no plan chosen", async () => {
+    const token = await createPendingSignupToken({ activationCode: "YOPA-ABCD-1234" });
+    const payload = await verifyPendingSignupToken(token);
+    expect(payload).toEqual({
+      plan: undefined,
+      stripeCustomerId: undefined,
+      stripeSubscriptionId: undefined,
+      metaPages: undefined,
+      activationCode: "YOPA-ABCD-1234",
+    });
+  });
+
+  it("rejects a token with an invalid (but present) plan value", async () => {
+    const token = await createPendingSignupToken({
+      // @ts-expect-error - deliberately invalid for this test
+      plan: "NOT_A_PLAN",
+    });
+    expect(await verifyPendingSignupToken(token)).toBeNull();
+  });
+
   it("rejects a tampered token", async () => {
     const token = await createPendingSignupToken({ plan: "MONTHLY" });
     const tampered = token.slice(0, -2) + "xx";

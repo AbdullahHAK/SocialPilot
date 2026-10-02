@@ -1,5 +1,6 @@
 "use server";
 
+import { isActivationCodeRedeemable } from "@socialpilot/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
@@ -59,4 +60,24 @@ export async function startPendingCheckoutAction(formData: FormData) {
     redirect("/pricing?error=checkout_session_failed");
   }
   redirect(checkoutSession.url);
+}
+
+/** The code half of "pay by card or enter a code, right here on the pricing
+ * page" - no account exists yet, so this only previews the code (read-only,
+ * doesn't claim it) before stashing it in the pending-signup cookie. The
+ * actual redemption happens in createAccountAction once an organization
+ * exists to redeem it against. */
+export async function startCodeSignupAction(formData: FormData) {
+  const raw = formData.get("activationCode");
+  const code = typeof raw === "string" ? raw.trim().toUpperCase() : "";
+  if (!code) {
+    redirect("/pricing?error=code_required");
+  }
+
+  if (!(await isActivationCodeRedeemable(code))) {
+    redirect("/pricing?error=invalid_code");
+  }
+
+  await setPendingSignupCookie({ activationCode: code });
+  redirect("/create-account");
 }

@@ -48,7 +48,11 @@ export default async function CreateAccountPage() {
         </div>
       }
     >
-      <AuthForm mode="signup" action={createAccountAction} />
+      <AuthForm
+        mode="signup"
+        action={createAccountAction}
+        defaultActivationCode={pending.activationCode}
+      />
     </AuthShell>
   );
 }

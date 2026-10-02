@@ -77,7 +77,7 @@ export async function createAccountAction(
       await syncSubscriptionFromStripe({
         stripeCustomerId: pending.stripeCustomerId,
         stripeSubscriptionId: subscription.id,
-        plan: pending.plan,
+        plan: pending.plan ?? null,
         status: mapStripeStatusToSubscriptionStatus(subscription.status),
         currentPeriodEnd: item?.current_period_end
           ? new Date(item.current_period_end * 1000)
@@ -123,21 +123,35 @@ export async function createAccountAction(
     }
   }
 
-  // Optional - the account already exists at this point regardless of
-  // whether the code turns out to be valid, so an invalid/typo'd code
-  // doesn't block signup; it can still be redeemed correctly later from
-  // /dashboard/subscription.
-  const activationCode = formData.get("activationCode");
-  if (typeof activationCode === "string" && activationCode.trim()) {
+  // The account already exists at this point regardless of whether the code
+  // turns out to be valid, so an invalid/typo'd code doesn't block signup -
+  // it can still be redeemed correctly later from /dashboard/subscription.
+  // The one case that does need to surface clearly: a code the customer
+  // chose on /pricing (already confirmed real and UNUSED there, read-only)
+  // failing to redeem here means a genuine race - someone else claimed it
+  // in the few minutes since - not a typo, so silently moving on would land
+  // them on /onboarding thinking they paid/activated when they didn't.
+  const activationCodeRaw = formData.get("activationCode");
+  const activationCode =
+    typeof activationCodeRaw === "string" ? activationCodeRaw.trim().toUpperCase() : "";
+  let preValidatedCodeFailed = false;
+  if (activationCode) {
     try {
-      await redeemActivationCode(activationCode.trim().toUpperCase(), organizationId);
+      await redeemActivationCode(activationCode, organizationId);
     } catch (error) {
       if (!(error instanceof ActivationCodeInvalidError)) throw error;
+      if (activationCode === pending.activationCode?.trim().toUpperCase()) {
+        preValidatedCodeFailed = true;
+      }
     }
   }
 
   await setSessionCookie({ userId, organizationId, sessionVersion: 0 });
   await clearPendingSignupCookie();
+
+  if (preValidatedCodeFailed) {
+    redirect("/dashboard/subscription?codeError=1");
+  }
 
   redirect("/onboarding");
 }

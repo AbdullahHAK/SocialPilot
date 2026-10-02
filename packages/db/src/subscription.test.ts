@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { prisma } from "./index";
 import {
   adjustSubscriptionDays,
+  extendSubscriptionByDuration,
   getSubscription,
   isSubscriptionActive,
   manuallyActivateSubscription,
@@ -89,6 +90,58 @@ describe("adjustSubscriptionDays", () => {
     const before = Date.now();
 
     const newExpiration = await adjustSubscriptionDays(org.id, 30);
+
+    const expected = before + 30 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(newExpiration.getTime() - expected)).toBeLessThan(5000);
+  });
+});
+
+describe("extendSubscriptionByDuration", () => {
+  it("stacks the new duration on top of remaining time, not from now", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await manuallyActivateSubscription(org.id, "MONTHLY", 120); // 4 months left
+
+    const newExpiration = await extendSubscriptionByDuration({
+      organizationId: org.id,
+      plan: "SIX_MONTH",
+      durationDays: 180, // +6 months
+    });
+
+    const sub = await getSubscription(org.id);
+    expect(newExpiration.toISOString()).toBe(sub?.currentPeriodEnd?.toISOString());
+    expect(sub?.plan).toBe("SIX_MONTH");
+    expect(sub?.status).toBe("ACTIVE");
+
+    // Roughly 10 months (300 days) out from the original activation, not 6.
+    const before = Date.now();
+    const expectedEnd = before + (120 + 180) * 24 * 60 * 60 * 1000;
+    expect(Math.abs(newExpiration.getTime() - expectedEnd)).toBeLessThan(5000);
+  });
+
+  it("bases off now when there's no existing subscription", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    const before = Date.now();
+
+    const newExpiration = await extendSubscriptionByDuration({
+      organizationId: org.id,
+      plan: "MONTHLY",
+      durationDays: 30,
+    });
+
+    const expected = before + 30 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(newExpiration.getTime() - expected)).toBeLessThan(5000);
+  });
+
+  it("bases off now, not the stale date, when the existing subscription already expired", async () => {
+    const org = await prisma.organization.create({ data: { name: "Acme" } });
+    await setSubscriptionExpiration(org.id, new Date("2020-01-01T00:00:00Z"));
+    const before = Date.now();
+
+    const newExpiration = await extendSubscriptionByDuration({
+      organizationId: org.id,
+      plan: "MONTHLY",
+      durationDays: 30,
+    });
 
     const expected = before + 30 * 24 * 60 * 60 * 1000;
     expect(Math.abs(newExpiration.getTime() - expected)).toBeLessThan(5000);

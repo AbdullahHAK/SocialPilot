@@ -29,3 +29,4 @@ export * from "./admin-auth";
 export * from "./audit-log";
 export * from "./activation-code";
 export * from "./organization";
+export * from "./stripe-event";

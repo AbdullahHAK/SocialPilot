@@ -238,6 +238,21 @@ model Subscription {
   @@map("subscriptions")
 }
 
+// Stripe can and does deliver the same webhook event more than once (retries
+// on a slow/ambiguous response, etc.). syncSubscriptionFromStripe is safe to
+// run twice - it just overwrites with whatever Stripe currently says - but
+// the one-time "extend by N days" action a checkout.session.completed event
+// triggers is NOT: reprocessing it would silently add the purchased time
+// twice. Recording Stripe's own event.id here before acting on any event
+// (insert-or-skip on the id's uniqueness) makes the whole handler safely
+// re-deliverable, not just the already-idempotent half of it.
+model ProcessedStripeEvent {
+  id        String   @id
+  createdAt DateTime @default(now())
+
+  @@map("processed_stripe_events")
+}
+
 model BrandProfile {
   id               String   @id @default(cuid())
   organizationId   String   @unique

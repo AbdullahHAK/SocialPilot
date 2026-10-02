@@ -18,9 +18,10 @@ export type AuthFormAction = (
 interface AuthFormProps {
   mode: "signup" | "login";
   action: AuthFormAction;
+  defaultActivationCode?: string;
 }
 
-export function AuthForm({ mode, action }: AuthFormProps) {
+export function AuthForm({ mode, action, defaultActivationCode }: AuthFormProps) {
   const t = useTranslations("auth.form");
   const [state, formAction, isPending] = useActionState<
     AuthFormState,
@@ -44,7 +45,11 @@ export function AuthForm({ mode, action }: AuthFormProps) {
         minLength={mode === "signup" ? 8 : undefined}
       />
       {mode === "signup" && (
-        <Field label={t("activationCode")} name="activationCode" />
+        <Field
+          label={t("activationCode")}
+          name="activationCode"
+          defaultValue={defaultActivationCode}
+        />
       )}
       {state.error && (
         <p role="alert" className="text-sm font-medium text-destructive">
@@ -64,12 +69,14 @@ function Field({
   type = "text",
   required,
   minLength,
+  defaultValue,
 }: {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   minLength?: number;
+  defaultValue?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -80,6 +87,7 @@ function Field({
         type={type}
         required={required}
         minLength={minLength}
+        defaultValue={defaultValue}
       />
     </div>
   );

@@ -10,11 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
 import { isStripeConfigured } from "@/lib/stripe";
-import { startPendingCheckoutAction } from "./actions";
+import { startCodeSignupAction, startPendingCheckoutAction } from "./actions";
 
 export default async function PricingPage({
   searchParams,
@@ -113,6 +114,31 @@ export default async function PricingPage({
               </Card>
             ))}
           </div>
+
+          <div className="mx-auto mt-12 flex max-w-md items-center gap-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            {t("orDivider")}
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <Card className="mx-auto mt-6 max-w-md">
+            <CardHeader>
+              <CardTitle>{t("haveCodeTitle")}</CardTitle>
+              <CardDescription>{t("haveCodeDescription")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={startCodeSignupAction} className="flex gap-2">
+                <Input
+                  name="activationCode"
+                  placeholder={t("haveCodePlaceholder")}
+                  required
+                />
+                <Button type="submit" variant="outline">
+                  {t("haveCodeSubmit")}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>

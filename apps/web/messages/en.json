@@ -75,12 +75,19 @@
     "billingInProgress": "Billing setup is still in progress — continue below at no charge for now. You'll be able to add payment details later from your account.",
     "checkoutCancelled": "Checkout was cancelled — no charges were made.",
     "choosePlan": "Choose {plan}",
+    "orDivider": "or",
+    "haveCodeTitle": "Have an activation code?",
+    "haveCodeDescription": "Skip the card payment and activate instantly with a code instead.",
+    "haveCodePlaceholder": "YOPA-XXXX-XXXX",
+    "haveCodeSubmit": "Continue with code",
     "errors": {
       "payment_incomplete": "Your payment didn't complete. Please try again.",
       "missing_session": "That checkout link has expired. Please choose a plan again.",
       "unknown_plan": "We couldn't match your purchase to a plan. Please try again.",
       "missing_customer": "Something went wrong confirming your payment. Please try again.",
-      "checkout_session_failed": "Something went wrong starting checkout. Please try again in a moment."
+      "checkout_session_failed": "Something went wrong starting checkout. Please try again in a moment.",
+      "code_required": "Enter an activation code to continue.",
+      "invalid_code": "That code is invalid, expired, or already used."
     }
   },
   "plans": {
@@ -563,8 +570,12 @@
       "renews": "Renews {date}",
       "manageBilling": "Manage billing",
       "subscribe": "Subscribe",
+      "addTime": "Add time",
+      "extendTitle": "Extend your subscription",
+      "extendDescription": "Add more time on top of what you already have - it stacks with your current plan instead of replacing it.",
       "redeemCodeTitle": "Have an activation code?",
       "redeemCodeDescription": "Enter it below to activate your subscription instantly - no payment needed.",
+      "redeemCodeDescriptionActive": "Enter a code below to add more time to your subscription - it stacks with what you already have.",
       "redeemCode": "Redeem",
       "codeInvalid": "That code is invalid, expired, or already used.",
       "manualActivationTitle": "Need to activate right now?",

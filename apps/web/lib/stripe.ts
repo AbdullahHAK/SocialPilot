@@ -33,6 +33,20 @@ export const STRIPE_PRICE_IDS = {
   YEARLY: () => requireEnv("STRIPE_PRICE_ID_YEARLY"),
 } as const;
 
+/** USD cents and day-count per plan, matching the amounts the recurring
+ * Prices above were created with ($19.9/mo, $99/6mo, $178/yr). The
+ * recurring Prices can't be reused for a one-time "add more time" purchase
+ * (Stripe Checkout's `mode: "payment"` needs non-recurring price data), so
+ * this is what builds that purchase's inline `price_data` instead. */
+export const PLAN_DETAILS: Record<
+  "MONTHLY" | "SIX_MONTH" | "YEARLY",
+  { cents: number; days: number }
+> = {
+  MONTHLY: { cents: 1990, days: 30 },
+  SIX_MONTH: { cents: 9900, days: 180 },
+  YEARLY: { cents: 17800, days: 365 },
+};
+
 /** Derives our plan from the Stripe price actually purchased, rather than
  * trusting a client-suppliable value, since this feeds both the webhook and
  * the pre-account checkout-completion redirect. */

@@ -75,12 +75,19 @@
     "billingInProgress": "La configuration de la facturation est encore en cours — continuez ci-dessous sans frais pour l'instant. Vous pourrez ajouter vos informations de paiement plus tard depuis votre compte.",
     "checkoutCancelled": "Le paiement a été annulé — aucun frais n'a été prélevé.",
     "choosePlan": "Choisir {plan}",
+    "orDivider": "ou",
+    "haveCodeTitle": "Vous avez un code d'activation ?",
+    "haveCodeDescription": "Passez le paiement par carte et activez instantanément avec un code.",
+    "haveCodePlaceholder": "YOPA-XXXX-XXXX",
+    "haveCodeSubmit": "Continuer avec un code",
     "errors": {
       "payment_incomplete": "Votre paiement n'a pas abouti. Veuillez réessayer.",
       "missing_session": "Ce lien de paiement a expiré. Veuillez choisir une offre à nouveau.",
       "unknown_plan": "Nous n'avons pas pu associer votre achat à une offre. Veuillez réessayer.",
       "missing_customer": "Une erreur s'est produite lors de la confirmation de votre paiement. Veuillez réessayer.",
-      "checkout_session_failed": "Une erreur s'est produite au démarrage du paiement. Veuillez réessayer dans un instant."
+      "checkout_session_failed": "Une erreur s'est produite au démarrage du paiement. Veuillez réessayer dans un instant.",
+      "code_required": "Saisissez un code d'activation pour continuer.",
+      "invalid_code": "Ce code est invalide, expiré ou déjà utilisé."
     }
   },
   "plans": {
@@ -563,8 +570,12 @@
       "renews": "Renouvellement le {date}",
       "manageBilling": "Gérer la facturation",
       "subscribe": "S'abonner",
+      "addTime": "Ajouter du temps",
+      "extendTitle": "Prolonger votre abonnement",
+      "extendDescription": "Ajoutez du temps supplémentaire à ce que vous avez déjà - il s'ajoute à votre offre actuelle au lieu de la remplacer.",
       "redeemCodeTitle": "Vous avez un code d'activation ?",
       "redeemCodeDescription": "Saisissez-le ci-dessous pour activer votre abonnement instantanément - aucun paiement requis.",
+      "redeemCodeDescriptionActive": "Saisissez un code ci-dessous pour ajouter du temps à votre abonnement - il s'ajoute à ce que vous avez déjà.",
       "redeemCode": "Valider",
       "codeInvalid": "Ce code est invalide, expiré ou déjà utilisé.",
       "manualActivationTitle": "Besoin d'activer maintenant ?",

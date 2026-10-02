@@ -17,10 +17,16 @@ export interface PendingMetaPage {
 }
 
 export interface PendingSignupPayload {
-  plan: "MONTHLY" | "SIX_MONTH" | "YEARLY";
+  /** Absent when the visitor is signing up with an activation code instead
+   * of a chosen paid plan - redeemActivationCode determines the plan once
+   * the code is actually redeemed against the new organization. */
+  plan?: "MONTHLY" | "SIX_MONTH" | "YEARLY";
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   metaPages?: PendingMetaPage[];
+  /** Pre-validated (via isActivationCodeRedeemable) on /pricing before this
+   * cookie was set - not yet redeemed, since no organization exists yet. */
+  activationCode?: string;
 }
 
 function getSecretKey(): Uint8Array {
@@ -57,6 +63,7 @@ export async function verifyPendingSignupToken(
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
     if (
+      payload.plan !== undefined &&
       payload.plan !== "MONTHLY" &&
       payload.plan !== "SIX_MONTH" &&
       payload.plan !== "YEARLY"
@@ -79,6 +86,8 @@ export async function verifyPendingSignupToken(
           ? payload.stripeSubscriptionId
           : undefined,
       metaPages,
+      activationCode:
+        typeof payload.activationCode === "string" ? payload.activationCode : undefined,
     };
   } catch {
     return null;

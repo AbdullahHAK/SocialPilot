@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { SubscriptionPlan } from "@prisma/client";
 import { prisma } from "./index";
+import { extendSubscriptionByDuration } from "./subscription";
 
 // Excludes visually-ambiguous characters (I/1, O/0) since these get read
 // aloud or typed by hand.
@@ -77,8 +78,10 @@ export interface RedeemActivationCodeResult {
  * transition is a compare-and-swap (same pattern as job claiming in
  * apps/worker) - under a concurrent race on the same code, only one
  * `updateMany` call actually matches a row, so a code can never grant two
- * subscriptions. Sets the org's Subscription straight to ACTIVE with no
- * Stripe ids, since this is a manual, no-payment activation. */
+ * subscriptions. Extends the org's Subscription via extendSubscriptionByDuration
+ * (ACTIVE, no Stripe ids, since this is a manual/no-card activation) - a code
+ * redeemed against an org with time already remaining adds on top of it
+ * rather than resetting the clock, same as a paid extension purchase. */
 export async function redeemActivationCode(
   code: string,
   organizationId: string,
@@ -100,23 +103,25 @@ export async function redeemActivationCode(
       throw new ActivationCodeInvalidError();
     }
 
-    const currentPeriodEnd = new Date(
-      Date.now() + record.durationDays * 24 * 60 * 60 * 1000,
+    const currentPeriodEnd = await extendSubscriptionByDuration(
+      { organizationId, plan: record.plan, durationDays: record.durationDays },
+      tx,
     );
-
-    await tx.subscription.upsert({
-      where: { organizationId },
-      create: {
-        organizationId,
-        plan: record.plan,
-        status: "ACTIVE",
-        currentPeriodEnd,
-      },
-      update: { plan: record.plan, status: "ACTIVE", currentPeriodEnd },
-    });
 
     return { plan: record.plan, currentPeriodEnd };
   });
+}
+
+/** Read-only validity check for a code with no organization to redeem it
+ * against yet - e.g. on /pricing, before an account exists. Previews
+ * whether redeemActivationCode would currently accept the code without
+ * claiming or mutating it, so a visitor can be routed straight to signup
+ * only once their code is confirmed real. */
+export async function isActivationCodeRedeemable(code: string): Promise<boolean> {
+  const record = await prisma.activationCode.findUnique({ where: { code } });
+  if (!record || record.status !== "UNUSED") return false;
+  if (record.expiresAt && record.expiresAt < new Date()) return false;
+  return true;
 }
 
 export function listActivationCodes(search?: string) {
