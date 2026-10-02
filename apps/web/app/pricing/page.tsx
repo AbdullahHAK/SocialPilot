@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Info } from "lucide-react";
+import { AlertCircle, Check, Info, Mail, MessageCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
+import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMBER } from "@/lib/company";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
 import { isStripeConfigured } from "@/lib/stripe";
 import { startCodeSignupAction, startPendingCheckoutAction } from "./actions";
@@ -126,7 +127,7 @@ export default async function PricingPage({
               <CardTitle>{t("haveCodeTitle")}</CardTitle>
               <CardDescription>{t("haveCodeDescription")}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-4">
               <form action={startCodeSignupAction} className="flex gap-2">
                 <Input
                   name="activationCode"
@@ -137,6 +138,25 @@ export default async function PricingPage({
                   {t("haveCodeSubmit")}
                 </Button>
               </form>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                <span>{t("haveCodeContact")}</span>
+                <a
+                  href={`https://wa.me/${WHATSAPP_NUMBER}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  <MessageCircle className="size-3.5" />
+                  {CONTACT_PHONE}
+                </a>
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  <Mail className="size-3.5" />
+                  {CONTACT_EMAIL}
+                </a>
+              </div>
             </CardContent>
           </Card>
         </div>

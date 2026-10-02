@@ -80,6 +80,7 @@
     "haveCodeDescription": "Passez le paiement par carte et activez instantanément avec un code.",
     "haveCodePlaceholder": "YOPA-XXXX-XXXX",
     "haveCodeSubmit": "Continuer avec un code",
+    "haveCodeContact": "Pas encore de code ? Contactez-nous sur",
     "errors": {
       "payment_incomplete": "Votre paiement n'a pas abouti. Veuillez réessayer.",
       "missing_session": "Ce lien de paiement a expiré. Veuillez choisir une offre à nouveau.",

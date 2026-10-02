@@ -80,6 +80,7 @@
     "haveCodeDescription": "تخطَّ الدفع بالبطاقة وفعّل فورًا باستخدام رمز بدلاً من ذلك.",
     "haveCodePlaceholder": "YOPA-XXXX-XXXX",
     "haveCodeSubmit": "المتابعة بالرمز",
+    "haveCodeContact": "ليس لديك رمز بعد؟ تواصل معنا عبر",
     "errors": {
       "payment_incomplete": "لم تكتمل عملية الدفع. يرجى المحاولة مرة أخرى.",
       "missing_session": "انتهت صلاحية رابط الدفع هذا. يرجى اختيار خطة مرة أخرى.",

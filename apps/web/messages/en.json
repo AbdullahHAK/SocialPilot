@@ -80,6 +80,7 @@
     "haveCodeDescription": "Skip the card payment and activate instantly with a code instead.",
     "haveCodePlaceholder": "YOPA-XXXX-XXXX",
     "haveCodeSubmit": "Continue with code",
+    "haveCodeContact": "Don't have a code yet? Contact us on",
     "errors": {
       "payment_incomplete": "Your payment didn't complete. Please try again.",
       "missing_session": "That checkout link has expired. Please choose a plan again.",
