@@ -658,17 +658,15 @@
       "closing": "C'est tout. YOPAPI s'occupe du reste."
     },
     "showcase": {
-      "eyebrow": "Voyez-le en action",
+      "eyebrow": "Du vrai contenu, vraiment publié",
       "title": "Une équipe IA. Tous les types d'entreprises.",
-      "subtitle": "YOPAPI n'est pas conçu pour un seul secteur — il est conçu pour comprendre le vôtre.",
+      "subtitle": "Ce ne sont pas des maquettes — chaque publication ci-dessous a été générée par YOPAPI et est actuellement en ligne sur Instagram. Cliquez sur l'une d'elles pour le constater par vous-même.",
+      "viewOnInstagram": "Voir sur Instagram",
+      "tapToView": "Cliquer pour voir",
+      "moreComing": "De nouveaux exemples réels sont ajoutés chaque semaine.",
       "items": [
-        { "category": "Restaurant", "caption": "Promotion culinaire" },
-        { "category": "Pizzeria", "caption": "Fraîchement sorti du four" },
-        { "category": "Restauration rapide", "caption": "Croustillant, doré, prêt à commander" },
-        { "category": "Café", "caption": "Contenu café" },
-        { "category": "Boulangerie", "caption": "Dessert du jour" },
-        { "category": "Boutique de vêtements", "caption": "Contenu mode" },
-        { "category": "Entreprise de beauté", "caption": "Contenu produit" }
+        { "business": "DC Chicken", "businessType": "Restauration rapide, Maroc" },
+        { "business": "M Good", "businessType": "Marque de loisirs pour enfants, Maroc" }
       ]
     },
     "stayVisible": {
