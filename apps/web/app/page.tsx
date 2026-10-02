@@ -10,6 +10,7 @@ import { VisualShowcase } from "@/components/landing/visual-showcase";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { PaymentTrustBar } from "@/components/payment-badges";
 import { COMPANY_LEGAL_NAME, CONTACT_EMAIL } from "@/lib/company";
 
 export default async function Home() {
@@ -49,26 +50,29 @@ export default async function Home() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
-          <Logo />
-          <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} YOPAPI — {COMPANY_LEGAL_NAME}.{" "}
-            {t("footer.rights")}
-          </p>
-          <nav className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-foreground hover:underline">
-              {CONTACT_EMAIL}
-            </a>
-            <Link href="/privacy" className="hover:text-foreground hover:underline">
-              {t("footer.privacy")}
-            </Link>
-            <Link href="/terms" className="hover:text-foreground hover:underline">
-              {t("footer.terms")}
-            </Link>
-            <Link href="/data-deletion" className="hover:text-foreground hover:underline">
-              {t("footer.dataDeletion")}
-            </Link>
-          </nav>
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-8 sm:px-6">
+          <PaymentTrustBar />
+          <div className="flex w-full flex-col items-center justify-between gap-4 sm:flex-row">
+            <Logo />
+            <p className="text-center text-sm text-muted-foreground">
+              © {new Date().getFullYear()} YOPAPI — {COMPANY_LEGAL_NAME}.{" "}
+              {t("footer.rights")}
+            </p>
+            <nav className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-foreground hover:underline">
+                {CONTACT_EMAIL}
+              </a>
+              <Link href="/privacy" className="hover:text-foreground hover:underline">
+                {t("footer.privacy")}
+              </Link>
+              <Link href="/terms" className="hover:text-foreground hover:underline">
+                {t("footer.terms")}
+              </Link>
+              <Link href="/data-deletion" className="hover:text-foreground hover:underline">
+                {t("footer.dataDeletion")}
+              </Link>
+            </nav>
+          </div>
         </div>
       </footer>
     </div>

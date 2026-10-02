@@ -13,6 +13,9 @@
       "logoUploadFailed": "Impossible de téléverser le logo. Veuillez réessayer."
     }
   },
+  "payments": {
+    "securePayments": "Les paiements sont sécurisés et traités par"
+  },
   "auth": {
     "invalidInput": "Entrée invalide",
     "invalidCredentials": "E-mail ou mot de passe invalide.",

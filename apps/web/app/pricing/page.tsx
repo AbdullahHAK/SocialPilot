@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
+import { PaymentTrustBar } from "@/components/payment-badges";
 import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMBER } from "@/lib/company";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
 import { isStripeConfigured } from "@/lib/stripe";
@@ -52,6 +53,7 @@ export default async function PricingPage({
               {t("title")}
             </h1>
             <p className="mt-4 text-muted-foreground">{t("subtitle")}</p>
+            <PaymentTrustBar className="mt-6" />
           </div>
 
           {!billingLive && (

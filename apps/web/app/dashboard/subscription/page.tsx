@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PaymentTrustBar } from "@/components/payment-badges";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/company";
 import { getSession } from "@/lib/session";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
@@ -43,9 +44,12 @@ export default async function SubscriptionPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="mt-1 text-muted-foreground">{t("description")}</p>
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("description")}</p>
+        </div>
+        <PaymentTrustBar className="sm:items-end" />
       </div>
 
       {checkout === "success" && (

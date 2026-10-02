@@ -13,6 +13,9 @@
       "logoUploadFailed": "Couldn't upload the logo. Please try again."
     }
   },
+  "payments": {
+    "securePayments": "Payments are secure and processed by"
+  },
   "auth": {
     "invalidInput": "Invalid input",
     "invalidCredentials": "Invalid email or password.",
