@@ -16,10 +16,15 @@ import {
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import type { AuthFormState } from "@/components/auth-form";
+import { notifyAdminNewCustomer, sendCustomerActivationEmail, sendCustomerConfirmationEmail } from "@/lib/notifications";
 import { clearPendingSignupCookie, getPendingSignup } from "@/lib/pending-signup";
 import { setSessionCookie } from "@/lib/session";
-import { getStripeClient, mapStripeStatusToSubscriptionStatus } from "@/lib/stripe";
+import { getStripeClient, mapStripeStatusToSubscriptionStatus, PLAN_DETAILS } from "@/lib/stripe";
 import { createSignupSchema } from "@/lib/validation";
+
+function formatUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
 
 export async function createAccountAction(
   _prevState: AuthFormState,
@@ -98,6 +103,22 @@ export async function createAccountAction(
           ? new Date(item.current_period_end * 1000)
           : null,
       });
+
+      if (pending.plan) {
+        await Promise.all([
+          notifyAdminNewCustomer({
+            businessName: parsed.data.organizationName,
+            ownerEmail: parsed.data.email,
+            plan: pending.plan,
+            amountLabel: formatUsd(PLAN_DETAILS[pending.plan].cents),
+            source: "card",
+          }),
+          sendCustomerConfirmationEmail(parsed.data.email, {
+            businessName: parsed.data.organizationName,
+            plan: pending.plan,
+          }),
+        ]);
+      }
     }
   }
 
@@ -152,7 +173,21 @@ export async function createAccountAction(
   let preValidatedCodeFailed = false;
   if (activationCode) {
     try {
-      await redeemActivationCode(activationCode, organizationId);
+      const redemption = await redeemActivationCode(activationCode, organizationId);
+      await Promise.all([
+        notifyAdminNewCustomer({
+          businessName: parsed.data.organizationName,
+          ownerEmail: parsed.data.email,
+          plan: redemption.plan,
+          amountLabel: "Activation code (no charge)",
+          source: "code",
+        }),
+        sendCustomerActivationEmail(parsed.data.email, {
+          businessName: parsed.data.organizationName,
+          plan: redemption.plan,
+          expiresAt: redemption.currentPeriodEnd,
+        }),
+      ]);
     } catch (error) {
       if (!(error instanceof ActivationCodeInvalidError)) throw error;
       if (activationCode === pending.activationCode?.trim().toUpperCase()) {
