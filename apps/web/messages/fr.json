@@ -51,7 +51,10 @@
     "lastUpdated": "Dernière mise à jour",
     "privacyTitle": "Politique de confidentialité",
     "termsTitle": "Conditions d'utilisation",
-    "dataDeletionTitle": "Instructions de suppression des données"
+    "dataDeletionTitle": "Instructions de suppression des données",
+    "agreeToTermsPrefix": "J'accepte les",
+    "agreeToTermsLink": "Conditions d'utilisation",
+    "termsRequired": "Veuillez accepter les Conditions d'utilisation pour continuer."
   },
   "connect": {
     "title": "Connectez vos comptes",
@@ -91,6 +94,7 @@
       "missing_customer": "Une erreur s'est produite lors de la confirmation de votre paiement. Veuillez réessayer.",
       "checkout_session_failed": "Une erreur s'est produite au démarrage du paiement. Veuillez réessayer dans un instant.",
       "code_required": "Saisissez un code d'activation pour continuer.",
+      "terms_required": "Veuillez accepter les Conditions d'utilisation pour continuer.",
       "invalid_code": "Ce code est invalide, expiré ou déjà utilisé."
     }
   },

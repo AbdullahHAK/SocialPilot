@@ -47,10 +47,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const termsVersion = checkoutSession.metadata?.termsVersion;
+  const termsAcceptedAt = checkoutSession.metadata?.termsAcceptedAt;
+
   await setPendingSignupCookie({
     plan,
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscriptionId,
+    termsAcceptance:
+      termsVersion && termsAcceptedAt
+        ? {
+            version: termsVersion,
+            acceptedAt: termsAcceptedAt,
+            ipAddress: checkoutSession.metadata?.termsIp || null,
+          }
+        : undefined,
   });
 
   return NextResponse.redirect(new URL("/connect", request.url));

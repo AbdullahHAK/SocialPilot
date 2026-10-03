@@ -4,7 +4,9 @@ import { isActivationCodeRedeemable } from "@socialpilot/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
-import { setPendingSignupCookie } from "@/lib/pending-signup";
+import { TERMS_VERSION } from "@/lib/legal";
+import { setPendingSignupCookie, type PendingSignupPayload } from "@/lib/pending-signup";
+import { getClientIp } from "@/lib/request-ip";
 import { getStripeClient, isStripeConfigured, STRIPE_PRICE_IDS } from "@/lib/stripe";
 
 async function getBaseUrl(): Promise<string> {
@@ -12,6 +14,23 @@ async function getBaseUrl(): Promise<string> {
   const host = headersList.get("host");
   const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
   return `${protocol}://${host}`;
+}
+
+/** The checkbox lives outside React's reach here (a plain native input, not
+ * a client-controlled one - see terms-checkbox-field.tsx for why), so this
+ * is the actual enforcement; a disabled-button trick on the client is only
+ * ever a convenience, never trustworthy on its own. */
+async function requireTermsAcceptance(
+  formData: FormData,
+): Promise<NonNullable<PendingSignupPayload["termsAcceptance"]>> {
+  if (formData.get("acceptedTerms") !== "on") {
+    redirect("/pricing?error=terms_required");
+  }
+  return {
+    version: TERMS_VERSION,
+    acceptedAt: new Date().toISOString(),
+    ipAddress: await getClientIp(),
+  };
 }
 
 /** Starts a Stripe Checkout session for a visitor who has no account yet -
@@ -27,8 +46,10 @@ export async function startPendingCheckoutAction(formData: FormData) {
   const plan = formData.get("plan");
   if (plan !== "MONTHLY" && plan !== "SIX_MONTH" && plan !== "YEARLY") return;
 
+  const termsAcceptance = await requireTermsAcceptance(formData);
+
   if (!isStripeConfigured()) {
-    await setPendingSignupCookie({ plan });
+    await setPendingSignupCookie({ plan, termsAcceptance });
     redirect("/connect");
   }
 
@@ -43,6 +64,16 @@ export async function startPendingCheckoutAction(formData: FormData) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${baseUrl}/api/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing?checkout=cancelled`,
+      // Carried through to /api/checkout/complete (Stripe's own redirect
+      // back, not a page this app controls) since that's where the
+      // pending-signup cookie for a live Stripe payment actually gets set -
+      // metadata values must be flat strings, hence three keys instead of
+      // the nested shape used everywhere else.
+      metadata: {
+        termsVersion: termsAcceptance.version,
+        termsAcceptedAt: termsAcceptance.acceptedAt,
+        termsIp: termsAcceptance.ipAddress ?? "",
+      },
     });
   } catch (error) {
     // A Stripe-side account misconfiguration (e.g. no payment methods
@@ -74,10 +105,12 @@ export async function startCodeSignupAction(formData: FormData) {
     redirect("/pricing?error=code_required");
   }
 
+  const termsAcceptance = await requireTermsAcceptance(formData);
+
   if (!(await isActivationCodeRedeemable(code))) {
     redirect("/pricing?error=invalid_code");
   }
 
-  await setPendingSignupCookie({ activationCode: code });
+  await setPendingSignupCookie({ activationCode: code, termsAcceptance });
   redirect("/create-account");
 }

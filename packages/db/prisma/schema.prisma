@@ -549,3 +549,19 @@ model ActivationCode {
   @@index([status])
   @@map("activation_codes")
 }
+
+// An append-only legal record, not something the app ever reads back to
+// gate behavior (isSubscriptionActive etc. don't check this) - its only
+// job is to answer "did this org's owner agree, and when" if a payment
+// dispute or chargeback ever asks. version lets a future Terms update be
+// distinguished from what an existing customer actually agreed to.
+model TermsAcceptance {
+  id             String   @id @default(cuid())
+  organizationId String
+  version        String
+  acceptedAt     DateTime @default(now())
+  ipAddress      String?
+
+  @@index([organizationId])
+  @@map("terms_acceptances")
+}

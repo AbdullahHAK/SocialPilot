@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { COMPANY_LEGAL_NAME, CONTACT_EMAIL } from "@/lib/company";
+import { TERMS_UPDATED_DATE_DISPLAY } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Terms of Service — YOPAPI" };
 
 export default async function TermsOfServicePage() {
   const t = await getTranslations("legal");
   return (
-    <LegalPage title={t("termsTitle")} updatedDate="September 21, 2026">
+    <LegalPage title={t("termsTitle")} updatedDate={TERMS_UPDATED_DATE_DISPLAY}>
       <p>
         These Terms of Service (&quot;Terms&quot;) govern your use of
         YOPAPI (the &quot;Service&quot;), owned and operated by{" "}

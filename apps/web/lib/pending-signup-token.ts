@@ -27,6 +27,16 @@ export interface PendingSignupPayload {
   /** Pre-validated (via isActivationCodeRedeemable) on /pricing before this
    * cookie was set - not yet redeemed, since no organization exists yet. */
   activationCode?: string;
+  /** Captured at the moment of the /pricing submission (not later, at
+   * account creation) since that's the actual moment of agreement - the ip
+   * and version are a snapshot of what the customer saw and agreed to right
+   * then, not whatever happens to be current when the account is created a
+   * few minutes later. */
+  termsAcceptance?: {
+    version: string;
+    acceptedAt: string;
+    ipAddress: string | null;
+  };
 }
 
 function getSecretKey(): Uint8Array {
@@ -55,6 +65,21 @@ function isPendingMetaPage(value: unknown): value is PendingMetaPage {
     typeof page.externalId === "string" &&
     typeof page.encryptedAccessToken === "string"
   );
+}
+
+function parseTermsAcceptance(
+  value: unknown,
+): PendingSignupPayload["termsAcceptance"] {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  if (typeof record.version !== "string" || typeof record.acceptedAt !== "string") {
+    return undefined;
+  }
+  return {
+    version: record.version,
+    acceptedAt: record.acceptedAt,
+    ipAddress: typeof record.ipAddress === "string" ? record.ipAddress : null,
+  };
 }
 
 export async function verifyPendingSignupToken(
@@ -88,6 +113,7 @@ export async function verifyPendingSignupToken(
       metaPages,
       activationCode:
         typeof payload.activationCode === "string" ? payload.activationCode : undefined,
+      termsAcceptance: parseTermsAcceptance(payload.termsAcceptance),
     };
   } catch {
     return null;

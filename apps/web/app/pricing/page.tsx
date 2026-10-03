@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { PaymentTrustBar } from "@/components/payment-badges";
+import { TermsCheckboxField } from "@/components/terms-checkbox-field";
 import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMBER } from "@/lib/company";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
 import { isStripeConfigured } from "@/lib/stripe";
@@ -24,9 +25,10 @@ export default async function PricingPage({
 }: PageProps<"/pricing">) {
   const { checkout, error } = await searchParams;
   const billingLive = isStripeConfigured();
-  const [t, tPlans] = await Promise.all([
+  const [t, tPlans, tLegal] = await Promise.all([
     getTranslations("pricingPage"),
     getTranslations("plans"),
+    getTranslations("legal"),
   ]);
   const plans = getPlans(tPlans);
   const features = getPlanFeatures(tPlans);
@@ -103,8 +105,12 @@ export default async function PricingPage({
                       </li>
                     ))}
                   </ul>
-                  <form action={startPendingCheckoutAction}>
+                  <form action={startPendingCheckoutAction} className="flex flex-col gap-3">
                     <input type="hidden" name="plan" value={plan.id} />
+                    <TermsCheckboxField
+                      prefix={tLegal("agreeToTermsPrefix")}
+                      linkLabel={tLegal("agreeToTermsLink")}
+                    />
                     <Button
                       type="submit"
                       className="w-full"
@@ -130,15 +136,21 @@ export default async function PricingPage({
               <CardDescription>{t("haveCodeDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <form action={startCodeSignupAction} className="flex gap-2">
-                <Input
-                  name="activationCode"
-                  placeholder={t("haveCodePlaceholder")}
-                  required
+              <form action={startCodeSignupAction} className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <Input
+                    name="activationCode"
+                    placeholder={t("haveCodePlaceholder")}
+                    required
+                  />
+                  <Button type="submit" variant="outline">
+                    {t("haveCodeSubmit")}
+                  </Button>
+                </div>
+                <TermsCheckboxField
+                  prefix={tLegal("agreeToTermsPrefix")}
+                  linkLabel={tLegal("agreeToTermsLink")}
                 />
-                <Button type="submit" variant="outline">
-                  {t("haveCodeSubmit")}
-                </Button>
               </form>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                 <span>{t("haveCodeContact")}</span>

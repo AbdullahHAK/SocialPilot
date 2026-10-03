@@ -4,6 +4,7 @@ import {
   ActivationCodeInvalidError,
   decryptToken,
   EmailAlreadyInUseError,
+  recordTermsAcceptance,
   redeemActivationCode,
   setStripeCustomer,
   signUp,
@@ -60,6 +61,20 @@ export async function createAccountAction(
       return { error: tAuth("emailInUse") };
     }
     throw error;
+  }
+
+  // The actual agree-before-paying gate already happened back on /pricing
+  // (requireTermsAcceptance there redirects if the checkbox wasn't ticked);
+  // this just persists the record it captured. A missing one here would
+  // only mean a signup already in flight through an older cookie at the
+  // exact moment this feature deployed - not worth blocking a legitimately
+  // completed signup over.
+  if (pending.termsAcceptance) {
+    await recordTermsAcceptance({
+      organizationId,
+      version: pending.termsAcceptance.version,
+      ipAddress: pending.termsAcceptance.ipAddress,
+    });
   }
 
   if (pending.stripeCustomerId) {

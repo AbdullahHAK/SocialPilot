@@ -56,6 +56,36 @@ describe("pending signup token", () => {
     });
   });
 
+  it("round-trips a terms acceptance record", async () => {
+    const token = await createPendingSignupToken({
+      plan: "MONTHLY",
+      termsAcceptance: {
+        version: "2026-09-21",
+        acceptedAt: "2026-10-03T12:00:00.000Z",
+        ipAddress: "203.0.113.4",
+      },
+    });
+    const payload = await verifyPendingSignupToken(token);
+    expect(payload?.termsAcceptance).toEqual({
+      version: "2026-09-21",
+      acceptedAt: "2026-10-03T12:00:00.000Z",
+      ipAddress: "203.0.113.4",
+    });
+  });
+
+  it("round-trips a terms acceptance record with no ip address known", async () => {
+    const token = await createPendingSignupToken({
+      plan: "MONTHLY",
+      termsAcceptance: {
+        version: "2026-09-21",
+        acceptedAt: "2026-10-03T12:00:00.000Z",
+        ipAddress: null,
+      },
+    });
+    const payload = await verifyPendingSignupToken(token);
+    expect(payload?.termsAcceptance?.ipAddress).toBeNull();
+  });
+
   it("rejects a token with an invalid (but present) plan value", async () => {
     const token = await createPendingSignupToken({
       // @ts-expect-error - deliberately invalid for this test

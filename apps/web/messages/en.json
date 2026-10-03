@@ -51,7 +51,10 @@
     "lastUpdated": "Last updated",
     "privacyTitle": "Privacy Policy",
     "termsTitle": "Terms of Service",
-    "dataDeletionTitle": "Data Deletion Instructions"
+    "dataDeletionTitle": "Data Deletion Instructions",
+    "agreeToTermsPrefix": "I agree to the",
+    "agreeToTermsLink": "Terms of Service",
+    "termsRequired": "Please agree to the Terms of Service to continue."
   },
   "connect": {
     "title": "Connect your accounts",
@@ -91,6 +94,7 @@
       "missing_customer": "Something went wrong confirming your payment. Please try again.",
       "checkout_session_failed": "Something went wrong starting checkout. Please try again in a moment.",
       "code_required": "Enter an activation code to continue.",
+      "terms_required": "Please agree to the Terms of Service to continue.",
       "invalid_code": "That code is invalid, expired, or already used."
     }
   },

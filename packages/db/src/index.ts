@@ -30,3 +30,4 @@ export * from "./audit-log";
 export * from "./activation-code";
 export * from "./organization";
 export * from "./stripe-event";
+export * from "./terms-acceptance";

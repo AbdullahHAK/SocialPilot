@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PaymentTrustBar } from "@/components/payment-badges";
+import { TermsCheckboxField } from "@/components/terms-checkbox-field";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/company";
 import { getSession } from "@/lib/session";
 import { getPlanFeatures, getPlans } from "@/lib/plans";
@@ -31,12 +32,13 @@ export default async function SubscriptionPage({
     redirect("/login");
   }
 
-  const { checkout, codeError } = await searchParams;
+  const { checkout, codeError, termsError } = await searchParams;
   const subscription = await getSubscription(session.organizationId);
   const active = isSubscriptionActive(subscription);
-  const [t, tPlans] = await Promise.all([
+  const [t, tPlans, tLegal] = await Promise.all([
     getTranslations("dashboard.subscription"),
     getTranslations("plans"),
+    getTranslations("legal"),
   ]);
   const plans = getPlans(tPlans);
   const features = getPlanFeatures(tPlans);
@@ -75,6 +77,12 @@ export default async function SubscriptionPage({
           {t("codeInvalid")}
         </div>
       )}
+      {typeof termsError === "string" && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          {tLegal("termsRequired")}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -83,12 +91,18 @@ export default async function SubscriptionPage({
             {active ? t("redeemCodeDescriptionActive") : t("redeemCodeDescription")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form action={redeemActivationCodeAction} className="flex gap-2">
-            <Input name="code" placeholder="YOPA-XXXX-XXXX" className="max-w-56" required />
-            <Button type="submit" variant="outline">
-              {t("redeemCode")}
-            </Button>
+        <CardContent className="flex flex-col gap-3">
+          <form action={redeemActivationCodeAction} className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <Input name="code" placeholder="YOPA-XXXX-XXXX" className="max-w-56" required />
+              <Button type="submit" variant="outline">
+                {t("redeemCode")}
+              </Button>
+            </div>
+            <TermsCheckboxField
+              prefix={tLegal("agreeToTermsPrefix")}
+              linkLabel={tLegal("agreeToTermsLink")}
+            />
           </form>
         </CardContent>
       </Card>
@@ -169,8 +183,15 @@ export default async function SubscriptionPage({
                   </li>
                 ))}
               </ul>
-              <form action={active ? startExtensionCheckoutAction : startCheckoutAction}>
+              <form
+                action={active ? startExtensionCheckoutAction : startCheckoutAction}
+                className="flex flex-col gap-3"
+              >
                 <input type="hidden" name="plan" value={plan.id} />
+                <TermsCheckboxField
+                  prefix={tLegal("agreeToTermsPrefix")}
+                  linkLabel={tLegal("agreeToTermsLink")}
+                />
                 <Button
                   type="submit"
                   className="w-full"

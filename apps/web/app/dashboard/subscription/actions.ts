@@ -3,11 +3,14 @@
 import {
   ActivationCodeInvalidError,
   getSubscription,
+  recordTermsAcceptance,
   redeemActivationCode,
   setStripeCustomer,
 } from "@socialpilot/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { TERMS_VERSION } from "@/lib/legal";
+import { getClientIp } from "@/lib/request-ip";
 import { getSession } from "@/lib/session";
 import { getStripeClient, PLAN_DETAILS, STRIPE_PRICE_IDS } from "@/lib/stripe";
 
@@ -24,6 +27,23 @@ async function getBaseUrl(): Promise<string> {
   return `${protocol}://${host}`;
 }
 
+/** The organization already exists for every caller here (all post-login),
+ * unlike the /pricing version of this check - so this records the
+ * acceptance directly instead of stashing it in a pending-signup cookie. */
+async function requireTermsAcceptance(
+  formData: FormData,
+  organizationId: string,
+): Promise<void> {
+  if (formData.get("acceptedTerms") !== "on") {
+    redirect("/dashboard/subscription?termsError=1");
+  }
+  await recordTermsAcceptance({
+    organizationId,
+    version: TERMS_VERSION,
+    ipAddress: await getClientIp(),
+  });
+}
+
 export async function startCheckoutAction(formData: FormData) {
   const session = await getSession();
   if (!session) {
@@ -32,6 +52,8 @@ export async function startCheckoutAction(formData: FormData) {
 
   const plan = formData.get("plan");
   if (plan !== "MONTHLY" && plan !== "SIX_MONTH" && plan !== "YEARLY") return;
+
+  await requireTermsAcceptance(formData, session.organizationId);
 
   const stripe = getStripeClient();
   const existing = await getSubscription(session.organizationId);
@@ -79,6 +101,8 @@ export async function startExtensionCheckoutAction(formData: FormData) {
 
   const plan = formData.get("plan");
   if (plan !== "MONTHLY" && plan !== "SIX_MONTH" && plan !== "YEARLY") return;
+
+  await requireTermsAcceptance(formData, session.organizationId);
 
   const stripe = getStripeClient();
   const existing = await getSubscription(session.organizationId);
@@ -137,6 +161,8 @@ export async function redeemActivationCodeAction(formData: FormData) {
   if (!code) {
     redirect("/dashboard/subscription?codeError=1");
   }
+
+  await requireTermsAcceptance(formData, session.organizationId);
 
   try {
     await redeemActivationCode(code, session.organizationId);

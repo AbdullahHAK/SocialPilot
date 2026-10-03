@@ -51,7 +51,10 @@
     "lastUpdated": "آخر تحديث",
     "privacyTitle": "سياسة الخصوصية",
     "termsTitle": "شروط الخدمة",
-    "dataDeletionTitle": "تعليمات حذف البيانات"
+    "dataDeletionTitle": "تعليمات حذف البيانات",
+    "agreeToTermsPrefix": "أوافق على",
+    "agreeToTermsLink": "شروط الخدمة",
+    "termsRequired": "يرجى الموافقة على شروط الخدمة للمتابعة."
   },
   "connect": {
     "title": "اربط حساباتك",
@@ -91,6 +94,7 @@
       "missing_customer": "حدث خطأ أثناء تأكيد دفعتك. يرجى المحاولة مرة أخرى.",
       "checkout_session_failed": "حدث خطأ أثناء بدء الدفع. يرجى المحاولة مرة أخرى بعد لحظات.",
       "code_required": "أدخل رمز تفعيل للمتابعة.",
+      "terms_required": "يرجى الموافقة على شروط الخدمة للمتابعة.",
       "invalid_code": "هذا الرمز غير صالح أو منتهي الصلاحية أو مستخدم بالفعل."
     }
   },
