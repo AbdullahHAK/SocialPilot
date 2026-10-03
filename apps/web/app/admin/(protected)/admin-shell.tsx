@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -65,9 +65,26 @@ export function AdminShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 lg:hidden">
           <p className="font-semibold">YOPAPI Admin</p>
-          <button type="button" onClick={() => setOpen(true)} aria-label="Open menu">
-            <Menu className="size-5" />
-          </button>
+          {/* Sign out also lives in the drawer (desktop's only copy of it),
+              but it must not be reachable ONLY through the drawer's toggle
+              button on mobile - a single button being invisible for any
+              reason (a stuck "Request Desktop Site" mode, a rendering quirk
+              on some browser) would otherwise leave no way to sign out at
+              all. This one-tap copy is the fallback. */}
+          <div className="flex items-center gap-4">
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                aria-label="Sign out"
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <LogOut className="size-5" />
+              </button>
+            </form>
+            <button type="button" onClick={() => setOpen(true)} aria-label="Open menu">
+              <Menu className="size-5" />
+            </button>
+          </div>
         </div>
         <main className="flex-1 overflow-y-auto p-4 pb-20 sm:p-6 lg:pb-6">
           <div className="mx-auto max-w-5xl">{children}</div>
